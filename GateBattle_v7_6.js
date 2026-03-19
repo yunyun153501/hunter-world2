@@ -9701,7 +9701,7 @@ function renderCharacterView() {
       con: 'HP +10',
       agi: '물리공격력 +0.2, SP +10',
       int: '마법공격력 +0.3, MP +10',
-      sense: 'SP +3, MP +3'
+      sense: 'SP +3, MP +3, 던전탐색도움, 명중률, 크리보조'
     };
     const statCap = STAT_CAP_BY_RANK[u.rank || 'E'] || STAT_CAP_BY_RANK.E;
     const statRows = Object.entries(statNames).map(([key, label]) => {
