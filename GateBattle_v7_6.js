@@ -449,14 +449,14 @@ const EQUIP_MAX_ENHANCE = { weapon:5, subweapon:0, armor:5, accessory:5 };
 const WEAPON_ENHANCE_ATK = { E:1, D:1, C:2, B:3, A:4, S:5 };
 // Base weapon ATK by rank
 const WEAPON_BASE_ATK = { E:5, D:15, C:25, B:45, A:70, S:100 };
-// Armor base stats (main stat per enhance, armor 물리방어/마법방어 range, resistance → 물리피해감소/마법피해감소)
+// Armor base stats (main stat per enhance, armor 물리방어/마법방어 range)
 const ARMOR_STAT_BY_RANK = {
-  E: { totalStatSum:0,  defRange:[0,5],   resistance:1, enhanceStat:1 },
-  D: { totalStatSum:2,  defRange:[0,15],  resistance:2, enhanceStat:2 },
-  C: { totalStatSum:5,  defRange:[0,40],  resistance:3, enhanceStat:3 },
-  B: { totalStatSum:8,  defRange:[0,75],  resistance:5, enhanceStat:4 },
-  A: { totalStatSum:11, defRange:[0,100], resistance:7, enhanceStat:5 },
-  S: { totalStatSum:16, defRange:[0,200], resistance:10,enhanceStat:6 },
+  E: { totalStatSum:0,  defRange:[0,5],   enhanceStat:1 },
+  D: { totalStatSum:2,  defRange:[0,15],  enhanceStat:2 },
+  C: { totalStatSum:5,  defRange:[0,40],  enhanceStat:3 },
+  B: { totalStatSum:8,  defRange:[0,75],  enhanceStat:4 },
+  A: { totalStatSum:11, defRange:[0,100], enhanceStat:5 },
+  S: { totalStatSum:16, defRange:[0,200], enhanceStat:6 },
 };
 // Armor subtypes: different defense multipliers, stat pools, and stat bonus modifiers
 const ARMOR_SUBTYPES = {
@@ -2209,7 +2209,7 @@ const RARE_FAMILY_PRESETS = {
             enhance: 0, infuse: 0, maxInfuse: 2, traits: [],
             durability: 100, maxDurability: 100,
             atk: atkPenalty, pdef, mdef,
-            mainStat, resistType: '', resistPct: armorBase.resistance || 0,
+            mainStat, resistType: '', resistPct: 0,
             price,
             note: `${rank}급 ${sub.label}.`
           });
@@ -2270,6 +2270,7 @@ const RARE_FAMILY_PRESETS = {
       customGuildDesc: '',
       incomeLog: [],
       guildTaxLog: [],
+      gateClearHistory: {},  // { [characterId/personaId]: { "E_small":count, "E_medium":count, ... } }
       homeRegions: [],   // [{id, name, homes:[{id, name, area, houseType, deposit, monthlyRent, maintenanceFee, purchasePrice, brokerFee, desc, features:[], storages:[{id,name,type,maxSlots,maxWeightKg,items:[]}]}]}]
       ownedHomes: {},    // { [activeCharId]: [ { regionId, homeId, moveInDate:'2026-01-01', lastRentPaidMonth:'2026-01', rentLog:[{month,amount,paidDate}] }, ... ] }
       gameDate: { year: 2026, month: 1, day: 1 },
@@ -4182,6 +4183,18 @@ function buildGateNormalPool(run) {
     if (pool.length >= 4) break;
     if (!seen.has(m.id)) { seen.add(m.id); pool.push(m); }
   }
+  // 물리/마법 다양성 보장: 풀에 4마리 이상이면 최소 1마리는 다른 공격 타입
+  if (pool.length >= 4) {
+    const types = pool.map(m => inferDamageType(m.position, m.job));
+    const hasPhysical = types.includes('physical');
+    const hasMagic = types.includes('magic');
+    if (!hasPhysical || !hasMagic) {
+      const needed = !hasPhysical ? 'physical' : 'magic';
+      const allCandidates = primaries.concat(secondaries);
+      const swap = allCandidates.find(m => !seen.has(m.id) && inferDamageType(m.position, m.job) === needed);
+      if (swap) { pool[pool.length - 1] = swap; }
+    }
+  }
   return pool;
 }
 function distributeGateRunContents(run) {
@@ -4321,6 +4334,15 @@ function advanceGateRunAfterMainRoom(run, stageIndex, room) {
     // 게이트 완료 시에도 현재 HP 상태를 캐릭터 DB에 저장
     syncPartyHpToDb(run);
     pushGateLog(run, '게이트의 마지막 방을 넘었다.');
+    // 게이트 클리어 횟수 기록 (캐릭터/페르소나별)
+    const gateKey = `${run.rank}_${run.size}`;
+    if (!model.db.gateClearHistory) model.db.gateClearHistory = {};
+    (run.partyState || []).forEach(u => {
+      const charId = u.sourceId || u.baseId || u.id || '';
+      if (!charId) return;
+      if (!model.db.gateClearHistory[charId]) model.db.gateClearHistory[charId] = {};
+      model.db.gateClearHistory[charId][gateKey] = (model.db.gateClearHistory[charId][gateKey] || 0) + 1;
+    });
   }
 }
 function beginGateRunFromSelectedGate() {
@@ -4595,10 +4617,10 @@ function addNormalRollLoot(bucket, rank, roll, sourceRef) {
   if (roll <= 50) return;
   if (roll <= 80) { addNormalMaterial(bucket, rank, 1, sourceRef); return; }
   let purity = 10;
-  if (roll <= 90) purity = randInt(10, 19);
-  else if (roll <= 95) purity = randInt(20, 29);
-  else if (roll <= 98) purity = randInt(30, 39);
-  else if (roll <= 99) purity = randInt(40, 49);
+  if (roll <= 84) purity = randInt(10, 19);
+  else if (roll <= 90) purity = randInt(20, 29);
+  else if (roll <= 92) purity = randInt(30, 39);
+  else if (roll <= 94) purity = randInt(40, 49);
   else purity = 50;
   addManaStone(bucket, rank, purity, 1);
 }
@@ -9971,6 +9993,7 @@ function renderCommandPanel(runtime) {
           </div>
           <div class="gb-btn-row"><button class="gb-btn primary" id="gb-char-save">저장</button><button class="gb-btn" id="gb-char-delete">삭제</button></div>
           ${item.id ? renderEquippedStatSection(item, 'character') : ''}
+          ${item.id ? renderGateClearHistorySection(item.id) : ''}
         </div>
       </div>
       ${renderPersonalInventoryHtml('character', item.id)}
@@ -10044,6 +10067,23 @@ function renderCommandPanel(runtime) {
   }
 
   // 장착 스탯 섹션 HTML (캐릭터/페르소나 편집기 공용)
+  function renderGateClearHistorySection(charId) {
+    if (!charId) return '';
+    const history = (model.db.gateClearHistory || {})[charId] || {};
+    const sizeLabels = { small:'소형', medium:'중형', large:'대형' };
+    const entries = Object.entries(history).filter(([,v]) => v > 0);
+    if (!entries.length) return '<div class="gb-sub" style="margin-top:8px;">게이트 클리어 기록 없음</div>';
+    const rows = entries.map(([key, count]) => {
+      const [rank, size] = key.split('_');
+      return `<tr><td>${escapeHtml(rank)}급</td><td>${escapeHtml(sizeLabels[size] || size)}</td><td><input class="gb-input" style="width:60px" type="number" min="0" data-gate-clear-key="${escapeHtml(key)}" value="${count}" /></td></tr>`;
+    }).join('');
+    return `<div style="margin-top:8px;"><div class="gb-section-title" style="font-size:12px;">🏆 게이트 클리어 기록</div>
+      <table style="width:100%;font-size:11px;"><thead><tr><th>등급</th><th>크기</th><th>횟수</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="gb-btn-row" style="margin-top:4px;">
+        <button class="gb-btn" style="font-size:10px;" data-add-gate-clear="${escapeHtml(charId)}">+ 기록 추가</button>
+      </div>
+    </div>`;
+  }
   function renderEquippedStatSection(item, type) {
     const inv = getPersonalInv(type, item.id);
     if (!inv) return '';
@@ -10338,6 +10378,7 @@ function renderCommandPanel(runtime) {
           <label>메모<textarea class="gb-textarea short" id="gb-persona-note">${escapeHtml(item.note || '')}</textarea></label>
           <div class="gb-btn-row"><button class="gb-btn primary" id="gb-persona-save">저장</button><button class="gb-btn" id="gb-persona-delete">삭제</button></div>
           ${item.id ? renderEquippedStatSection(item, 'persona') : ''}
+          ${item.id ? renderGateClearHistorySection(item.id) : ''}
         </div>
       </div>
       ${renderPersonalInventoryHtml('persona', item.id)}
@@ -13650,6 +13691,35 @@ async function saveMaterialTraitFromForm() {
     on('#gb-persona-new', 'click', async () => { model.state.selected.personas = ''; await saveState(); renderApp(); });
     on('#gb-persona-save', 'click', async () => { try { await savePersonaFromForm(); } catch (e) { toast(e.message || String(e), true); } });
     on('#gb-persona-delete', 'click', async () => { try { await deleteSelected('personas'); } catch (e) { toast(e.message || String(e), true); } });
+
+    // ── 게이트 클리어 기록 추가 ──
+    on('[data-add-gate-clear]', 'click', async (ev) => {
+      const charId = ev.currentTarget.getAttribute('data-add-gate-clear') || '';
+      if (!charId) return;
+      const rankInput = prompt('등급 (E/D/C/B/A/S):');
+      if (!rankInput) return;
+      const rank = String(rankInput).toUpperCase();
+      if (!GRADE_ORDER.includes(rank)) { toast('올바른 등급을 입력해주세요 (E/D/C/B/A/S)', true); return; }
+      const sizeInput = prompt('크기 (small/medium/large):');
+      if (!sizeInput) return;
+      const size = String(sizeInput).toLowerCase();
+      if (!['small','medium','large'].includes(size)) { toast('올바른 크기를 입력해주세요 (small/medium/large)', true); return; }
+      const gateKey = `${rank}_${size}`;
+      if (!model.db.gateClearHistory) model.db.gateClearHistory = {};
+      if (!model.db.gateClearHistory[charId]) model.db.gateClearHistory[charId] = {};
+      model.db.gateClearHistory[charId][gateKey] = (model.db.gateClearHistory[charId][gateKey] || 0);
+      await saveDb(); renderApp();
+    });
+    on('[data-gate-clear-key]', 'change', async (ev) => {
+      const key = ev.currentTarget.getAttribute('data-gate-clear-key') || '';
+      const val = Math.max(0, Number(ev.currentTarget.value || 0));
+      const charId = model.state.selected.personas || model.state.selected.characters || '';
+      if (!charId || !key) return;
+      if (!model.db.gateClearHistory) model.db.gateClearHistory = {};
+      if (!model.db.gateClearHistory[charId]) model.db.gateClearHistory[charId] = {};
+      model.db.gateClearHistory[charId][key] = val;
+      await saveDb();
+    });
 
     // ── 개인 인벤토리 탭 전환 ──
     on('[data-personal-inv-tab]', 'click', async (ev) => {
