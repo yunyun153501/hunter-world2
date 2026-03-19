@@ -12618,8 +12618,12 @@ async function saveMaterialTraitFromForm() {
         if (Number(inv.gold || 0) < fee) throw new Error(`소지금 부족. (필요 ₩${fee.toLocaleString('en-US')})`);
         // 수수료 차감
         inv.gold = Math.max(0, Number(inv.gold || 0) - fee);
-        // 마정석 1개 소모
-        removeInventoryItem(stoneKey, 'one');
+        // 마정석 1개 소모 (개인 인벤에서 직접 제거)
+        const _stoneIdx = inv.items.findIndex(x => inventoryItemKey(x) === stoneKey);
+        if (_stoneIdx < 0) throw new Error('마정석을 인벤토리에서 찾을 수 없다.');
+        const _stoneItem = inv.items[_stoneIdx];
+        if (_stoneItem.stackable && Number(_stoneItem.count || 0) > 1) _stoneItem.count = Number(_stoneItem.count) - 1;
+        else inv.items.splice(_stoneIdx, 1);
         const success = Math.random() < rate;
         if (success) {
           equip.enhance = (equip.enhance || 0) + 1;
@@ -12659,9 +12663,13 @@ async function saveMaterialTraitFromForm() {
         if ((equip.infuse || 0) >= maxInfuse) throw new Error(`이미 최대 특성 수(${maxInfuse})에 도달했다.`);
         if ((equip.traits||[]).includes(traitId)) throw new Error('이미 보유한 특성이다.');
         if (Number(inv.gold || 0) < totalCost) throw new Error(`소지금 부족. (필요 ₩${totalCost.toLocaleString('en-US')})`);
-        // 비용 차감 및 재료 소모
+        // 비용 차감 및 재료 소모 (개인 인벤에서 직접 제거)
         inv.gold = Math.max(0, Number(inv.gold || 0) - totalCost);
-        removeInventoryItem(matKey, 'one');
+        const _matIdx = inv.items.findIndex(x => inventoryItemKey(x) === matKey);
+        if (_matIdx < 0) throw new Error('재료를 인벤토리에서 찾을 수 없다.');
+        const _matItem = inv.items[_matIdx];
+        if (_matItem.stackable && Number(_matItem.count || 0) > 1) _matItem.count = Number(_matItem.count) - 1;
+        else inv.items.splice(_matIdx, 1);
         // 특성 주입 (100% 성공)
         if (!Array.isArray(equip.traits)) equip.traits = [];
         equip.traits.push(traitId);
