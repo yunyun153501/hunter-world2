@@ -5874,6 +5874,7 @@ function getBuffedStat(unit, statKey) {
     if (cmd.mode === 'skill') return { type:'skill', skillId:cmd.skillId || '', target:cmd.target || null };
     if (cmd.mode === 'defend') return { type:'defend' };
     if (cmd.mode === 'wait') return { type:'wait' };
+    if (cmd.type === 'potion') return { type:'defend' }; // 물약 사용 시 방어 자세로 행동 소모
     return chooseEnemyAction(actor, allies, foes, true);
   }
 
@@ -11948,7 +11949,7 @@ async function saveMaterialTraitFromForm() {
       const listingId = ev.currentTarget.getAttribute('data-auction-bid-raremat');
       const mktPrice = Number(ev.currentTarget.getAttribute('data-auction-bid-mkt') || 0);
       const inv = getActiveInventory();
-      const startRatio = AUCTION_BUY_START_RATIO;
+      const startRatio = AUCTION_PRICE_MIN_RATIO;
       const startPrice = Math.round(mktPrice * startRatio);
       if (Number(inv.gold || 0) < startPrice) { toast('소지금 부족! 최소 시작가: ₩' + startPrice.toLocaleString('en-US')); return; }
       model.state.auctionBid = { listingId, marketPrice: mktPrice, currentRatio: startRatio, step: 0, log: [`[경매 시작] 시장가: ₩${mktPrice.toLocaleString('en-US')} | 시작가: 시장가 ${Math.round(startRatio*100)}% = ₩${startPrice.toLocaleString('en-US')}`], done: false, isRareMat: true };
