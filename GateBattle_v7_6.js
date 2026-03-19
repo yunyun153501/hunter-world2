@@ -527,6 +527,11 @@ const DURABILITY_COST = {
   accessoryAction: 0.3
 };
 
+// ── 전투 밸런스 상수 ──────────────────────────────────────────────────────────
+const SKILL_ADDITIONAL_SP_COST = 2;        // 스킬 1회 사용 시 추가 SP 고정 소모
+const HEAL_MAX_HP_BONUS_RATE = 0.07;       // 힐 시 대상 최대체력의 N% 추가 회복
+const RANK_ACCURACY_BONUS_PER_LEVEL = 0.10; // 등급 우위 시 등급차 × N% 명중률 보너스
+
 // ── 대장간 강화 시스템 ──────────────────────────────────────────────────────────
 // 강화 재료: 같은 등급 마정석 순도 80~100%
 // 순도별 성공률 (80%→70%, 85%→77.5%, 90%→85%, 95%→90%, 100%→95%)
@@ -687,7 +692,8 @@ function calcRepairFee(rank, part, lostPct) {
 const EQUIP_MAX_DURABILITY_FLOOR = 80; // minimum max durability after many repairs
 const EQUIP_MAX_DURABILITY_START = 100;
 // Helper: 내구도 표시 (소수점 2자리, ex: 98.04/99.00)
-function fmtDur(v) { return Number(v ?? 100).toFixed(2); }
+function formatDurability(v) { return Number(v ?? 100).toFixed(2); }
+function fmtDur(v) { return formatDurability(v); }
 // Helper: apply "first equip" maxDurability decay (100→99)
 function applyFirstEquip(item) {
   if (!item) return item;
@@ -2966,7 +2972,10 @@ function mergeRewardBucket(dst, src) {
 function fallbackNormalMaterialName(sourceRef, rank) {
   const speciesKey = normalizeSpeciesId(sourceRef && sourceRef.species ? sourceRef.species : '');
   const name = String((sourceRef && sourceRef.name) || '').trim();
-  // 종족별 접미사 재료 이름 테이블 (몬스터 이름 + 종족 접미사)
+  // 종족별 접미사 재료 이름 테이블
+  // 몬스터 이름(코어) + 종족 특성에 맞는 접미사로 재료 이름 생성
+  // undead: 뼈/부패 관련, ghost: 영혼/사념 관련, beast: 신체 부위,
+  // plant: 식물 부산물, slime: 점액/핵 관련, construct: 기계 부품, elemental: 원소/마력
   const speciesSuffixMap = {
     undead: ['의 뼛조각','의 부패살점','의 마력잔재','의 해골편','의 검은재'],
     ghost:  ['의 혼백편','의 영혼파편','의 사념잔흔','의 그림자조각','의 잔영막'],
@@ -5439,8 +5448,8 @@ function getBuffedStat(unit, statKey) {
     // 몬스터는 MP/SP 비용 무시 (쿨타임만 적용)
     if (unit.isMonster) return true;
     const cost = getSkillCost(unit, skill);
-    // 스킬 사용 시 추가 SP 2 소모를 고려
-    return unit.mp >= cost.mp && unit.sp >= (cost.sp + 2);
+    // 스킬 사용 시 추가 SP 소모를 고려
+    return unit.mp >= cost.mp && unit.sp >= (cost.sp + SKILL_ADDITIONAL_SP_COST);
   }
   // 몬스터 스킬 쿨타임 결정: 일반=기본공격1/스킬2, 엘리트·보스=기본공격1/스킬2/광역3
   function getMonsterSkillCooldown(unit, skill) {
@@ -5454,8 +5463,8 @@ function getBuffedStat(unit, statKey) {
     if (!unit.isMonster) {
       unit.mp = Math.max(0, unit.mp - cost.mp);
       unit.sp = Math.max(0, unit.sp - cost.sp);
-      // 스킬 1회 사용 시 추가 SP 2 소모
-      unit.sp = Math.max(0, unit.sp - 2);
+      // 스킬 1회 사용 시 추가 SP 소모
+      unit.sp = Math.max(0, unit.sp - SKILL_ADDITIONAL_SP_COST);
     }
     // 몬스터: 쿨타임 적용 (MP/SP 소모 없음)
     if (unit.isMonster) {
@@ -5515,7 +5524,7 @@ function getBuffedStat(unit, statKey) {
     if (rankIndex(attacker.rank) > rankIndex(target.rank)) {
       evasion = 0;
       const rankDiff = rankIndex(attacker.rank) - rankIndex(target.rank);
-      accuracy = Math.min(1.0, accuracy + rankDiff * 0.10);
+      accuracy = Math.min(1.0, accuracy + rankDiff * RANK_ACCURACY_BONUS_PER_LEVEL);
     }
     // 같은 등급 몬스터가 헌터 공격 시: 회피율 50% 감소
     if (attacker.isMonster && !target.isMonster && rankIndex(attacker.rank) === rankIndex(target.rank)) {
@@ -5754,8 +5763,8 @@ function getBuffedStat(unit, statKey) {
   }
 
   function applyHeal(target, heal) {
-    // 대상 최대체력 7% 추가 회복
-    const maxHpBonus = Math.floor(Number(target.maxHp || target.hp || 0) * 0.07);
+    // 대상 최대체력 비례 추가 회복
+    const maxHpBonus = Math.floor(Number(target.maxHp || target.hp || 0) * HEAL_MAX_HP_BONUS_RATE);
     let effectiveHeal = heal + maxHpBonus;
     // Bleed reduces healing received by 50%
     if (Number(target.statuses.bleedHealReduction || 0) > 0) {
@@ -9751,26 +9760,29 @@ function renderCommandPanel(runtime) {
     const aliveEnemies = getAlive(rt.enemies);
     const battleTab = model.state.battleTab || 'action';
 
+    // ── 상태이상 아이콘 헬퍼 ──
+    function getStatusIcons(statuses, includeLabels) {
+      const st = statuses || {};
+      const icons = [];
+      const map = [
+        ['poison', '🟢', '독'], ['bleed', '🔴', '출혈'], ['burn', '🟠', '화상'],
+        ['curse', '🟣', '저주'], ['stun', '💫', '기절'], ['bind', '🔗', '속박'],
+        ['sleep', '💤', '수면'], ['silence', '🔇', '침묵'], ['slow', '🐌', '둔화'],
+        ['blind', '🌑', '실명'], ['freeze', '🧊', '빙결'], ['paralyze', '⚡', '마비']
+      ];
+      map.forEach(([key, icon, label]) => {
+        if (Number(st[key] || 0) > 0) icons.push(includeLabels ? icon + label : icon);
+      });
+      return icons;
+    }
+
     // ── 몰입형 유닛 카드 (파티) ──
     function immersivePartyCard(u) {
       const hpPct = u.maxHp > 0 ? Math.round(u.hp / u.maxHp * 100) : 0;
       const mpPct = u.maxMp > 0 ? Math.round(u.mp / u.maxMp * 100) : 0;
       const spPct = u.maxSp > 0 ? Math.round(u.sp / u.maxSp * 100) : 0;
       const hpColor = hpPct > 50 ? '#22c55e' : hpPct > 25 ? '#f59e0b' : '#ef4444';
-      const statusIcons = [];
-      const st = u.statuses || {};
-      if (st.poison > 0) statusIcons.push('🟢독');
-      if (st.bleed > 0) statusIcons.push('🔴출혈');
-      if (st.burn > 0) statusIcons.push('🟠화상');
-      if (st.curse > 0) statusIcons.push('🟣저주');
-      if (st.stun > 0) statusIcons.push('💫기절');
-      if (st.bind > 0) statusIcons.push('🔗속박');
-      if (st.sleep > 0) statusIcons.push('💤수면');
-      if (st.silence > 0) statusIcons.push('🔇침묵');
-      if (st.slow > 0) statusIcons.push('🐌둔화');
-      if (st.blind > 0) statusIcons.push('🌑실명');
-      if (st.freeze > 0) statusIcons.push('🧊빙결');
-      if (st.paralyze > 0) statusIcons.push('⚡마비');
+      const statusIcons = getStatusIcons(u.statuses, true);
       return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:10px;border-left:3px solid ${hpColor};margin-bottom:4px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div><strong style="font-size:14px;">${escapeHtml(u.name)}</strong> <span class="gb-badge">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="font-size:9px;">${escapeHtml(rowLabel(u.row))}</span></div>
@@ -9790,16 +9802,7 @@ function renderCommandPanel(runtime) {
     function immersiveEnemyCard(u) {
       const hpPct = u.maxHp > 0 ? Math.round(u.hp / u.maxHp * 100) : 0;
       const kindColor = u.kind === 'Boss' ? '#dc2626' : u.kind === 'Elite' ? '#d97706' : '#64748b';
-      const statusIcons = [];
-      const st = u.statuses || {};
-      if (st.poison > 0) statusIcons.push('🟢');
-      if (st.bleed > 0) statusIcons.push('🔴');
-      if (st.burn > 0) statusIcons.push('🟠');
-      if (st.curse > 0) statusIcons.push('🟣');
-      if (st.stun > 0) statusIcons.push('💫');
-      if (st.bind > 0) statusIcons.push('🔗');
-      if (st.freeze > 0) statusIcons.push('🧊');
-      if (st.paralyze > 0) statusIcons.push('⚡');
+      const statusIcons = getStatusIcons(u.statuses, false);
       return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:8px;border-left:3px solid ${kindColor};margin-bottom:4px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div><strong style="font-size:13px;">${escapeHtml(u.name)}</strong> <span class="gb-badge">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="background:rgba(239,68,68,0.18);color:#fca5a5;font-size:9px;">${escapeHtml(u.kind||'')}</span> ${statusIcons.join('')}</div>
