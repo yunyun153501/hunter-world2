@@ -669,8 +669,10 @@ passiveMods: {
 총 ATK = Σ(무기 ATK + 강화 ATK + 중갑 ATK 패널티)
 총 PDEF = Σ(방어구 PDEF + 보조무기 PDEF + 강화 PDEF)
 총 MDEF = Σ(방어구 MDEF + 강화 MDEF)
-방어구 주스탯 보너스 = ARMOR_STAT_BY_RANK[등급].totalStatSum × (1 + statBonusMul) {E:0, D:2, C:5, B:8, A:11, S:16}
-악세서리 주스탯 보너스 = ACCESSORY_STAT_BY_RANK[등급].totalStatSum {E:0, D:1, C:3, B:5, A:8, S:12}
+방어구 주스탯 보너스 = ARMOR_STAT_BY_RANK[등급].totalStatSum × (1 + statBonusMul) + 강화단계 × enhanceStat
+악세서리 주스탯 보너스 = ACCESSORY_STAT_BY_RANK[등급].totalStatSum + 강화단계 × enhanceStat
+  예: C등급 가죽갑 +3 → 5 × 1.10 + 3 × 3 = 6 + 9 = 15 (주스탯에 +15)
+  예: D등급 악세서리 +2 → 1 + 2 × 2 = 5 (주스탯에 +5)
 ※ 무기/보조무기는 주스탯 보너스 없음
 ※ 주스탯(mainStat)은 방어구 종류별 스탯 풀에서 랜덤 선택됨
 ```

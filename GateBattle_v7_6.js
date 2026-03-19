@@ -8527,7 +8527,10 @@ function renderForgeShopHtml() {
             <div class="gb-sub">현재 특성: ${existingTraits.map(t => escapeHtml(equipTraitDisplay(t, it.rank))).join(', ') || '없음'}</div>
             <div class="gb-sub" style="color:#f97316;">최대 특성 수(${maxInfuse})에 도달했다. 더 이상 주입 불가.</div>`;
         } else {
-          const rareMats = (inv.items||[]).filter(mi =>
+          // 개인 인벤 + 공용 인벤 모두에서 희귀재료 검색
+          const sharedInv = getInventory();
+          const allItems = (sharedInv !== inv) ? [...(inv.items||[]), ...(sharedInv.items||[])] : (inv.items||[]);
+          const rareMats = allItems.filter(mi =>
             mi.category === 'rareMaterial' &&
             mi.traitId &&
             Number(mi.suggestedPrice || 0) > 0 &&
@@ -8539,12 +8542,13 @@ function renderForgeShopHtml() {
             ? `<div class="gb-sub" style="color:#ef4444;">주입 가능한 희귀재료가 없다. (traitId 있고, 기준가 있는 재료만 가능) 게이트 보상으로 획득하자.</div>`
             : rareMats.map(mi => {
                 const mkey = inventoryItemKey(mi);
+                const isShared = sharedInv !== inv && (sharedInv.items||[]).includes(mi);
                 const sp = Number(mi.suggestedPrice || 0);
                 const fee = Math.round(sp * 0.25);
                 const total = sp + fee;
                 const traitLabel = equipTraitDisplay(mi.traitId, mi.rank);
                 return `<button class="gb-list-item ${mkey===selMat?'is-active':''}" data-forge-infuse-mat="${escapeHtml(mkey)}">
-                  <strong>${escapeHtml(mi.name||mi.id)}</strong>
+                  <strong>${escapeHtml(mi.name||mi.id)}</strong>${isShared ? ' <span class="gb-badge" style="background:rgba(96,165,250,0.18);color:#93c5fd;font-size:9px;">공용</span>' : ''}
                   <span class="gb-badge">${escapeHtml(mi.rank||'E')}</span> ×${mi.count||1}
                   <div class="gb-sub">주입 특성: <strong>${escapeHtml(traitLabel)}</strong> | 재료가 ${fmt(sp)} + 수수료 ${fmt(fee)} = 총 ${fmt(total)}</div>
                 </button>`;
@@ -9836,15 +9840,16 @@ function renderCommandPanel(runtime) {
       const statusIcons = getStatusIcons(u.statuses, true);
       return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:4px 8px;border-left:3px solid ${hpColor};margin-bottom:2px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div><strong style="font-size:12px;">${escapeHtml(u.name)}</strong> <span class="gb-badge" style="font-size:8px;">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="font-size:8px;">${escapeHtml(rowLabel(u.row))}</span>${statusIcons.length ? ` ${statusIcons.join('')}` : ''}</div>
-          <div style="font-size:9px;color:#94a3b8;">${escapeHtml(u.job||'')}</div>
+          <div><strong style="font-size:14px;">${escapeHtml(u.name)}</strong> <span class="gb-badge">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="font-size:9px;">${escapeHtml(rowLabel(u.row))}</span>${statusIcons.length ? ` ${statusIcons.join('')}` : ''}</div>
+          <div style="font-size:10px;color:#94a3b8;">${escapeHtml(u.job||'')} / ${escapeHtml(u.position||'')}</div>
         </div>
-        <div style="display:flex;gap:4px;align-items:center;margin-top:2px;">
-          <div class="gb-bar-wrap" style="flex:2;"><span style="font-size:9px;color:${hpColor};">❤️${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar" style="height:6px;"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
-          <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:8px;color:#60a5fa;">💧${Math.floor(u.mp)}</span><div class="gb-bar" style="height:4px;"><div class="gb-bar-fill mp" style="width:${mpPct}%"></div></div></div>
-          <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:8px;color:#fbbf24;">⚡${Math.floor(u.sp)}</span><div class="gb-bar" style="height:4px;"><div class="gb-bar-fill sp" style="width:${spPct}%"></div></div></div>
+        ${statusIcons.length ? `<div style="margin:3px 0;font-size:10px;">${statusIcons.join(' ')}</div>` : ''}
+        <div class="gb-bar-wrap" style="margin-top:4px;"><span style="font-size:11px;color:${hpColor};">❤️ ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
+        <div style="display:flex;gap:8px;">
+          <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:10px;color:#60a5fa;">💧 ${Math.floor(u.mp)}/${Math.floor(u.maxMp)}</span><div class="gb-bar"><div class="gb-bar-fill mp" style="width:${mpPct}%"></div></div></div>
+          <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:10px;color:#fbbf24;">⚡ ${Math.floor(u.sp)}/${Math.floor(u.maxSp)}</span><div class="gb-bar"><div class="gb-bar-fill sp" style="width:${spPct}%"></div></div></div>
         </div>
-        ${u.lastAction ? `<div style="font-size:9px;color:#94a3b8;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
+        ${u.lastAction ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
       </div>`;
     }
 
@@ -9855,11 +9860,11 @@ function renderCommandPanel(runtime) {
       const statusIcons = getStatusIcons(u.statuses, false);
       return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:4px 8px;border-left:3px solid ${kindColor};margin-bottom:2px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div><strong style="font-size:11px;">${escapeHtml(u.name)}</strong> <span class="gb-badge" style="font-size:8px;">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="background:rgba(239,68,68,0.18);color:#fca5a5;font-size:8px;">${escapeHtml(u.kind||'')}</span>${statusIcons.length ? ` ${statusIcons.join('')}` : ''}</div>
-          <span style="font-size:9px;color:#94a3b8;">${escapeHtml(rowLabel(u.row))}</span>
+          <div><strong style="font-size:13px;">${escapeHtml(u.name)}</strong> <span class="gb-badge">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="background:rgba(239,68,68,0.18);color:#fca5a5;font-size:9px;">${escapeHtml(u.kind||'')}</span>${statusIcons.length ? ` ${statusIcons.join('')}` : ''}</div>
+          <span style="font-size:10px;color:#94a3b8;">${escapeHtml(rowLabel(u.row))}</span>
         </div>
-        <div class="gb-bar-wrap" style="margin-top:2px;"><span style="font-size:9px;">HP ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar" style="height:6px;"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
-        ${u.lastAction ? `<div style="font-size:9px;color:#94a3b8;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
+        <div class="gb-bar-wrap" style="margin-top:4px;"><span style="font-size:11px;">HP ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
+        ${u.lastAction ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
       </div>`;
     }
 
@@ -10091,11 +10096,11 @@ function renderCommandPanel(runtime) {
         const armorData = ARMOR_STAT_BY_RANK[eq.rank || 'E'] || ARMOR_STAT_BY_RANK.E;
         const baseStat = armorData.totalStatSum || 0;
         const subBonusMul = (eq.armorSubtype && ARMOR_SUBTYPES[eq.armorSubtype]) ? ARMOR_SUBTYPES[eq.armorSubtype].statBonusMul : 0;
-        bonus[eq.mainStat] += Math.round(baseStat * (1 + subBonusMul));
+        bonus[eq.mainStat] += Math.round(baseStat * (1 + subBonusMul)) + (eq.enhance || 0) * (armorData.enhanceStat || 0);
       }
       if (part === 'accessory' && eq.mainStat && bonus[eq.mainStat] !== undefined) {
         const accData = ACCESSORY_STAT_BY_RANK[eq.rank || 'E'] || ACCESSORY_STAT_BY_RANK.E;
-        bonus[eq.mainStat] += accData.totalStatSum || 0;
+        bonus[eq.mainStat] += (accData.totalStatSum || 0) + (eq.enhance || 0) * (accData.enhanceStat || 0);
       }
     });
     return bonus;
@@ -12850,7 +12855,16 @@ async function saveMaterialTraitFromForm() {
         const totalCost = Number(btn.getAttribute('data-forge-infuse-fee') || '0');
         const traitId = btn.getAttribute('data-forge-trait-id') || '';
         const equip = inv.items.find(x => inventoryItemKey(x) === equipKey);
-        const mat = inv.items.find(x => inventoryItemKey(x) === matKey);
+        // 희귀재료는 개인 인벤 + 공용 인벤 모두에서 검색
+        let mat = inv.items.find(x => inventoryItemKey(x) === matKey);
+        let matInv = inv;
+        if (!mat) {
+          const sharedInv = getInventory();
+          if (sharedInv !== inv) {
+            mat = (sharedInv.items||[]).find(x => inventoryItemKey(x) === matKey);
+            if (mat) matInv = sharedInv;
+          }
+        }
         if (!equip) throw new Error('특성주입할 장비를 찾을 수 없다.');
         if (!mat) throw new Error('희귀재료를 찾을 수 없다.');
         if (!traitId) throw new Error('주입할 특성 정보가 없다.');
@@ -12858,13 +12872,13 @@ async function saveMaterialTraitFromForm() {
         if ((equip.infuse || 0) >= maxInfuse) throw new Error(`이미 최대 특성 수(${maxInfuse})에 도달했다.`);
         if ((equip.traits||[]).includes(traitId)) throw new Error('이미 보유한 특성이다.');
         if (Number(inv.gold || 0) < totalCost) throw new Error(`소지금 부족. (필요 ₩${totalCost.toLocaleString('en-US')})`);
-        // 비용 차감 및 재료 소모 (개인 인벤에서 직접 제거)
+        // 비용 차감 및 재료 소모 (해당 인벤에서 직접 제거)
         inv.gold = Math.max(0, Number(inv.gold || 0) - totalCost);
-        const _matIdx = inv.items.findIndex(x => inventoryItemKey(x) === matKey);
+        const _matIdx = matInv.items.findIndex(x => inventoryItemKey(x) === matKey);
         if (_matIdx < 0) throw new Error('재료를 인벤토리에서 찾을 수 없다.');
-        const _matItem = inv.items[_matIdx];
+        const _matItem = matInv.items[_matIdx];
         if (_matItem.stackable && Number(_matItem.count || 0) > 1) _matItem.count = Number(_matItem.count) - 1;
-        else inv.items.splice(_matIdx, 1);
+        else matInv.items.splice(_matIdx, 1);
         // 특성 주입 (100% 성공)
         if (!Array.isArray(equip.traits)) equip.traits = [];
         equip.traits.push(traitId);
