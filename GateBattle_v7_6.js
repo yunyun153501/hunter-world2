@@ -6473,7 +6473,7 @@ function renderTeamPanel() {
   const allChars = model.db.characters || [];
   const allPersonas = model.db.personas || [];
   const teamView = model.state.teamView || 'members';
-  const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${Math.round(n/10000)}만` : n.toLocaleString('en-US');
+  const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
 
   // 팀에 없는 캐릭터 목록 (추가 가능)
   const inTeamIds = new Set(team.map(m => m.charId));
@@ -6922,7 +6922,7 @@ function renderAuctionHouseHtml() {
   const inv = getActiveInventory();
   const gold = Number(inv.gold || 0);
   const tab = model.state.auctionTab || 'browse';
-  const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${Math.round(n/10000)}만원` : `${n.toLocaleString('en-US')}원`;
+  const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`;
 
   const tabBar = `<div class="gb-btn-row">
     <button class="gb-btn${tab==='browse'?' primary':''}" data-auction-tab="browse">🔍 구매</button>
@@ -7753,7 +7753,7 @@ function renderEquipShopHtml() {
         const canAfford = price === 0 || gold >= price;
         const traitTags = (e.traits||[]).map(t => `<span class="gb-badge">${escapeHtml(equipTraitDisplay(t, e.rank))}</span>`).join(' ');
         const atkLine = e.part==='weapon' ? `ATK+${e.atk||WEAPON_BASE_ATK[e.rank]||0}` : e.part==='subweapon' ? (Number(e.pdef||0)>0 ? `물리방어+${e.pdef} / ATK${-Math.ceil(e.pdef/2)}` : '특수효과 전용') : e.part==='armor' ? `${e.armorSubtype && ARMOR_SUBTYPES[e.armorSubtype] ? '['+ARMOR_SUBTYPES[e.armorSubtype].label+'] ' : ''}물리방어+${e.pdef||0} / 마법방어+${e.mdef||0}${e.resistType?` / ${escapeHtml(EQUIP_TRAIT_LABELS[''+e.resistType]||e.resistType)} 저항 ${e.resistPct||0}%`:''}` : e.part==='accessory' ? (e.traits&&e.traits.length ? `특성: ${(e.traits||[]).map(t=>equipTraitDisplay(t,e.rank)).join(', ')}` : '특성 없음') : '';
-        const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${Math.round(n/10000)}만` : n.toLocaleString('en-US');
+        const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
         return `<div class="gb-unit">
           <div class="gb-unit-top">
             <div>
@@ -7936,7 +7936,7 @@ function renderHunterMarketHtml() {
       const enhancedBase = it.enhance > 0 ? calcEquipEnhancedPrice(basePrice, it.enhance, it.rank||'E') : basePrice;
       const conditionMul = calcUsedEquipConditionMul(dur, maxDur);
       const sellPrice = Math.round(enhancedBase * conditionMul);
-      const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${Math.round(n/10000)}만` : n.toLocaleString('en-US');
+      const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
       const durColor = dur < 30 ? '#ef4444' : dur < 60 ? '#f97316' : '#22c55e';
       const statParts = [];
       if (Number(it.atk||0) > 0)  statParts.push(`⚔️ ATK +${it.atk}`);
@@ -7983,7 +7983,7 @@ function renderHunterMarketHtml() {
     const rarityOk = !it.rarity || (it.rarity !== 'Unique' && it.rarity !== 'Legendary');
     return maxDur >= 80 && maxDur < 100 && (!selRank || (it.rank||'E') === selRank) && (!selPart || it.part === selPart) && rarityOk;
   });
-  const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${Math.round(n/10000)}만` : n.toLocaleString('en-US');
+  const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
   // 장비 상세 툴팁 헬퍼
   function hmItemTooltip(e) {
     const lines = [`${e.name}${e.rank ? ` [${e.rank}급]` : ''}`, `부위: ${EQUIP_PART_LABELS[e.part||'weapon']||e.part||''}  |  내구도: ${fmtDur(e.durability)}/${fmtDur(e.maxDurability)}`];
@@ -8121,7 +8121,7 @@ function renderBlackMarketHtml() {
     const enhPrice = it.enhance > 0 ? calcEquipEnhancedPrice(mktPrice, it.enhance, it.rank||'E') : mktPrice;
     const pDetect = (1 - Math.pow(1 - BM_DETECT_RATE, 1)) * 100;
     const fine = Math.floor(enhPrice * BM_FINE_RATE);
-    const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${Math.round(n/10000)}만` : n.toLocaleString('en-US');
+    const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
     return `<div class="gb-unit">
       <div class="gb-unit-top">
         <div>
@@ -8176,7 +8176,7 @@ function renderRepairShopHtml() {
       const part = it.part || 'weapon';
       const lostToMax = maxDur - dur;
       const feeToFull = calcRepairFee(rank, part, lostToMax);
-      const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${Math.round(n/10000)}만원` : `${n.toLocaleString('en-US')}원`;
+      const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`;
       const canAfford = gold >= feeToFull;
       const maxDurAfter = Math.max(EQUIP_MAX_DURABILITY_FLOOR, maxDur - 1);
       detailHtml = `
@@ -8229,7 +8229,7 @@ function renderForgeShopHtml() {
   const ownedEquip = (inv.items||[]).filter(it => it.category === 'equipment');
   const selKey = model.state.shopForgeSel || '';
   const forgeTab = model.state.shopForgeTab || 'enhance';
-  const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${Math.round(n/10000)}만원` : `${n.toLocaleString('en-US')}원`;
+  const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`;
 
   const tabBar = `<div class="gb-btn-row">
     <button class="gb-btn${forgeTab==='enhance'?' primary':''}" data-forge-tab="enhance">⚒️ 강화</button>
@@ -9034,7 +9034,7 @@ function renderGoldTransferPanel() {
   const sharedGold = Number(inv.gold || 0);
   const allChars = model.db.characters || [];
   const allPersonas = model.db.personas || [];
-  const fmtG = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${Math.round(n/10000)}만원` : `${n.toLocaleString('en-US')}원`;
+  const fmtG = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`;
 
   // 파티에 편성된 캐릭터만 표시
   const partySlotIds = ((model.db.battleSetup || {}).partySlots || []).filter(Boolean);
@@ -9268,14 +9268,29 @@ function renderPartyView() {
       </div>`;
     }).join('');
 
-    // 장비 요약
+    // 장비 상세 요약
     const pInv = getPersonalInv(allChars.find(c=>c.id===u.id) ? 'character' : 'persona', u.id);
     const eqSummary = pInv ? EQUIP_PARTS.map(p => {
       const eq = pInv.equipped[p];
-      return eq ? `${EQUIP_PART_LABELS[p]}: <span style="${rarityStyle(eq.rarity)}">${escapeHtml(eq.name||eq.id)}${eq.enhance>0?` +${eq.enhance}`:''}</span>` : null;
-    }).filter(Boolean).join(' / ') || '장착 장비 없음' : '장비정보 없음';
+      if (!eq) return null;
+      const enhTxt = eq.enhance > 0 ? ` +${eq.enhance}` : '';
+      const dur = Number(eq.durability ?? 100);
+      const maxDur = Number(eq.maxDurability ?? 100);
+      const atkVal = Number(eq.atk || 0);
+      const pdefVal = Number(eq.pdef || 0);
+      const mdefVal = Number(eq.mdef || 0);
+      const statParts = [];
+      if (atkVal) statParts.push(`ATK:${atkVal}`);
+      if (pdefVal) statParts.push(`물방:${pdefVal}`);
+      if (mdefVal) statParts.push(`마방:${mdefVal}`);
+      const maxEnhance = EQUIP_MAX_ENHANCE[p] || 0;
+      const maxInfuse = eq.maxInfuse ?? (typeof EQUIP_MAX_INFUSE !== 'undefined' ? EQUIP_MAX_INFUSE[p] : 1) ?? 1;
+      const curInfuse = eq.infuse || 0;
+      const traitTxt = (eq.traits||[]).length ? (eq.traits||[]).map(t=>equipTraitDisplay(t, eq.rank)).join(', ') : '';
+      return `<div style="margin:2px 0;font-size:11px;">${EQUIP_PART_LABELS[p]}: <span style="${rarityStyle(eq.rarity)}">${escapeHtml(eq.name||eq.id)}${enhTxt}</span> <span class="gb-sub">${escapeHtml(eq.rank||'E')}등급</span>${statParts.length ? ` <span style="color:#94a3b8;">[${statParts.join('/')}]</span>` : ''} <span class="gb-sub">강화 ${eq.enhance||0}/${maxEnhance} | 주입 ${curInfuse}/${maxInfuse} | 내구 ${Math.floor(dur)}/${Math.floor(maxDur)}</span>${traitTxt ? ` <span style="color:#a78bfa;font-size:10px;">(${escapeHtml(traitTxt)})</span>` : ''}</div>`;
+    }).filter(Boolean).join('') || '장착 장비 없음' : '장비정보 없음';
     const personalGold = Number(u.gold || 0);
-    const fmtG = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${Math.round(n/10000)}만` : n.toLocaleString('en-US');
+    const fmtG = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
 
     return `<div class="gb-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -9300,7 +9315,7 @@ function renderPartyView() {
       ${freePoints > 0 ? `<div style="color:#34d399;font-weight:600;font-size:13px;margin:4px 0;">🌟 배분 가능 스탯포인트: ${freePoints}</div>` : ''}
       <div class="gb-sub" style="font-size:11px;margin:2px 0;">스탯 상한: ${statCap} (${u.rank || 'E'}등급)</div>
       <div style="margin-top:4px;">${statRows}</div>
-      <div class="gb-sub" style="margin-top:4px;font-size:11px;">⚔️ ${eqSummary}</div>
+      <div style="margin-top:4px;">⚔️ ${eqSummary}</div>
       <div class="gb-sub" style="margin-top:4px;">스킬: ${(u.skills || []).map(s => {
         const sk = getAllSkillMap()[s];
         if (!sk) return escapeHtml(s);
@@ -9334,7 +9349,7 @@ function renderPartyView() {
   const partyGoldSection = (() => {
     const inv = getInventory();
     const sharedGold = Number(inv.gold || 0);
-    const fmtGG = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${Math.round(n/10000)}만원` : `${n.toLocaleString('en-US')}원`;
+    const fmtGG = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`;
     const partyMembers = partySlots.filter(s => s.unit).map(s => s.unit);
     if (!partyMembers.length) return '';
     const rows = partyMembers.map(m => {
@@ -9700,6 +9715,20 @@ function renderCommandPanel(runtime) {
           <div style="font-size:11px;color:#94a3b8;">피해 ${rt.totals.partyDamage} / 받은 ${rt.totals.enemyDamage}</div>
         </div>
 
+        ${(() => {
+          const run = activeGateRun ? activeGateRun() : null;
+          if (!run || !run.stages) return '';
+          const total = run.stages.length;
+          const current = Math.min(run.currentStage + 1, total);
+          const tokens = (run.stages || []).map((stage, idx) => {
+            const isCurrent = !run.sideRoomActive && idx === run.currentStage;
+            const room = stage.kind === 'room' ? stage.room : ((stage.options || []).find(o => o.key === stage.chosen) || {}).room;
+            const text = room && (stage.cleared || room.discovered || isCurrent) ? roomDisplayLabel(room, true) : '?';
+            return `<span class="gb-badge"${isCurrent ? ' style="background:#1d4ed8;"' : ''}>${escapeHtml(text)}</span>`;
+          }).join(' → ');
+          return `<div style="padding:6px 10px;margin-bottom:6px;background:rgba(15,23,42,0.6);border-radius:8px;border:1px solid rgba(148,163,184,0.1);font-size:11px;"><span style="color:#60a5fa;font-weight:600;">노드 진행:</span> ${tokens} <span class="gb-sub" style="margin-left:6px;">(${current}/${total})</span></div>`;
+        })()}
+
         ${rt.showPotionPanel ? renderBattlePotionPanel(rt) : ''}
 
         <!-- 유닛 패널: 아군 vs 적 -->
@@ -9881,7 +9910,21 @@ function renderCommandPanel(runtime) {
     const equipNames = EQUIP_PARTS.map(p => {
       const eq = inv.equipped[p];
       if (!eq) return null;
-      return `${EQUIP_PART_LABELS[p]}: <strong style="${rarityStyle(eq.rarity)}">${escapeHtml(eq.name||eq.id)}</strong>${eq.enhance>0?` +${eq.enhance}`:''}${eq.rarity && eq.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(eq.rarity)};color:#000;font-size:9px;">${escapeHtml(eq.rarity)}</span>` : ''}`;
+      const enhTxt = eq.enhance > 0 ? ` +${eq.enhance}` : '';
+      const dur = Number(eq.durability ?? 100);
+      const maxDur = Number(eq.maxDurability ?? 100);
+      const atkVal = Number(eq.atk || 0);
+      const pdefVal = Number(eq.pdef || 0);
+      const mdefVal = Number(eq.mdef || 0);
+      const statParts = [];
+      if (atkVal) statParts.push(`ATK:${atkVal}`);
+      if (pdefVal) statParts.push(`물방:${pdefVal}`);
+      if (mdefVal) statParts.push(`마방:${mdefVal}`);
+      const maxEnhance = EQUIP_MAX_ENHANCE[p] || 0;
+      const maxInfuse = eq.maxInfuse ?? (typeof EQUIP_MAX_INFUSE !== 'undefined' ? EQUIP_MAX_INFUSE[p] : 1) ?? 1;
+      const curInfuse = eq.infuse || 0;
+      const traitTxt = (eq.traits||[]).length ? (eq.traits||[]).map(t=>equipTraitDisplay(t, eq.rank)).join(', ') : '';
+      return `<div style="margin:2px 0;font-size:11px;">${EQUIP_PART_LABELS[p]}: <strong style="${rarityStyle(eq.rarity)}">${escapeHtml(eq.name||eq.id)}${enhTxt}</strong>${eq.rarity && eq.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(eq.rarity)};color:#000;font-size:9px;">${escapeHtml(eq.rarity)}</span>` : ''} <span class="gb-sub">${escapeHtml(eq.rank||'E')}등급</span>${statParts.length ? ` <span style="color:#94a3b8;">[${statParts.join('/')}]</span>` : ''} <span class="gb-sub">강화 ${eq.enhance||0}/${maxEnhance} | 주입 ${curInfuse}/${maxInfuse} | 내구 ${Math.floor(dur)}/${Math.floor(maxDur)}</span>${traitTxt ? ` <span style="color:#a78bfa;font-size:10px;">(${escapeHtml(traitTxt)})</span>` : ''}</div>`;
     }).filter(Boolean);
 
     // 기본값: 스탯 기반 (장비 제외) — PDEF/MDEF는 기본 0, ATK는 스탯 보너스만
@@ -9934,7 +9977,7 @@ function renderCommandPanel(runtime) {
       <button class="gb-btn${activeTab==='equip'?' primary':''}" data-personal-inv-tab="${type}:equip">🛡️ 장비창</button>
       <button class="gb-btn${activeTab==='items'?' primary':''}" data-personal-inv-tab="${type}:items">🎒 인벤토리</button>
     </div>`;
-    const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${Math.round(n/10000)}만` : n.toLocaleString('en-US');
+    const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
     if (activeTab === 'equip') {
       // Equipment slots (weapon/subweapon/armor/accessory) 
       const slotHtml = EQUIP_PARTS.map(part => {
@@ -10452,7 +10495,7 @@ function renderCommandPanel(runtime) {
     const rangeText = (() => {
       const r = EQUIP_PRICE_RANGE[rank];
       if (!r) return '';
-      const fmt = n => n >= 1e8 ? (n/1e8).toFixed(1)+'억' : n >= 10000 ? Math.round(n/10000)+'만' : n+'원';
+      const fmt = n => n >= 1e8 ? (n/1e8).toFixed(1)+'억' : n >= 10000 ? (n/10000).toFixed(1)+'만' : n+'원';
       return `${fmt(r[0])} ~ ${fmt(r[1])}`;
     })();
 
@@ -11797,7 +11840,7 @@ async function saveMaterialTraitFromForm() {
         listArr.splice(idx, 1);
         model.state.auctionBid = null;
         await saveDb(); await saveState(); renderApp();
-        const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${Math.round(n/10000)}만원` : `${n.toLocaleString('en-US')}원`;
+        const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`;
         toast(`🏷️ ${buyItem.name} 낙찰! (-${fmt(bidState.finalPrice)})`);
       } catch(e) { toast(e.message || String(e), true); }
     });
@@ -11848,7 +11891,7 @@ async function saveMaterialTraitFromForm() {
         inv.gold = Number(inv.gold||0) + sellState.finalPrice;
         model.state.auctionSell = null;
         await saveDb(); await saveState(); renderApp();
-        const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${Math.round(n/10000)}만원` : `${n.toLocaleString('en-US')}원`;
+        const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`;
         toast(`💰 ${escapeHtml(sellState.itemName)} 판매 완료! +${fmt(sellState.finalPrice)}`);
       } catch(e) { toast(e.message || String(e), true); }
     });
@@ -11905,7 +11948,9 @@ async function saveMaterialTraitFromForm() {
         const gs = gateStateSafe();
         if (!gs.run) throw new Error('정산할 게이트 공략이 없다.');
         const st = model.state;
-        const dateVal = (fieldValue('#gb-settle-date') || st.settleDate || '').trim();
+        const gdFallback = model.db.gameDate || { year:2026, month:1, day:1 };
+        const gameDateStr = `${gdFallback.year}-${String(gdFallback.month).padStart(2,'0')}-${String(gdFallback.day).padStart(2,'0')}`;
+        const dateVal = (fieldValue('#gb-settle-date') || st.settleDate || gameDateStr).trim();
         const result = buildSettlementSheet(gs.run, st);
         const runTitle = gs.run.title || '게이트';
         const goldGain = result ? result.final : 0;
@@ -11999,7 +12044,9 @@ async function saveMaterialTraitFromForm() {
         const inv = getInventory();
         const sel = model.state.settleItemSel || {};
         const isGuild = (model.state.settleType||'association') === 'guild';
-        const dateVal = (fieldValue('#gb-settle-date') || model.state.settleDate || '').trim();
+        const gdFallback = model.db.gameDate || { year:2026, month:1, day:1 };
+        const gameDateStr = `${gdFallback.year}-${String(gdFallback.month).padStart(2,'0')}-${String(gdFallback.day).padStart(2,'0')}`;
+        const dateVal = (fieldValue('#gb-settle-date') || model.state.settleDate || gameDateStr).trim();
         const fmtS = n => { const v = Math.floor((n||0) / 10) * 10; return v >= 1e8 ? `${(v/1e8).toFixed(2)}억원` : `${v.toLocaleString('en-US')}원`; };
         let total = 0;
         const toRemove = [];
@@ -12031,7 +12078,9 @@ async function saveMaterialTraitFromForm() {
         const inv = getInventory();
         const sel = model.state.settleItemSel || {};
         const isGuild = (model.state.settleType||'association') === 'guild';
-        const dateVal = (fieldValue('#gb-settle-date') || model.state.settleDate || '').trim();
+        const gdFallback = model.db.gameDate || { year:2026, month:1, day:1 };
+        const gameDateStr = `${gdFallback.year}-${String(gdFallback.month).padStart(2,'0')}-${String(gdFallback.day).padStart(2,'0')}`;
+        const dateVal = (fieldValue('#gb-settle-date') || model.state.settleDate || gameDateStr).trim();
         const team = Array.isArray(model.db.team) ? model.db.team : [];
         const totalRatio = team.reduce((s, m) => s + Number(m.ratio||10), 0);
         if (team.length === 0) { toast('팀이 없다. 허브에서 팀을 구성하라.', true); return; }
@@ -12481,6 +12530,12 @@ async function saveMaterialTraitFromForm() {
         const success = Math.random() < rate;
         if (success) {
           equip.enhance = (equip.enhance || 0) + 1;
+          // 무기 ATK 재계산
+          if (equip.part === 'weapon') {
+            const baseAtk = WEAPON_BASE_ATK[equip.rank || btnRank] || WEAPON_BASE_ATK.E;
+            const atkPerEnh = WEAPON_ENHANCE_ATK[equip.rank || btnRank] || 1;
+            equip.atk = baseAtk + equip.enhance * atkPerEnh;
+          }
           const baseP = Number(equip.price || calcEquipBasePrice(equip.rank||'E', equip.part||'weapon'));
           const newMarketPrice = calcEquipEnhancedPrice(baseP, equip.enhance, equip.rank || btnRank);
           const newUsedPrice = calcForgeEnhancedUsedPrice(baseP, equip.enhance, equip.part, equip.rank || btnRank);
