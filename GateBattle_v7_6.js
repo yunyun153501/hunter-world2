@@ -631,14 +631,16 @@ const EQUIP_TRAIT_EFFECT_PCT = {
   E: 3, D: 5, C: 8, B: 12, A: 18, S: 25
 };
 // Helper: get trait display string with % effect for a given rank.
-// Uses per-scale values from DEFAULT_RARE_MATERIAL_PACK when available (snake_case IDs),
+// Uses per-scale values from rareMaterialPack (DB or default) when available (snake_case IDs),
 // falls back to flat EQUIP_TRAIT_EFFECT_PCT for legacy camelCase traits.
 function equipTraitDisplay(traitId, rank) {
   const label = EQUIP_TRAIT_LABELS[traitId] || traitId;
-  // Try pack scale values (snake_case IDs)
-  const traitDef = (DEFAULT_RARE_MATERIAL_PACK.traits || []).find(t => t.id === traitId);
+  // Try pack scale values — DB에 있으면 DB 사용, 없으면 DEFAULT 사용
+  const pack = (model && model.db && model.db.rareMaterialPack && model.db.rareMaterialPack.traits && model.db.rareMaterialPack.traits.length > 0)
+    ? model.db.rareMaterialPack : DEFAULT_RARE_MATERIAL_PACK;
+  const traitDef = (pack.traits || []).find(t => t.id === traitId);
   if (traitDef && traitDef.scale) {
-    const scaleTable = (DEFAULT_RARE_MATERIAL_PACK.valueScales || {})[traitDef.scale];
+    const scaleTable = (pack.valueScales || {})[traitDef.scale];
     const val = scaleTable && scaleTable[String(rank || 'E').toUpperCase()];
     if (val != null) {
       // defenseFlat은 고정값이므로 % 대신 + 표시
@@ -950,458 +952,9 @@ function buildConvFoodItem(foodDef, count=1) {
   return { id: foodDef.id, name: foodDef.name, category:'convFood', rank:'', count:Math.max(1,Number(count||1)), unitWeightG:foodDef.weightG||300, stackable:true, stackKey:`convFood:${foodDef.id}`, note: foodDef.note||'' };
 }
 
-const DEFAULT_RARE_MATERIAL_PACK = {
-  "version": 3,
-  "note": "GateBattle v7.8 — unified trait system (58 traits), statFlat scale added for 5 stat traits, SPECIAL_MATERIAL_EFFECTS auto-derived from EQUIP_TRAIT_TYPES.",
-  "valueScales": {
-    "percentSmall": {
-      "E": 1,
-      "D": 2,
-      "C": 3,
-      "B": 5,
-      "A": 7,
-      "S": 10
-    },
-    "statusPercent": {
-      "E": 2,
-      "D": 4,
-      "C": 6,
-      "B": 8,
-      "A": 10,
-      "S": 12
-    },
-    "critChance": {
-      "E": 1,
-      "D": 2,
-      "C": 3,
-      "B": 4,
-      "A": 5,
-      "S": 7
-    },
-    "critDamage": {
-      "E": 5,
-      "D": 10,
-      "C": 15,
-      "B": 20,
-      "A": 25,
-      "S": 35
-    },
-    "threatPercent": {
-      "E": 10,
-      "D": 20,
-      "C": 30,
-      "B": 40,
-      "A": 50,
-      "S": 60
-    },
-    "defenseFlat": {
-      "E": 3,
-      "D": 8,
-      "C": 20,
-      "B": 35,
-      "A": 50,
-      "S": 70
-    },
-    "statFlat": {
-      "E": 2,
-      "D": 4,
-      "C": 6,
-      "B": 8,
-      "A": 11,
-      "S": 14
-    }
-  },
-  "traits": [
-    {
-      "id": "physical_damage",
-      "name": "물리 피해 증가",
-      "category": "offense",
-      "scale": "percentSmall"
-    },
-    {
-      "id": "magic_damage",
-      "name": "마법 피해 증가",
-      "category": "offense",
-      "scale": "percentSmall"
-    },
-    {
-      "id": "fire_damage",
-      "name": "불 속성 피해 증가",
-      "category": "offense",
-      "scale": "statusPercent",
-      "element": "fire"
-    },
-    {
-      "id": "water_damage",
-      "name": "물 속성 피해 증가",
-      "category": "offense",
-      "scale": "statusPercent",
-      "element": "water"
-    },
-    {
-      "id": "ice_damage",
-      "name": "얼음 속성 피해 증가",
-      "category": "offense",
-      "scale": "statusPercent",
-      "element": "ice"
-    },
-    {
-      "id": "earth_damage",
-      "name": "대지 속성 피해 증가",
-      "category": "offense",
-      "scale": "statusPercent",
-      "element": "earth"
-    },
-    {
-      "id": "wind_damage",
-      "name": "바람 속성 피해 증가",
-      "category": "offense",
-      "scale": "statusPercent",
-      "element": "wind"
-    },
-    {
-      "id": "lightning_damage",
-      "name": "전기 속성 피해 증가",
-      "category": "offense",
-      "scale": "statusPercent",
-      "element": "lightning"
-    },
-    {
-      "id": "light_damage",
-      "name": "빛 속성 피해 증가",
-      "category": "offense",
-      "scale": "statusPercent",
-      "element": "light"
-    },
-    {
-      "id": "dark_damage",
-      "name": "어둠 속성 피해 증가",
-      "category": "offense",
-      "scale": "statusPercent",
-      "element": "dark"
-    },
-    {
-      "id": "crit_chance",
-      "name": "치명타 확률 증가",
-      "category": "offense",
-      "scale": "critChance"
-    },
-    {
-      "id": "crit_damage",
-      "name": "치명타 피해 증가",
-      "category": "offense",
-      "scale": "critDamage"
-    },
-    {
-      "id": "physical_defense",
-      "name": "물리피해감소 증가",
-      "category": "defense",
-      "scale": "percentSmall"
-    },
-    {
-      "id": "magic_defense",
-      "name": "마법피해감소 증가",
-      "category": "defense",
-      "scale": "percentSmall"
-    },
-    {
-      "id": "pdef_flat",
-      "name": "물리방어력 증가",
-      "category": "defense",
-      "scale": "defenseFlat"
-    },
-    {
-      "id": "mdef_flat",
-      "name": "마법방어력 증가",
-      "category": "defense",
-      "scale": "defenseFlat"
-    },
-    {
-      "id": "fire_resist",
-      "name": "불 속성 저항",
-      "category": "defense",
-      "scale": "statusPercent",
-      "element": "fire"
-    },
-    {
-      "id": "water_resist",
-      "name": "물 속성 저항",
-      "category": "defense",
-      "scale": "statusPercent",
-      "element": "water"
-    },
-    {
-      "id": "ice_resist",
-      "name": "얼음 속성 저항",
-      "category": "defense",
-      "scale": "statusPercent",
-      "element": "ice"
-    },
-    {
-      "id": "earth_resist",
-      "name": "대지 속성 저항",
-      "category": "defense",
-      "scale": "statusPercent",
-      "element": "earth"
-    },
-    {
-      "id": "wind_resist",
-      "name": "바람 속성 저항",
-      "category": "defense",
-      "scale": "statusPercent",
-      "element": "wind"
-    },
-    {
-      "id": "lightning_resist",
-      "name": "전기 속성 저항",
-      "category": "defense",
-      "scale": "statusPercent",
-      "element": "lightning"
-    },
-    {
-      "id": "light_resist",
-      "name": "빛 속성 저항",
-      "category": "defense",
-      "scale": "statusPercent",
-      "element": "light"
-    },
-    {
-      "id": "dark_resist",
-      "name": "어둠 속성 저항",
-      "category": "defense",
-      "scale": "statusPercent",
-      "element": "dark"
-    },
-    {
-      "id": "poison_apply",
-      "name": "독 부여 확률 증가",
-      "category": "status_apply",
-      "scale": "statusPercent",
-      "status": "poison"
-    },
-    {
-      "id": "bleed_apply",
-      "name": "출혈 부여 확률 증가",
-      "category": "status_apply",
-      "scale": "statusPercent",
-      "status": "bleed"
-    },
-    {
-      "id": "burn_apply",
-      "name": "화상 부여 확률 증가",
-      "category": "status_apply",
-      "scale": "statusPercent",
-      "status": "burn"
-    },
-    {
-      "id": "curse_apply",
-      "name": "저주 부여 확률 증가",
-      "category": "status_apply",
-      "scale": "statusPercent",
-      "status": "curse"
-    },
-    {
-      "id": "poison_resist",
-      "name": "독 저항",
-      "category": "status_resist",
-      "scale": "statusPercent",
-      "status": "poison"
-    },
-    {
-      "id": "bleed_resist",
-      "name": "출혈 저항",
-      "category": "status_resist",
-      "scale": "statusPercent",
-      "status": "bleed"
-    },
-    {
-      "id": "burn_resist",
-      "name": "화상 저항",
-      "category": "status_resist",
-      "scale": "statusPercent",
-      "status": "burn"
-    },
-    {
-      "id": "curse_resist",
-      "name": "저주 저항",
-      "category": "status_resist",
-      "scale": "statusPercent",
-      "status": "curse"
-    },
-    {
-      "id": "stun_apply",
-      "name": "기절 부여 확률 증가",
-      "category": "status_apply",
-      "scale": "statusPercent",
-      "status": "stun"
-    },
-    {
-      "id": "bind_apply",
-      "name": "속박 부여 확률 증가",
-      "category": "status_apply",
-      "scale": "statusPercent",
-      "status": "bind"
-    },
-    {
-      "id": "sleep_apply",
-      "name": "수면 부여 확률 증가",
-      "category": "status_apply",
-      "scale": "statusPercent",
-      "status": "sleep"
-    },
-    {
-      "id": "silence_apply",
-      "name": "침묵 부여 확률 증가",
-      "category": "status_apply",
-      "scale": "statusPercent",
-      "status": "silence"
-    },
-    {
-      "id": "slow_apply",
-      "name": "둔화 부여 확률 증가",
-      "category": "status_apply",
-      "scale": "statusPercent",
-      "status": "slow"
-    },
-    {
-      "id": "blind_apply",
-      "name": "실명 부여 확률 증가",
-      "category": "status_apply",
-      "scale": "statusPercent",
-      "status": "blind"
-    },
-    {
-      "id": "freeze_apply",
-      "name": "빙결 부여 확률 증가",
-      "category": "status_apply",
-      "scale": "statusPercent",
-      "status": "freeze"
-    },
-    {
-      "id": "paralyze_apply",
-      "name": "마비 부여 확률 증가",
-      "category": "status_apply",
-      "scale": "statusPercent",
-      "status": "paralyze"
-    },
-    {
-      "id": "stun_resist",
-      "name": "기절 저항",
-      "category": "status_resist",
-      "scale": "statusPercent",
-      "status": "stun"
-    },
-    {
-      "id": "bind_resist",
-      "name": "속박 저항",
-      "category": "status_resist",
-      "scale": "statusPercent",
-      "status": "bind"
-    },
-    {
-      "id": "sleep_resist",
-      "name": "수면 저항",
-      "category": "status_resist",
-      "scale": "statusPercent",
-      "status": "sleep"
-    },
-    {
-      "id": "silence_resist",
-      "name": "침묵 저항",
-      "category": "status_resist",
-      "scale": "statusPercent",
-      "status": "silence"
-    },
-    {
-      "id": "slow_resist",
-      "name": "둔화 저항",
-      "category": "status_resist",
-      "scale": "statusPercent",
-      "status": "slow"
-    },
-    {
-      "id": "blind_resist",
-      "name": "실명 저항",
-      "category": "status_resist",
-      "scale": "statusPercent",
-      "status": "blind"
-    },
-    {
-      "id": "freeze_resist",
-      "name": "빙결 저항",
-      "category": "status_resist",
-      "scale": "statusPercent",
-      "status": "freeze"
-    },
-    {
-      "id": "paralyze_resist",
-      "name": "마비 저항",
-      "category": "status_resist",
-      "scale": "statusPercent",
-      "status": "paralyze"
-    },
-    {
-      "id": "healing_done",
-      "name": "치유량 증가",
-      "category": "support",
-      "scale": "percentSmall"
-    },
-    {
-      "id": "healing_received",
-      "name": "받는 치유량 증가",
-      "category": "support",
-      "scale": "percentSmall"
-    },
-    {
-      "id": "shield_effect",
-      "name": "보호막 효과 증가",
-      "category": "support",
-      "scale": "statusPercent"
-    },
-    {
-      "id": "threat_up",
-      "name": "위협 수치 증가",
-      "category": "support",
-      "scale": "threatPercent"
-    },
-    {
-      "id": "threat_down",
-      "name": "위협 수치 감소",
-      "category": "support",
-      "scale": "threatPercent"
-    },
-    {
-      "id": "stat_str_up",
-      "name": "STR 증가",
-      "category": "stat",
-      "scale": "statFlat"
-    },
-    {
-      "id": "stat_con_up",
-      "name": "CON 증가",
-      "category": "stat",
-      "scale": "statFlat"
-    },
-    {
-      "id": "stat_int_up",
-      "name": "INT 증가",
-      "category": "stat",
-      "scale": "statFlat"
-    },
-    {
-      "id": "stat_agi_up",
-      "name": "AGI 증가",
-      "category": "stat",
-      "scale": "statFlat"
-    },
-    {
-      "id": "stat_sense_up",
-      "name": "SENSE 증가",
-      "category": "stat",
-      "scale": "statFlat"
-    }
-  ]
-};
+// 희귀재료 팩 기본값 — JSON 가져오기로 채워짐 (rare_material_pack_default.json)
+// model.db.rareMaterialPack 에 저장된 데이터를 사용. 비어있으면 JSON 가져오기 필요.
+const DEFAULT_RARE_MATERIAL_PACK = { version: 0, note: '', valueScales: {}, traits: [] };
 const RARE_TRAIT_LEGACY_ALIASES = {
   '물리피해':'physical_damage',
   '마법피해':'magic_damage',
@@ -2442,7 +1995,8 @@ function buildDefaultState() {
     const bonuses = {};
     if (!entry || !entry.inventory || !entry.inventory.equipped) return bonuses;
     const equipped = entry.inventory.equipped;
-    const pack = DEFAULT_RARE_MATERIAL_PACK;
+    const pack = (model && model.db && model.db.rareMaterialPack && model.db.rareMaterialPack.traits && model.db.rareMaterialPack.traits.length > 0)
+      ? model.db.rareMaterialPack : DEFAULT_RARE_MATERIAL_PACK;
     const valueScales = pack.valueScales || {};
     const traitDefs = pack.traits || [];
     EQUIP_PARTS.forEach(part => {
@@ -7144,28 +6698,54 @@ function seedNpcAuctionListings() {
     const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + i;
 
     if (partType === 'skillbook') {
-      // ── 스킬북 매물 ──
+      // ── 스킬북 매물 ── 등급 분배: E50% D30% C15% B4.5% A0.4% S0.1%
+      function pickSkillbookRank() {
+        const r = Math.random() * 100;
+        if (r < 50) return 'E';
+        if (r < 80) return 'D';
+        if (r < 95) return 'C';
+        if (r < 99.5) return 'B';
+        if (r < 99.9) return 'A';
+        return 'S';
+      }
+      // 티어 분배: T4(50%) > T3(30%) > T2(15%) > T1(5%)  — 상위 티어일수록 희귀
+      function pickSkillbookTier() {
+        const r = Math.random() * 100;
+        if (r < 50) return 4;  // T4: singleHeal, passive, utility
+        if (r < 80) return 3;  // T3: aoeHeal, buff
+        if (r < 95) return 2;  // T2: singleAttack, singleCC
+        return 1;              // T1: aoeAttack, aoeCC
+      }
+      const sbRank = pickSkillbookRank();
+      const sbTier = pickSkillbookTier();
+      const tierCats = { 1:['aoeAttack','aoeCC'], 2:['singleAttack','singleCC'], 3:['aoeHeal','buff'], 4:['singleHeal','passive','utility'] };
+      const cats = tierCats[sbTier] || tierCats[4];
       const skillKeys = Object.keys(BUILTIN_SKILLS || {});
       const matchingSkills = skillKeys.filter(k => {
         const sk = BUILTIN_SKILLS[k];
-        return sk && sk.grade === rank;
+        return sk && sk.grade === sbRank && cats.includes(sk.category);
       });
-      if (matchingSkills.length === 0) continue; // no skills for this rank, skip
-      const pickedKey = matchingSkills[Math.floor(Math.random() * matchingSkills.length)];
+      // 해당 등급+티어 스킬이 없으면 등급만 맞추기
+      const fallbackSkills = matchingSkills.length > 0 ? matchingSkills : skillKeys.filter(k => {
+        const sk = BUILTIN_SKILLS[k];
+        return sk && sk.grade === sbRank;
+      });
+      if (fallbackSkills.length === 0) continue;
+      const pickedKey = fallbackSkills[Math.floor(Math.random() * fallbackSkills.length)];
       const skill = BUILTIN_SKILLS[pickedKey];
       const cat = skill.category || 'utility';
       const tier = SKILL_BOOK_TIERS[cat] || 4;
-      const bookPrice = calcSkillBookPrice(rank, tier);
+      const bookPrice = calcSkillBookPrice(sbRank, tier);
       const ratio = randomAuctionRatio();
       const askPrice = Math.round(bookPrice * ratio);
       const item = {
-        id: `npc_skillbook_${rank.toLowerCase()}_${uid}`,
+        id: `npc_skillbook_${sbRank.toLowerCase()}_${uid}`,
         name: `📖 ${skill.name || pickedKey} 스킬북`,
-        category: 'skillbook', rank, skillId: pickedKey,
+        category: 'skillbook', rank: sbRank, skillId: pickedKey,
         skillCategory: cat, skillTier: tier,
         price: bookPrice, stackable: false,
         unitWeightG: 200,
-        note: `${rank}급 T${tier} 스킬북 [${cat}]`
+        note: `${sbRank}급 T${tier} 스킬북 [${cat}]`
       };
       model.db.auctionListings.push({ id: `auc_npc_${uid}`, item, askPrice, marketPrice: bookPrice, priceRatio: ratio, isNpc: true, listedAt: Date.now() });
       continue;
@@ -10904,7 +10484,7 @@ function renderCommandPanel(runtime) {
           <details open style="margin-top:6px;border:1px solid rgba(148,163,184,0.12);border-radius:6px;padding:6px;">
           <summary style="cursor:pointer;font-weight:bold;padding:2px 4px;">💍 악세서리 스탯</summary>
           <div class="gb-sub">악세서리: 총 스탯합 ${accessoryStat.totalStatSum||0} | 특성 슬롯 ${accessoryStat.traits||1}개 | 강화당 주스탯 +${accessoryStat.enhanceStat||0}</div>
-          <div class="gb-sub" style="color:#a78bfa;">✨ ${rank}등급 특성 효과 예시: 물리/마법 피해 +${(DEFAULT_RARE_MATERIAL_PACK.valueScales.percentSmall||{})[rank]||0}%, 속성/상태이상 +${(DEFAULT_RARE_MATERIAL_PACK.valueScales.statusPercent||{})[rank]||0}%, 치확 +${(DEFAULT_RARE_MATERIAL_PACK.valueScales.critChance||{})[rank]||0}%, 치피 +${(DEFAULT_RARE_MATERIAL_PACK.valueScales.critDamage||{})[rank]||0}%, 방어력 +${(DEFAULT_RARE_MATERIAL_PACK.valueScales.defenseFlat||{})[rank]||0}</div>
+          <div class="gb-sub" style="color:#a78bfa;">✨ ${rank}등급 특성 효과 예시: 물리/마법 피해 +${(getRareMaterialPack().valueScales.percentSmall||{})[rank]||0}%, 속성/상태이상 +${(getRareMaterialPack().valueScales.statusPercent||{})[rank]||0}%, 치확 +${(getRareMaterialPack().valueScales.critChance||{})[rank]||0}%, 치피 +${(getRareMaterialPack().valueScales.critDamage||{})[rank]||0}%, 방어력 +${(getRareMaterialPack().valueScales.defenseFlat||{})[rank]||0}</div>
           <div class="gb-grid two">
             <label>총 스탯합 적용 주스탯<select class="gb-input" id="gb-eq-main-stat">
               ${['str','con','int','agi','sense'].map(s => `<option value="${s}" ${item.mainStat===s?'selected':''}>${s}</option>`).join('')}
@@ -11647,13 +11227,14 @@ async function saveMaterialTraitFromForm() {
       }
       // Auto-fill: value=0 → use trait scale value for current rank
       if (smeValue <= 0) {
-        const traitDef = (DEFAULT_RARE_MATERIAL_PACK.traits || []).find(t => t.id === smeEffect);
+        const _rmPack = getRareMaterialPack();
+        const traitDef = (_rmPack.traits || []).find(t => t.id === smeEffect);
         if (traitDef && traitDef.scale) {
-          const scaleTable = (DEFAULT_RARE_MATERIAL_PACK.valueScales || {})[traitDef.scale];
+          const scaleTable = (_rmPack.valueScales || {})[traitDef.scale];
           if (scaleTable && scaleTable[rank] != null) smeValue = scaleTable[rank];
         }
         if (smeValue <= 0) {
-          const fallback = (DEFAULT_RARE_MATERIAL_PACK.valueScales.percentSmall || {})[rank] || 3;
+          const fallback = (_rmPack.valueScales.percentSmall || {})[rank] || 3;
           smeValue = fallback;
         }
       }
