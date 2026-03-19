@@ -4567,10 +4567,10 @@ function addNormalRollLoot(bucket, rank, roll, sourceRef) {
   if (roll <= 50) return;
   if (roll <= 80) { addNormalMaterial(bucket, rank, 1, sourceRef); return; }
   let purity = 10;
-  if (roll <= 84) purity = randInt(10, 19);
-  else if (roll <= 90) purity = randInt(20, 29);
-  else if (roll <= 92) purity = randInt(30, 39);
-  else if (roll <= 94) purity = randInt(40, 49);
+  if (roll <= 90) purity = randInt(10, 19);
+  else if (roll <= 95) purity = randInt(20, 29);
+  else if (roll <= 98) purity = randInt(30, 39);
+  else if (roll <= 99) purity = randInt(40, 49);
   else purity = 50;
   addManaStone(bucket, rank, purity, 1);
 }
