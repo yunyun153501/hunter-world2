@@ -159,6 +159,12 @@ try {
 const ELEMENTS = DAMAGE_ELEMENTS;
 const SPECIES_LABELS = { undead:'언데드', ghost:'고스트', beast:'야수', plant:'식물', slime:'슬라임', construct:'구조체', elemental:'정령', demon:'악마', frost:'빙정', celestial:'천사체' };
 const SPECIES_KEY_BY_LABEL = Object.fromEntries(Object.entries(SPECIES_LABELS).map(([k,v]) => [v, k]));
+// 종족별 엘리트/보스 추가 상태이상 (50% 확률로 둘 중 하나 배정)
+const SPECIES_EXTRA_STATUS = {
+  undead:['curse','poison'], ghost:['curse','sleep'], beast:['bleed','stun'],
+  plant:['stun','poison'], slime:['slow','paralyze'], construct:['paralyze','blind'],
+  demon:['burn','curse'], frost:['freeze','slow'], celestial:['blind','paralyze']
+};
 const PICKAXE_WEIGHT_G = 2500;
 const EQUIP_WEIGHT_G = { weapon:1000, subweapon:1000, armor:1000, accessory:200 };
 const GATE_SIZE_META = {
@@ -1674,7 +1680,7 @@ const RARE_FAMILY_PRESETS = {
   }
   function createDefaultMeta() {
     return {
-      species:'', speciesLabel:'', baseElement:'none', immunities:[], damageTakenMods:{}, bonusVsBleeding:1, aloneDamageTaken:1, regenPct:0, regenBlockedBy:[], onHitStatus:'', onHitChance:0, onHitTurns:0
+      species:'', speciesLabel:'', baseElement:'none', immunities:[], damageTakenMods:{}, bonusVsBleeding:1, aloneDamageTaken:1, regenPct:0, regenBlockedBy:[], onHitStatus:'', onHitChance:0, onHitTurns:0, onHitStatus2:'', onHitChance2:0, onHitTurns2:0
     };
   }
   function mergeMeta(base, patch) {
@@ -1692,6 +1698,9 @@ const RARE_FAMILY_PRESETS = {
     if (p.onHitStatus) out.onHitStatus = normStatus(p.onHitStatus);
     if (p.onHitChance != null) out.onHitChance = Number(p.onHitChance);
     if (p.onHitTurns != null) out.onHitTurns = Number(p.onHitTurns);
+    if (p.onHitStatus2) out.onHitStatus2 = normStatus(p.onHitStatus2);
+    if (p.onHitChance2 != null) out.onHitChance2 = Number(p.onHitChance2);
+    if (p.onHitTurns2 != null) out.onHitTurns2 = Number(p.onHitTurns2);
     return out;
   }
   function parseMonsterMeta(entry) {
@@ -1750,6 +1759,19 @@ const RARE_FAMILY_PRESETS = {
         meta.onHitStatus = elSt;
         meta.onHitChance = hardCcTypes.includes(elSt) ? 0.18 : dotTypes.includes(elSt) ? 0.23 : 0.28;
         meta.onHitTurns = turnsByStatus[elSt] || 2;
+      }
+    }
+    // 엘리트/보스: 종족별 추가 상태이상 배정 (50% 확률로 둘 중 하나)
+    if ((kind === 'boss' || kind === 'elite') && meta.species && SPECIES_EXTRA_STATUS[meta.species]) {
+      const pair = SPECIES_EXTRA_STATUS[meta.species];
+      const picked = Math.random() < 0.5 ? pair[0] : pair[1];
+      if (normStatus(picked)) {
+        const hardCcTypes = ['stun','bind','sleep','freeze','paralyze','curse'];
+        const dotTypes = ['poison','bleed','burn'];
+        const turnsByStatus = { stun:2, bind:2, sleep:3, freeze:2, paralyze:2, curse:3, poison:3, bleed:3, burn:5, silence:2, slow:3, blind:3 };
+        meta.onHitStatus2 = picked;
+        meta.onHitChance2 = hardCcTypes.includes(picked) ? 0.18 : dotTypes.includes(picked) ? 0.23 : 0.28;
+        meta.onHitTurns2 = turnsByStatus[picked] || 2;
       }
     }
     if (Array.isArray(item.immunities)) meta = mergeMeta(meta, { immunities:item.immunities });
@@ -2504,7 +2526,10 @@ function buildDefaultState() {
       regenBlockedBy: Array.isArray(meta.regenBlockedBy) ? meta.regenBlockedBy.slice() : [],
       onHitStatus: normStatus(meta.onHitStatus || ''),
       onHitChance: Number(meta.onHitChance || 0),
-      onHitTurns: Number(meta.onHitTurns || 0)
+      onHitTurns: Number(meta.onHitTurns || 0),
+      onHitStatus2: normStatus(meta.onHitStatus2 || ''),
+      onHitChance2: Number(meta.onHitChance2 || 0),
+      onHitTurns2: Number(meta.onHitTurns2 || 0)
     };
     applyPassiveInitialization(unit);
     // 장비 특성 전투 적용: 장착 장비 traits → 전투 보너스
@@ -4053,7 +4078,10 @@ function serializeUnitState(unit) {
     regenBlockedBy: deepClone(unit.regenBlockedBy || []),
     onHitStatus: unit.onHitStatus || '',
     onHitChance: Number(unit.onHitChance || 0),
-    onHitTurns: Number(unit.onHitTurns || 0)
+    onHitTurns: Number(unit.onHitTurns || 0),
+    onHitStatus2: unit.onHitStatus2 || '',
+    onHitChance2: Number(unit.onHitChance2 || 0),
+    onHitTurns2: Number(unit.onHitTurns2 || 0)
   };
 }
 function createDefaultGateRun(gate) {
@@ -6217,6 +6245,7 @@ function getBuffedStat(unit, statKey) {
       if (actor.side === 'party') { actor.sp = Math.max(0, (actor.sp || 0) - 1); }
       if (Number(target.statuses.sleep || 0) > 0) target.statuses.sleep = 0;
       if (actor.onHitStatus) applyStatus(target, { name:'기본 공격', status:{ type:actor.onHitStatus, chance:actor.onHitChance, turns:actor.onHitTurns } }, summary, actor.name, null, runtime, actor, dmg);
+      if (actor.onHitStatus2) applyStatus(target, { name:'기본 공격', status:{ type:actor.onHitStatus2, chance:actor.onHitChance2, turns:actor.onHitTurns2 } }, summary, actor.name, null, runtime, actor, dmg);
       actor.lastAction = `기본 공격 → ${target.name} ${dmg}`;
       if (actor.side === 'party') summary.partyDamage += dmg; else summary.enemyDamage += dmg;
       if (target.dead) {
@@ -6286,6 +6315,7 @@ function getBuffedStat(unit, statKey) {
           applyDamage(target, dmg);
           if (Number(target.statuses.sleep || 0) > 0) target.statuses.sleep = 0;
           if (actor.onHitStatus) applyStatus(target, { name:skill.name, status:{ type:actor.onHitStatus, chance:actor.onHitChance, turns:actor.onHitTurns } }, summary, actor.name, null, runtime, actor, dmg);
+          if (actor.onHitStatus2) applyStatus(target, { name:skill.name, status:{ type:actor.onHitStatus2, chance:actor.onHitChance2, turns:actor.onHitTurns2 } }, summary, actor.name, null, runtime, actor, dmg);
           if (actor.side === 'party') summary.partyDamage += dmg; else summary.enemyDamage += dmg;
           if (target.dead) {
             if (actor.side === 'party') { summary.partyKills += 1; recordKillExp(runtime, target); } else summary.enemyKills += 1;
@@ -6343,6 +6373,7 @@ function getBuffedStat(unit, statKey) {
       if (skill.cc) ccTargets.push(target);
       applyStatus(target, skill, summary, actor.name, null, runtime, actor, dmg);
       if (actor.onHitStatus) applyStatus(target, { name:skill.name, status:{ type:actor.onHitStatus, chance:actor.onHitChance, turns:actor.onHitTurns } }, summary, actor.name, null, runtime, actor, dmg);
+      if (actor.onHitStatus2) applyStatus(target, { name:skill.name, status:{ type:actor.onHitStatus2, chance:actor.onHitChance2, turns:actor.onHitTurns2 } }, summary, actor.name, null, runtime, actor, dmg);
       // 접촉 기절: 근접 공격 시 대상의 벽력장 버프로 공격자 기절
       if (!actor.dead && (skill.damageType === 'physical' || !skill.damageType)) {
         const contactBuff = (target.buffs || []).find(b => b && b.onContactStun && b.turns > 0);
@@ -11152,6 +11183,9 @@ function readPartySlotsFromUI() {
       onHitStatus: normStatus(item.onHitStatus || parsedMeta.onHitStatus || ''),
       onHitChance: Number(item.onHitChance || parsedMeta.onHitChance || 0),
       onHitTurns: Number(item.onHitTurns || parsedMeta.onHitTurns || 0),
+      onHitStatus2: normStatus(item.onHitStatus2 || parsedMeta.onHitStatus2 || ''),
+      onHitChance2: Number(item.onHitChance2 || parsedMeta.onHitChance2 || 0),
+      onHitTurns2: Number(item.onHitTurns2 || parsedMeta.onHitTurns2 || 0),
       stats: normaliseStats(item.stats || {})
     };
   }
