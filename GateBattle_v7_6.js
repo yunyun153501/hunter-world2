@@ -759,9 +759,9 @@ function calcInventorySellPrice(it, isGuild) {
     const purity = parseInt(it.note||'0', 10);
     return (MANA_STONE_WON_PER_PCT[r] || MANA_STONE_WON_PER_PCT.E) * purity * Number(it.count||1);
   }
-  // normalMaterial and everything else
+  // normalMaterial and everything else — 하한~상한 랜덤 매입가
   const r = (it.rank||'E').toUpperCase();
-  return (Number(it.suggestedPrice||0) || NORMAL_MATERIAL_BASE_WON[r] || NORMAL_MATERIAL_BASE_WON.E) * Number(it.count||1);
+  return (Number(it.suggestedPrice||0) || normalMaterialBaseWon(r)) * Number(it.count||1);
 }
 
 const PARTY_BAGS = {
@@ -4109,8 +4109,8 @@ function buildDropEquipment(rank, forcePart) {
     // 특수효과는 주입이 아니므로 maxInfuse를 늘리지 않음
     traitName = EQUIP_TRAIT_LABELS[traitId] || traitId;
   }
-  // 특수효과(내장 특성)는 주입 횟수를 사용하지 않음
-  const infuseCount = builtInTrait ? 0 : traits.length;
+  // 특수효과(내장 특성)는 주입과 별도 — 생성 시 주입 0
+  const infuseCount = 0;
   // 보조무기 서브타입 결정 (방패 여부)
   let subSuffix = null;
   let isShield = false;
@@ -6836,24 +6836,29 @@ function seedNpcAuctionListings() {
       const sbTier = pickSkillbookTier();
       const tierCats = { 1:['aoeAttack','aoeCC'], 2:['singleAttack','singleCC'], 3:['aoeHeal','buff'], 4:['singleHeal','passive','utility'] };
       const cats = tierCats[sbTier] || tierCats[4];
+      // 빌트인 + 커스텀 스킬 통합 풀 (커스텀 스킬도 동일 등급/티어 분배)
+      const allSkillEntries = [];
       const skillKeys = Object.keys(BUILTIN_SKILLS || {});
-      const matchingSkills = skillKeys.filter(k => {
+      skillKeys.forEach(k => {
         const sk = BUILTIN_SKILLS[k];
-        return sk && sk.grade === sbRank && cats.includes(sk.category);
+        if (sk) allSkillEntries.push({ key: k, skill: sk });
       });
+      (model.db.customSkills || []).forEach(sk => {
+        if (sk && sk.id && sk.name) allSkillEntries.push({ key: sk.id, skill: sk });
+      });
+      const matchingSkills = allSkillEntries.filter(e => e.skill.grade === sbRank && cats.includes(e.skill.category));
       // 해당 등급+티어 스킬이 없으면 등급만 맞추기
-      const fallbackSkills = matchingSkills.length > 0 ? matchingSkills : skillKeys.filter(k => {
-        const sk = BUILTIN_SKILLS[k];
-        return sk && sk.grade === sbRank;
-      });
+      const fallbackSkills = matchingSkills.length > 0 ? matchingSkills : allSkillEntries.filter(e => e.skill.grade === sbRank);
       if (fallbackSkills.length === 0) continue;
-      const pickedKey = fallbackSkills[Math.floor(Math.random() * fallbackSkills.length)];
-      const skill = BUILTIN_SKILLS[pickedKey];
+      const picked = fallbackSkills[Math.floor(Math.random() * fallbackSkills.length)];
+      const pickedKey = picked.key;
+      const skill = picked.skill;
       const cat = skill.category || 'utility';
       const tier = SKILL_BOOK_TIERS[cat] || 4;
       const bookPrice = calcSkillBookPrice(sbRank, tier);
       const ratio = randomAuctionRatio();
       const askPrice = Math.round(bookPrice * ratio);
+      const isCustomSkill = !(BUILTIN_SKILLS && BUILTIN_SKILLS[pickedKey]);
       const item = {
         id: `npc_skillbook_${sbRank.toLowerCase()}_${uid}`,
         name: `📖 ${skill.name || pickedKey} 스킬북`,
@@ -6861,9 +6866,9 @@ function seedNpcAuctionListings() {
         skillCategory: cat, skillTier: tier,
         price: bookPrice, stackable: false,
         unitWeightG: 200,
-        note: `${sbRank}급 T${tier} 스킬북 [${cat}]`
+        note: `${sbRank}급 T${tier} 스킬북 [${cat}]${isCustomSkill ? ' (커스텀)' : ''}`
       };
-      model.db.auctionListings.push({ id: `auc_npc_${uid}`, item, askPrice, marketPrice: bookPrice, priceRatio: ratio, isNpc: true, listedAt: Date.now() });
+      model.db.auctionListings.push({ id: `auc_npc_${uid}`, item, askPrice, marketPrice: bookPrice, priceRatio: ratio, isNpc: true, isCustomSkill: isCustomSkill || undefined, sourceSkillId: isCustomSkill ? pickedKey : undefined, listedAt: Date.now() });
       continue;
     }
 
@@ -6917,9 +6922,24 @@ function seedNpcAuctionListings() {
       _isShield = (_subSuffix === '방패');
     }
     const { rarity: npcRarity, traitTier: npcTier } = hasTrait ? assignEquipRarity(part, traitId) : { rarity: 'Normal', traitTier: 0 };
-    const equipNameStr = generateEquipName(rank, part, _armorSub ? _armorSub.key : null, hasTrait ? traitName : '', _subSuffix);
-    // 특수효과(내장 특성)는 주입 횟수를 사용하지 않음
-    const infuseCount = (hasTrait && builtInTrait) ? 0 : (hasTrait ? 1 : 0);
+    // 커스텀 장비 통합: 같은 등급+부위의 커스텀 장비가 있으면 이름을 가져옴 (일반/레어만)
+    let equipNameStr = generateEquipName(rank, part, _armorSub ? _armorSub.key : null, hasTrait ? traitName : '', _subSuffix);
+    let isCustomSource = false;
+    let customSourceId = undefined;
+    const matchingCustom = (model.db.customEquipment || []).filter(eq => {
+      const eqRank = (eq.rank || 'E').toUpperCase();
+      const eqPart = eq.part || 'weapon';
+      const eqRarity = (eq.rarity || 'Normal').toLowerCase();
+      return eqRank === rank && eqPart === part && (eqRarity === 'normal' || eqRarity === 'rare');
+    });
+    if (matchingCustom.length > 0 && Math.random() < 0.25) {
+      const picked = matchingCustom[Math.floor(Math.random() * matchingCustom.length)];
+      equipNameStr = picked.name || equipNameStr;
+      isCustomSource = true;
+      customSourceId = picked.id;
+    }
+    // 특수효과는 주입과 별도 — 생성 시 주입 0
+    const infuseCount = 0;
     const item = {
       id: `npc_drop_equip_${rank.toLowerCase()}_${part}_${uid}`,
       name: equipNameStr,
@@ -6937,59 +6957,8 @@ function seedNpcAuctionListings() {
       armorStatBonusMul: _armorSub ? _armorSub.statBonusMul : undefined,
       resistType: '', resistPct: 0
     };
-    model.db.auctionListings.push({ id: `auc_npc_${uid}`, item, askPrice, marketPrice, priceRatio: ratio, isNpc: true, listedAt: Date.now() });
+    model.db.auctionListings.push({ id: `auc_npc_${uid}`, item, askPrice, marketPrice, priceRatio: ratio, isNpc: true, isCustom: isCustomSource || undefined, sourceId: customSourceId, listedAt: Date.now() });
   }
-
-    // ── 커스텀 장비 경매 등록 (일반/레어 등급만, 유니크/레전더리 제외) ──
-    const customEquips = (model.db.customEquipment || []).filter(eq => {
-      const r = (eq.rarity || 'Normal').toLowerCase();
-      return r === 'normal' || r === 'rare';
-    });
-    if (customEquips.length > 0) {
-      const existingCustomIds = new Set(model.db.auctionListings.filter(l => l.isCustom).map(l => l.sourceId));
-      customEquips.forEach(eq => {
-        if (existingCustomIds.has(eq.id)) return; // 이미 등록된 커스텀 장비 스킵
-        if (Math.random() > 0.3) return; // 30% 확률로 등록
-        const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-        const basePrice = calcEquipRandomPrice(eq.rank || 'E', eq.part || 'weapon');
-        const ratio = randomAuctionRatio();
-        const askPrice = Math.round(basePrice * ratio);
-        const item = deepClone(eq);
-        item.id = `custom_auction_${eq.id}_${uid}`;
-        item.category = 'equipment';
-        item.stackable = false;
-        item.stackKey = `equipment:custom_auction_${uid}`;
-        item.note = `커스텀 장비 경매`;
-        if (!item.unitWeightG) item.unitWeightG = EQUIP_WEIGHT_G[item.part] || 1000;
-        model.db.auctionListings.push({ id: `auc_custom_${uid}`, item, askPrice, marketPrice: basePrice, priceRatio: ratio, isNpc: true, isCustom: true, sourceId: eq.id, listedAt: Date.now() });
-      });
-    }
-    // ── 커스텀 스킬 경매 등록 (스킬북으로) ──
-    const customSkills = (model.db.customSkills || []).filter(sk => sk.id && sk.name);
-    if (customSkills.length > 0) {
-      const existingCustomSkillIds = new Set(model.db.auctionListings.filter(l => l.isCustomSkill).map(l => l.sourceSkillId));
-      customSkills.forEach(sk => {
-        if (existingCustomSkillIds.has(sk.id)) return;
-        if (Math.random() > 0.25) return; // 25% 확률로 등록
-        const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-        const cat = sk.category || 'utility';
-        const tier = SKILL_BOOK_TIERS[cat] || 4;
-        const sbRank = sk.grade || 'E';
-        const bookPrice = calcSkillBookPrice(sbRank, tier);
-        const ratio = randomAuctionRatio();
-        const askPrice = Math.round(bookPrice * ratio);
-        const item = {
-          id: `custom_skillbook_${sk.id}_${uid}`,
-          name: `📖 ${sk.name} 스킬북`,
-          category: 'skillbook', rank: sbRank, skillId: sk.id,
-          skillCategory: cat, skillTier: tier,
-          price: bookPrice, stackable: false,
-          unitWeightG: 200,
-          note: `${sbRank}급 T${tier} 커스텀 스킬북 [${cat}]`
-        };
-        model.db.auctionListings.push({ id: `auc_custom_sk_${uid}`, item, askPrice, marketPrice: bookPrice, priceRatio: ratio, isNpc: true, isCustomSkill: true, sourceSkillId: sk.id, listedAt: Date.now() });
-      });
-    }
 
   // ── 희귀재료 매물 ──
   if (!Array.isArray(model.db.auctionRareMats)) model.db.auctionRareMats = [];
@@ -8029,7 +7998,7 @@ function seedNpcUsedListings() {
     }
     const traits = hasTrait ? [traitId] : [];
     const maxInfuseBase = EQUIP_MAX_INFUSE[part] || 1;
-    const maxInfuse = (hasTrait && !builtInTraitPart) ? maxInfuseBase + 1 : maxInfuseBase;
+    const maxInfuse = maxInfuseBase; // 특수효과는 주입과 별도
     const traitName = hasTrait ? (EQUIP_TRAIT_LABELS[traits[0]] || traits[0]) : '';
     const basePrice = calcEquipRandomPrice(rank, part);
     const enhancedBase = enhance > 0 ? calcEquipEnhancedPrice(basePrice, enhance, rank) : basePrice;
@@ -8055,11 +8024,26 @@ function seedNpcUsedListings() {
     // 희귀도 자동 판정
     const { rarity: usedRarity, traitTier: usedTier } = assignEquipRarity(part, traits[0] || '');
     const finalRarity = isRare ? 'Rare' : usedRarity;
-    const equipNameStr = generateEquipName(rank, part, _armorSub ? _armorSub.key : null, hasTrait ? traitName : '') + enhLabel;
+    // 커스텀 장비 통합: 같은 등급+부위의 커스텀 장비가 있으면 이름을 가져옴 (일반/레어만)
+    let equipNameStr = generateEquipName(rank, part, _armorSub ? _armorSub.key : null, hasTrait ? traitName : '') + enhLabel;
+    let hmCustomSource = false;
+    let hmCustomSourceId = undefined;
+    const hmMatchingCustom = (model.db.customEquipment || []).filter(eq => {
+      const eqRank = (eq.rank || 'E').toUpperCase();
+      const eqPart = eq.part || 'weapon';
+      const eqRarity = (eq.rarity || 'Normal').toLowerCase();
+      return eqRank === rank && eqPart === part && (eqRarity === 'normal' || eqRarity === 'rare');
+    });
+    if (hmMatchingCustom.length > 0 && Math.random() < 0.25) {
+      const picked = hmMatchingCustom[Math.floor(Math.random() * hmMatchingCustom.length)];
+      equipNameStr = (picked.name || equipNameStr) + enhLabel;
+      hmCustomSource = true;
+      hmCustomSourceId = picked.id;
+    }
     const item = {
       id: `npc_used_${rank.toLowerCase()}_${part}_${uid}`,
       name: equipNameStr,
-      part, rank, rarity: finalRarity, traitTier: usedTier, enhance, infuse: traits.length, maxInfuse, traits,
+      part, rank, rarity: finalRarity, traitTier: usedTier, enhance, infuse: 0, maxInfuse, traits,
       durability: dur, maxDurability: maxDur, price: marketPrice,
       category: 'equipment', isDropped: true, stackable: false,
       unitWeightG: EQUIP_WEIGHT_G[part] || 1000,
@@ -8074,36 +8058,9 @@ function seedNpcUsedListings() {
       resistType: '', resistPct: 0
     };
     model.db.hmUsedListings.push({
-      id: `hm_npc_${uid}`, item, usedPrice, conditionPct: Math.round(conditionMul * 100), isNpc: true, listedAt: Date.now()
+      id: `hm_npc_${uid}`, item, usedPrice, conditionPct: Math.round(conditionMul * 100), isNpc: true, isCustom: hmCustomSource || undefined, sourceId: hmCustomSourceId, listedAt: Date.now()
     });
   }
-    // ── 커스텀 장비 중고 등록 (일반/레어만) ──
-    const hmCustomEquips = (model.db.customEquipment || []).filter(eq => {
-      const r = (eq.rarity || 'Normal').toLowerCase();
-      return r === 'normal' || r === 'rare';
-    });
-    if (hmCustomEquips.length > 0) {
-      const existingHmCustomIds = new Set((model.db.hmUsedListings||[]).filter(l => l.isCustom).map(l => l.sourceId));
-      hmCustomEquips.forEach(eq => {
-        if (existingHmCustomIds.has(eq.id)) return;
-        if (Math.random() > 0.25) return; // 25% 확률로 등록
-        const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-        const conditionMul = 0.40 + Math.random() * 0.55; // 40~95%
-        const durMul = conditionMul;
-        const item = deepClone(eq);
-        item.id = `hm_custom_${eq.id}_${uid}`;
-        item.category = 'equipment';
-        item.stackable = false;
-        item.stackKey = `equipment:hm_custom_${uid}`;
-        item.durability = Math.round((item.maxDurability || 100) * durMul);
-        item.maxDurability = 80 + Math.floor(Math.random() * 20); // 80~99
-        if (!item.unitWeightG) item.unitWeightG = EQUIP_WEIGHT_G[item.part] || 1000;
-        const basePrice = calcEquipRandomPrice(eq.rank || 'E', eq.part || 'weapon');
-        const usedPrice = Math.round(basePrice * conditionMul * 0.65);
-        item.note = `커스텀 장비 중고`;
-        model.db.hmUsedListings.push({ id: `hm_custom_${uid}`, item, usedPrice, conditionPct: Math.round(conditionMul * 100), isNpc: true, isCustom: true, sourceId: eq.id, listedAt: Date.now() });
-      });
-    }
 }
 
 function renderHunterMarketHtml() {
@@ -13997,8 +13954,11 @@ async function saveMaterialTraitFromForm() {
           const healDoneBonus = 1 + Number((caster.traitBonuses && caster.traitBonuses.healing_done) || 0) / 100;
           const healAmt = Math.max(1, Math.round(healBase * coef * healDoneBonus));
           const maxHp = Number(target.hp || target.maxHp || 1);
+          // 대상 최대체력 비례 추가 회복 (HEAL_MAX_HP_BONUS_RATE)
+          const maxHpBonus = Math.floor(maxHp * HEAL_MAX_HP_BONUS_RATE);
+          const totalHeal = healAmt + maxHpBonus;
           const before = Number(target.currentHp != null ? target.currentHp : target.hp || 0);
-          target.currentHp = Math.min(maxHp, before + healAmt);
+          target.currentHp = Math.min(maxHp, before + totalHeal);
           const actual = Math.floor(target.currentHp - before);
           resultMsg = `${caster.name} → ${target.name}에게 ${skill.name} 사용! HP +${actual} (${Math.floor(before)}→${Math.floor(target.currentHp)})`;
         } else if (cat === 'aoeHeal') {
@@ -14012,8 +13972,11 @@ async function saveMaterialTraitFromForm() {
           const healed = [];
           party.forEach(u => {
             const maxHp = Number(u.hp || u.maxHp || 1);
+            // 대상 최대체력 비례 추가 회복 (HEAL_MAX_HP_BONUS_RATE)
+            const maxHpBonus = Math.floor(maxHp * HEAL_MAX_HP_BONUS_RATE);
+            const totalHeal = healAmt + maxHpBonus;
             const before = Number(u.currentHp != null ? u.currentHp : u.hp || 0);
-            u.currentHp = Math.min(maxHp, before + healAmt);
+            u.currentHp = Math.min(maxHp, before + totalHeal);
             const actual = Math.floor(u.currentHp - before);
             if (actual > 0) healed.push(`${u.name} HP+${actual}`);
           });
