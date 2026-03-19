@@ -5502,11 +5502,11 @@ function getBuffedStat(unit, statKey) {
       // 실명된 몬스터: 명중률 -50%
       if (Number(attacker.statuses.blind || 0) > 0) accuracy *= 0.5;
     } else {
-      // 헌터 명중률 = 70 + 감각 * 0.5
+      // 헌터 명중률 = 70 + (감각 - 10) * 0.5  (감각 초기값 10은 보너스 없음)
       let sense = getBuffedStat(attacker, 'sense');
       // 속박된 헌터: 감각 -50%, 명중률 -50%
       if (Number(attacker.statuses.bind || 0) > 0) sense = Math.floor(sense * 0.5);
-      accuracy = (70 + sense * 0.5) / 100;
+      accuracy = (70 + Math.max(0, sense - 10) * 0.5) / 100;
       if (Number(attacker.statuses.bind || 0) > 0) accuracy *= 0.5;
       // 둔화된 헌터: 명중률 -30%
       if (Number(attacker.statuses.slow || 0) > 0) accuracy *= 0.7;
