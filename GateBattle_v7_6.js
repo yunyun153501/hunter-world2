@@ -530,7 +530,6 @@ const DURABILITY_COST = {
 // ── 전투 밸런스 상수 ──────────────────────────────────────────────────────────
 const SKILL_ADDITIONAL_SP_COST = 2;        // 스킬 1회 사용 시 추가 SP 고정 소모
 const HEAL_MAX_HP_BONUS_RATE = 0.07;       // 힐 시 대상 최대체력의 N% 추가 회복
-const RANK_ACCURACY_BONUS_PER_LEVEL = 0.10; // 등급 우위 시 등급차 × N% 명중률 보너스
 
 // ── 대장간 강화 시스템 ──────────────────────────────────────────────────────────
 // 강화 재료: 같은 등급 마정석 순도 80~100%
@@ -4565,14 +4564,14 @@ function rollRedGateSkillBookDrop(roll) {
 }
 function addNormalRollLoot(bucket, rank, roll, sourceRef) {
   if (!rank) return;
-  // 노말몹 드랍률 하향: 65% 미드랍 / 25% 일반재료 / 10% 마정석
-  if (roll <= 65) return;
-  if (roll <= 90) { addNormalMaterial(bucket, rank, 1, sourceRef); return; }
+  if (roll <= 50) return;
+  if (roll <= 80) { addNormalMaterial(bucket, rank, 1, sourceRef); return; }
   let purity = 10;
-  if (roll <= 93) purity = randInt(10, 19);
-  else if (roll <= 96) purity = randInt(20, 29);
-  else if (roll <= 98) purity = randInt(30, 39);
-  else purity = randInt(40, 50);
+  if (roll <= 84) purity = randInt(10, 19);
+  else if (roll <= 90) purity = randInt(20, 29);
+  else if (roll <= 92) purity = randInt(30, 39);
+  else if (roll <= 94) purity = randInt(40, 49);
+  else purity = 50;
   addManaStone(bucket, rank, purity, 1);
 }
 function addEliteLoot(bundle, rank, sourceRef) {
@@ -5520,11 +5519,9 @@ function getBuffedStat(unit, statKey) {
     if (target.passiveMods && Number(target.passiveMods.evasionBonus || 0) > 0) {
       evasion += Number(target.passiveMods.evasionBonus);
     }
-    // 공격자 등급 > 대상 등급 → 대상 회피율 0% + 명중률 보너스 (+등급차 × 10%)
+    // 공격자 등급 > 대상 등급 → 대상 회피율 0%
     if (rankIndex(attacker.rank) > rankIndex(target.rank)) {
       evasion = 0;
-      const rankDiff = rankIndex(attacker.rank) - rankIndex(target.rank);
-      accuracy = Math.min(1.0, accuracy + rankDiff * RANK_ACCURACY_BONUS_PER_LEVEL);
     }
     // 같은 등급 몬스터가 헌터 공격 시: 회피율 50% 감소
     if (attacker.isMonster && !target.isMonster && rankIndex(attacker.rank) === rankIndex(target.rank)) {
