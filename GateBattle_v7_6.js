@@ -4500,9 +4500,20 @@ function buildDropEquipment(rank, forcePart) {
   let maxInfuse = maxInfuseBase;
   let traitName = '';
   if (hasTrait) {
+    // 특성 티어 분배: T4(40%) > T3(30%) > T2(20%) > T1(10%) — 상위 티어일수록 희귀
+    function pickTraitByTier() {
+      const tierRoll = Math.random() * 100;
+      let targetTier;
+      if (tierRoll < 10) targetTier = 1;       // T1: 10%
+      else if (tierRoll < 30) targetTier = 2;   // T2: 20%
+      else if (tierRoll < 60) targetTier = 3;   // T3: 30%
+      else targetTier = 4;                       // T4: 40%
+      const pool = EQUIP_TRAIT_TYPES.filter(t => (TRAIT_TIER_MAP[t] || 4) === targetTier);
+      return pool.length ? pool[Math.floor(Math.random() * pool.length)] : EQUIP_TRAIT_TYPES[Math.floor(Math.random() * EQUIP_TRAIT_TYPES.length)];
+    }
     const traitId = builtInTrait
       ? (Math.random() < 0.20 ? RARE_TRAIT_POOL : NORMAL_TRAIT_POOL)[Math.floor(Math.random() * (Math.random() < 0.20 ? RARE_TRAIT_POOL : NORMAL_TRAIT_POOL).length)]
-      : EQUIP_TRAIT_TYPES[Math.floor(Math.random() * EQUIP_TRAIT_TYPES.length)];
+      : pickTraitByTier();
     traits.push(traitId);
     // 특수효과는 주입이 아니므로 maxInfuse를 늘리지 않음
     traitName = EQUIP_TRAIT_LABELS[traitId] || traitId;
@@ -4598,19 +4609,53 @@ function rollRedGateBossEquipDrop(roll) {
   if (roll <= 84) return 'armor';
   return 'weapon';
 }
-// 보스 스킬북 드랍 레이블 (98=치유/버프, 99=단일공격/CC, 100=광역공격/CC)
-function rollBossSkillBookDrop(roll) {
-  if (roll <= 97) return null;
-  if (roll === 98) return '치유·버프형';
-  if (roll === 99) return '단일 공격·CC형';
-  return '광역 공격·CC형';
+// 보스 스킬북 드랍 — 롤에 따라 티어 결정 (98=T4, 99=T2~T3, 100=T1)
+function rollBossSkillBookTier(roll) {
+  if (roll <= 97) return 0;  // no drop
+  if (roll === 98) return 4; // T4: singleHeal, passive, utility
+  if (roll === 99) return 2; // T2~T3: singleAttack/CC, aoeHeal/buff
+  return 1;                  // T1: aoeAttack, aoeCC (100)
 }
-// 레드게이트 보스 스킬북 드랍 (94~95=치유/버프, 96~97=단일, 98~100=광역)
-function rollRedGateSkillBookDrop(roll) {
-  if (roll <= 93) return null;
-  if (roll <= 95) return '치유·버프형';
-  if (roll <= 97) return '단일 공격·CC형';
-  return '광역 공격·CC형';
+// 레드게이트 보스 스킬북 드랍 — 더 높은 확률, 상위 티어도 가능
+function rollRedGateSkillBookTier(roll) {
+  if (roll <= 93) return 0;
+  if (roll <= 95) return 4; // T4
+  if (roll <= 97) return 3; // T3
+  if (roll <= 99) return 2; // T2
+  return 1;                 // T1 (100)
+}
+function createSkillBookDrop(rank, tier) {
+  const tierCategories = {
+    1: ['aoeAttack','aoeCC'],
+    2: ['singleAttack','singleCC'],
+    3: ['aoeHeal','buff'],
+    4: ['singleHeal','passive','utility']
+  };
+  const cats = tierCategories[tier] || tierCategories[4];
+  const skillKeys = Object.keys(BUILTIN_SKILLS || {});
+  const matching = skillKeys.filter(k => {
+    const sk = BUILTIN_SKILLS[k];
+    return sk && sk.grade === rank && cats.includes(sk.category);
+  });
+  // 해당 등급·카테고리 스킬 없으면 한 등급 낮은 걸로 시도
+  if (!matching.length) {
+    const lowerRank = lowerGrade(rank);
+    if (lowerRank) {
+      const lowerMatching = skillKeys.filter(k => {
+        const sk = BUILTIN_SKILLS[k];
+        return sk && sk.grade === lowerRank && cats.includes(sk.category);
+      });
+      if (lowerMatching.length) {
+        const pickedKey = lowerMatching[Math.floor(Math.random() * lowerMatching.length)];
+        const skill = BUILTIN_SKILLS[pickedKey];
+        return { id: `drop_skillbook_${rank.toLowerCase()}_${Date.now().toString(36)}`, name: `📖 ${skill.name || pickedKey} 스킬북`, category: 'skillbook', rank, skillId: pickedKey, skillCategory: skill.category, skillTier: tier, price: calcSkillBookPrice(rank, tier), stackable: false, unitWeightG: 200, note: `${rank}급 T${tier} 스킬북 [${skill.category}]` };
+      }
+    }
+    return null;
+  }
+  const pickedKey = matching[Math.floor(Math.random() * matching.length)];
+  const skill = BUILTIN_SKILLS[pickedKey];
+  return { id: `drop_skillbook_${rank.toLowerCase()}_${Date.now().toString(36)}`, name: `📖 ${skill.name || pickedKey} 스킬북`, category: 'skillbook', rank, skillId: pickedKey, skillCategory: skill.category, skillTier: tier, price: calcSkillBookPrice(rank, tier), stackable: false, unitWeightG: 200, note: `${rank}급 T${tier} 스킬북 [${skill.category}]` };
 }
 function addNormalRollLoot(bucket, rank, roll, sourceRef) {
   if (!rank) return;
@@ -4665,11 +4710,17 @@ function addBossLoot(bundle, rank, sourceRef) {
     grantInventoryItem(eq);
     bundle.notes.push(`⚔️ 장비 드랍: ${eq.name}${eq.traits.length ? ` [특성: ${eq.traits.map(t=>equipTraitDisplay(t, eq.rank)).join(', ')}]` : ''} (롤: ${equipRoll})`);
   }
-  // 보스 스킬북 드랍 (독립 롤: 98=치유/버프, 99=단일공격/CC, 100=광역공격/CC)
+  // 보스 스킬북 드랍 (독립 롤: 98=T4, 99=T2~T3, 100=T1)
   const sbRoll = randInt(1, 100);
-  const sbType = rollBossSkillBookDrop(sbRoll);
-  if (sbType) {
-    bundle.notes.push(`📖 스킬북 드랍: ${rank}급 [${sbType}] (롤: ${sbRoll}) — 추후 스킬북 시스템 연동 예정`);
+  const sbTier = rollBossSkillBookTier(sbRoll);
+  if (sbTier > 0) {
+    const sbItem = createSkillBookDrop(rank, sbTier);
+    if (sbItem) {
+      grantInventoryItem(sbItem);
+      bundle.notes.push(`📖 스킬북 드랍: ${sbItem.name} (T${sbTier}, 롤: ${sbRoll})`);
+    } else {
+      bundle.notes.push(`📖 스킬북 드랍: ${rank}급 T${sbTier} — 해당 등급 스킬 없음 (롤: ${sbRoll})`);
+    }
   }
 }
 function addOreVeinLoot(bundle, rank, count) {
@@ -8035,26 +8086,55 @@ function renderEquipShopHtml() {
 const HM_NPC_MAX = 16;
 
 // NPC 중고장비 씨딩: 다양한 등급·부위·내구도로 16개 채움
+// 등급 분배: E40% D30% C20% B9% A0.9% S0.1%
+// 희귀도 분배: Normal 80%, Rare 20%
+// 갱신: 하루 3회
 function seedNpcUsedListings() {
   if (!Array.isArray(model.db.hmUsedListings)) model.db.hmUsedListings = [];
   const npcCount = model.db.hmUsedListings.filter(l => l.isNpc).length;
   const needed = HM_NPC_MAX - npcCount;
   if (needed <= 0) return;
-  const grades = ['E','E','E','D','D','D','C','C','B'];
+  function pickHmRank() {
+    const r = Math.random() * 100;
+    if (r < 40) return 'E';
+    if (r < 70) return 'D';
+    if (r < 90) return 'C';
+    if (r < 99) return 'B';
+    if (r < 99.9) return 'A';
+    return 'S';
+  }
   const parts = EQUIP_PARTS;
   for (let i = 0; i < needed; i++) {
-    const rank = grades[Math.floor(Math.random() * grades.length)];
+    const rank = pickHmRank();
     const part = parts[Math.floor(Math.random() * parts.length)];
+    // 희귀도: Normal 80% / Rare 20%
+    const isRare = Math.random() < 0.20;
     // 현재 내구도: 사용감 있는 중고장비 (40~95 범위)
     const dur = Math.floor(Math.random() * 56) + 40;      // 40~95
     // 최대내구도: 게임 규칙상 최소 80 (EQUIP_MAX_DURABILITY_FLOOR), 최대 99 (100은 새 장비라 헌터마켓 등록 불가)
     const maxDur = Math.max(80, Math.min(99, dur + Math.floor(Math.random() * 10))); // 80~99
     // 강화: 가끔 +1~+3
     const enhance = Math.random() < 0.3 ? Math.floor(Math.random() * 3) + 1 : 0;
-    // 특성: 보조무기·악세서리는 항상 1개(내장), 그 외 30% 확률로 1개
+    // 특성: Rare면 항상 특성 보유, Normal이면 보조무기/악세는 80%확률 내장특성, 무기/방어구는 30% 확률
     const builtInTraitPart = (part === 'subweapon' || part === 'accessory');
-    const hasTrait = builtInTraitPart ? true : (Math.random() < 0.30);
-    const traits = hasTrait ? [EQUIP_TRAIT_TYPES[Math.floor(Math.random() * EQUIP_TRAIT_TYPES.length)]] : [];
+    let hasTrait = false;
+    if (isRare) {
+      hasTrait = true;
+    } else if (builtInTraitPart) {
+      hasTrait = Math.random() < 0.80;
+    } else {
+      hasTrait = Math.random() < 0.30;
+    }
+    let traitId = '';
+    if (hasTrait) {
+      if (builtInTraitPart) {
+        const pool = Math.random() < 0.20 ? RARE_TRAIT_POOL : NORMAL_TRAIT_POOL;
+        traitId = pool[Math.floor(Math.random() * pool.length)];
+      } else {
+        traitId = EQUIP_TRAIT_TYPES[Math.floor(Math.random() * EQUIP_TRAIT_TYPES.length)];
+      }
+    }
+    const traits = hasTrait ? [traitId] : [];
     const maxInfuseBase = EQUIP_MAX_INFUSE[part] || 1;
     const maxInfuse = (hasTrait && !builtInTraitPart) ? maxInfuseBase + 1 : maxInfuseBase;
     const traitName = hasTrait ? (EQUIP_TRAIT_LABELS[traits[0]] || traits[0]) : '';
@@ -8081,11 +8161,12 @@ function seedNpcUsedListings() {
     const enhLabel = enhance > 0 ? ` +${enhance}` : '';
     // 희귀도 자동 판정
     const { rarity: usedRarity, traitTier: usedTier } = assignEquipRarity(part, traits[0] || '');
+    const finalRarity = isRare ? 'Rare' : usedRarity;
     const equipNameStr = generateEquipName(rank, part, _armorSub ? _armorSub.key : null, hasTrait ? traitName : '') + enhLabel;
     const item = {
       id: `npc_used_${rank.toLowerCase()}_${part}_${uid}`,
       name: equipNameStr,
-      part, rank, rarity: usedRarity, traitTier: usedTier, enhance, infuse: traits.length, maxInfuse, traits,
+      part, rank, rarity: finalRarity, traitTier: usedTier, enhance, infuse: traits.length, maxInfuse, traits,
       durability: dur, maxDurability: maxDur, price: marketPrice,
       category: 'equipment', isDropped: true, stackable: false,
       unitWeightG: EQUIP_WEIGHT_G[part] || 1000,
@@ -8253,7 +8334,7 @@ function renderHunterMarketHtml() {
       }).join('');
   return notice + tabBar + `
     <div class="gb-panel">
-      <button class="gb-btn" data-hm-refresh style="margin-bottom:6px;">🔄 NPC 목록 갱신</button>
+      <button class="gb-btn" data-hm-refresh style="margin-bottom:6px;">🔄 NPC 목록 갱신 (${(() => { const today = new Date().toISOString().slice(0,10); const cnt = (model.state.hmRefreshDate === today) ? (model.state.hmRefreshCount || 0) : 0; return `${3 - cnt}/3`; })()})</button>
       <div class="gb-btn-row" style="flex-wrap:wrap;">
         <span class="gb-sub" style="align-self:center;">등급:</span> ${rankBtns}
       </div>
@@ -12482,11 +12563,22 @@ async function saveMaterialTraitFromForm() {
       await saveState(); renderApp();
     });
     on('[data-hm-refresh]', 'click', async () => {
+      // 하루 3회 제한
+      const today = new Date().toISOString().slice(0, 10);
+      if (!model.state.hmRefreshDate || model.state.hmRefreshDate !== today) {
+        model.state.hmRefreshDate = today;
+        model.state.hmRefreshCount = 0;
+      }
+      if ((model.state.hmRefreshCount || 0) >= 3) {
+        toast('⚠️ 오늘 새로고침 횟수를 모두 사용했습니다 (3/3)');
+        return;
+      }
+      model.state.hmRefreshCount = (model.state.hmRefreshCount || 0) + 1;
       if (!Array.isArray(model.db.hmUsedListings)) model.db.hmUsedListings = [];
       model.db.hmUsedListings = model.db.hmUsedListings.filter(l => !l.isNpc);
       seedNpcUsedListings();
-      await saveDb(); renderApp();
-      toast('🔄 헌터마켓 NPC 목록 갱신 완료');
+      await saveDb(); await saveState(); renderApp();
+      toast(`🔄 헌터마켓 NPC 목록 갱신 완료 (${model.state.hmRefreshCount}/3)`);
     });
     on('[data-hm-sell]', 'click', async (ev) => {
       try {
