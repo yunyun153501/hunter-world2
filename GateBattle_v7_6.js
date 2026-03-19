@@ -4510,7 +4510,7 @@ function resolveGateBattleAftermath(victory) {
     roomType: room.type,
     stageIndex: run.currentStage,
     restUsed:false,
-    actionUsed:{},  // 캐릭터별 행동 사용 여부 {charId: true}
+    actionUsed:{},  // 캐릭터별 전투 후 행동(물약/스킬) 사용 여부 {charId: true}
     allowRest:true,
     rewardLines: deepClone(room.rewardLines || []),
     sideRoom: !!run.sideRoomActive,
