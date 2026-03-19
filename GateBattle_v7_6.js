@@ -1824,6 +1824,7 @@ const RARE_FAMILY_PRESETS = {
       incomeLog: [],
       guildTaxLog: [],
       gateClearHistory: {},  // { [characterId/personaId]: { "E_small":count, "E_medium":count, ... } }
+      rankUpHistory: {},     // { [characterId/personaId]: { lastAttempt: timestamp, result: 'success'|'fail', targetRank } }
       homeRegions: [],   // [{id, name, homes:[{id, name, area, houseType, deposit, monthlyRent, maintenanceFee, purchasePrice, brokerFee, desc, features:[], storages:[{id,name,type,maxSlots,maxWeightKg,items:[]}]}]}]
       ownedHomes: {},    // { [activeCharId]: [ { regionId, homeId, moveInDate:'2026-01-01', lastRentPaidMonth:'2026-01', rentLog:[{month,amount,paidDate}] }, ... ] }
       gameDate: { year: 2026, month: 1, day: 1 },
@@ -6614,7 +6615,7 @@ function renderHub() {
 const ASSOC_FLOORS = [
   { id: '1F',  label: '1층 — 메인 로비 / 랭킹 센터 / 정산 카운터' },
   { id: '2F',  label: '2층 — 중앙 경매장' },
-  { id: '4F',  label: '4층 — 인사부 (측정·등록·평가)' },
+  { id: '4F',  label: '4층 — 등록과 (측정·등록·승급)' },
   { id: '7F',  label: '7층 — 엔지니어 로비' },
   { id: 'B5F', label: 'B5층 — 특수 연구 시설' },
 ];
@@ -7208,6 +7209,143 @@ function renderAuctionHouseHtml() {
     </div>`;
 }
 
+// ── 등록과 (4F) 승급 시스템 ──────────────────────────────────────────────────
+// 승급 조건: 동급 게이트 클리어 10회 이상 (소형×1, 중형×2, 대형×3) + 아이템 없이 목표 등급의 최소 스탯 이상
+// 재측정: 주 1회, 실패 시 1주간 재도전 불가, 캐릭터/페르소나별 독립
+const RANKUP_MIN_STAT_SUM = { D:70, C:90, B:120, A:160, S:200 }; // 목표등급의 최소 스탯합 (BALANCE_FORMULAS.md 기준)
+const RANKUP_GATE_CLEAR_REQ = 10; // 동급 게이트 클리어 필요 횟수 (소형×1, 중형×2, 대형×3 환산)
+const RANKUP_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7일 쿨다운
+
+function calcGateClearScore(charId, rank) {
+  const history = (model.db.gateClearHistory || {})[charId] || {};
+  const r = String(rank || 'E').toUpperCase();
+  const small = Number(history[`${r}_small`] || 0);
+  const medium = Number(history[`${r}_medium`] || 0);
+  const large = Number(history[`${r}_large`] || 0);
+  return small * 1 + medium * 2 + large * 3;
+}
+
+function getBaseStatSum(entry) {
+  // 아이템·버프 없이 순수 기본 스탯합
+  const stats = entry.stats || {};
+  return Number(stats.str||0) + Number(stats.con||0) + Number(stats.int||0) + Number(stats.agi||0) + Number(stats.sense||0);
+}
+
+function canAttemptRankUp(charId) {
+  if (!model.db.rankUpHistory) model.db.rankUpHistory = {};
+  const rec = model.db.rankUpHistory[charId];
+  if (!rec) return { ok: true };
+  const elapsed = Date.now() - (rec.lastAttempt || 0);
+  if (elapsed < RANKUP_COOLDOWN_MS) {
+    const remain = RANKUP_COOLDOWN_MS - elapsed;
+    const days = Math.ceil(remain / (24*60*60*1000));
+    return { ok: false, reason: `재측정 쿨다운 중 (${days}일 남음)` };
+  }
+  return { ok: true };
+}
+
+function attemptRankUp(entry) {
+  const charId = entry.id;
+  const currentRank = String(entry.rank || 'E').toUpperCase();
+  const idx = GRADE_ORDER.indexOf(currentRank);
+  if (idx < 0 || idx >= GRADE_ORDER.length - 1) return { success: false, reason: '이미 최고 등급이거나 유효하지 않은 등급입니다.' };
+  const targetRank = GRADE_ORDER[idx + 1];
+  const minStatSum = RANKUP_MIN_STAT_SUM[targetRank];
+  if (!minStatSum) return { success: false, reason: `${targetRank}등급 승급 데이터가 없습니다.` };
+
+  // 쿨다운 확인
+  const cooldownCheck = canAttemptRankUp(charId);
+  if (!cooldownCheck.ok) return { success: false, reason: cooldownCheck.reason };
+
+  // 게이트 클리어 확인
+  const clearScore = calcGateClearScore(charId, currentRank);
+  if (clearScore < RANKUP_GATE_CLEAR_REQ) {
+    return { success: false, reason: `${currentRank}급 게이트 클리어 점수 부족: ${clearScore}/${RANKUP_GATE_CLEAR_REQ} (소형×1, 중형×2, 대형×3)`, noRecord: true };
+  }
+
+  // 스탯합 확인 (아이템 없이)
+  const baseSum = getBaseStatSum(entry);
+  if (baseSum < minStatSum) {
+    // 실패: 쿨다운 기록
+    if (!model.db.rankUpHistory) model.db.rankUpHistory = {};
+    model.db.rankUpHistory[charId] = { lastAttempt: Date.now(), result: 'fail', targetRank };
+    return { success: false, reason: `기본 스탯합 부족: ${baseSum}/${minStatSum} (아이템 미착용 기준). 1주간 재도전 불가.` };
+  }
+
+  // 성공: 랭크 업
+  entry.rank = targetRank;
+  // 쿨다운 기록
+  if (!model.db.rankUpHistory) model.db.rankUpHistory = {};
+  model.db.rankUpHistory[charId] = { lastAttempt: Date.now(), result: 'success', targetRank };
+  return { success: true, reason: `${currentRank} → ${targetRank} 승급 성공! 축하합니다!` };
+}
+
+function renderRankUpView() {
+  const chars = model.db.characters || [];
+  const personas = model.db.personas || [];
+  const allUnits = [...personas.map(p => ({ ...p, _type: '페르소나' })), ...chars.map(c => ({ ...c, _type: '캐릭터' }))];
+
+  if (allUnits.length === 0) {
+    return `<div class="gb-panel">
+      <div class="gb-section-title">📊 등록과 (4F) — 측정·등록·승급</div>
+      <div class="gb-sub">등록된 캐릭터/페르소나가 없습니다.</div>
+    </div>`;
+  }
+
+  const rows = allUnits.map(u => {
+    const currentRank = String(u.rank || 'E').toUpperCase();
+    const idx = GRADE_ORDER.indexOf(currentRank);
+    const isMaxRank = idx >= GRADE_ORDER.length - 1;
+    const targetRank = isMaxRank ? '-' : GRADE_ORDER[idx + 1];
+    const minStatSum = isMaxRank ? '-' : (RANKUP_MIN_STAT_SUM[targetRank] || '?');
+    const baseSum = getBaseStatSum(u);
+    const clearScore = calcGateClearScore(u.id, currentRank);
+    const cooldownCheck = canAttemptRankUp(u.id);
+    const history = model.db.rankUpHistory && model.db.rankUpHistory[u.id];
+    const lastResult = history ? history.result : '';
+
+    const statOk = !isMaxRank && baseSum >= (RANKUP_MIN_STAT_SUM[targetRank] || 999);
+    const clearOk = clearScore >= RANKUP_GATE_CLEAR_REQ;
+    const canAttempt = !isMaxRank && statOk && clearOk && cooldownCheck.ok;
+
+    // 개별 클리어 횟수 표시
+    const h = (model.db.gateClearHistory || {})[u.id] || {};
+    const sml = Number(h[`${currentRank}_small`] || 0);
+    const med = Number(h[`${currentRank}_medium`] || 0);
+    const lrg = Number(h[`${currentRank}_large`] || 0);
+
+    return `<div class="gb-panel" style="margin-bottom:8px;padding:8px 10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="gb-badge">${escapeHtml(u._type)}</span>
+        <strong>${escapeHtml(u.name || u.id)}</strong>
+        <span class="gb-badge" style="background:#3b82f6;">${currentRank}급</span>
+        ${isMaxRank ? '<span class="gb-sub">최고 등급</span>' : `<span class="gb-sub">→ ${targetRank}급 승급 대상</span>`}
+      </div>
+      ${isMaxRank ? '' : `
+        <div style="font-size:12px;margin:4px 0;">
+          <div>📋 <b>${currentRank}급 게이트 클리어</b>: 소형 ${sml}회(×1) + 중형 ${med}회(×2) + 대형 ${lrg}회(×3) = <b>${clearScore}점</b> / ${RANKUP_GATE_CLEAR_REQ}점 ${clearOk ? '✅' : '❌'}</div>
+          <div>📊 <b>기본 스탯합</b> (아이템 미착용): <b>${baseSum}</b> / ${minStatSum} ${statOk ? '✅' : '❌'}</div>
+          ${!cooldownCheck.ok ? `<div style="color:#ef4444;">⏳ ${cooldownCheck.reason}</div>` : ''}
+          ${lastResult === 'fail' && !cooldownCheck.ok ? '<div style="color:#ef4444;">이전 결과: 실패 (쿨다운 진행 중)</div>' : ''}
+        </div>
+        <button class="gb-btn ${canAttempt ? 'primary' : ''}" data-rankup-attempt="${escapeHtml(u.id)}" ${canAttempt ? '' : 'disabled'} style="margin-top:4px;">
+          🏅 재측정 신청 (${currentRank} → ${targetRank})
+        </button>
+      `}
+    </div>`;
+  }).join('');
+
+  return `<div class="gb-panel">
+    <div class="gb-section-title">📊 등록과 (4F) — 측정·등록·승급</div>
+    <div class="gb-sub">첨단 하이테크 장비를 이용한 마나 측정 및 공식 랭크 부여. 헌터 등록 및 재측정도 이 층에서 진행됩니다.</div>
+    <div class="gb-sub" style="margin-top:4px;font-size:11px;">
+      📌 승급 조건: ① 동급 게이트 클리어 ${RANKUP_GATE_CLEAR_REQ}점 이상 (소형×1/중형×2/대형×3) ② 아이템 미착용 기준 목표 등급 최소 스탯합 충족<br>
+      📌 재측정은 주 1회. 실패 시 1주간 재도전 불가. 캐릭터/페르소나 각각 독립 적용.
+    </div>
+  </div>
+  ${rows}`;
+}
+
 function renderAssociationView() {
   const floor = model.state.assocFloor || '1F';
   const gs = gateStateSafe();
@@ -7409,12 +7547,7 @@ function renderAssociationView() {
   } else if (floor === '2F') {
     floorContent = renderAuctionHouseHtml();
   } else if (floor === '4F') {
-    floorContent = `
-      <div class="gb-panel">
-        <div class="gb-section-title">📊 인사부 (4F) — 측정·등록·평가팀</div>
-        <div class="gb-sub">첨단 하이테크 장비를 이용한 마나 측정 및 공식 랭크 부여. 헌터 등록 및 재측정도 이 층에서 진행된다.</div>
-        <div class="gb-sub" style="margin-top:8px;">— 랭크 판정 기능 확장 예정. —</div>
-      </div>`;
+    floorContent = renderRankUpView();
   } else if (floor === '7F') {
     floorContent = `
       <div class="gb-panel">
@@ -11465,6 +11598,20 @@ async function saveMaterialTraitFromForm() {
     on('[data-assoc-floor]', 'click', async (ev) => {
       model.state.assocFloor = ev.currentTarget.getAttribute('data-assoc-floor') || '1F';
       await saveState(); renderApp();
+    });
+    // ── 등록과 승급 핸들러 ──
+    on('[data-rankup-attempt]', 'click', async (ev) => {
+      const charId = ev.currentTarget.getAttribute('data-rankup-attempt');
+      if (!charId) return;
+      const entry = (model.db.personas || []).find(p => p.id === charId) || (model.db.characters || []).find(c => c.id === charId);
+      if (!entry) { toast('캐릭터를 찾을 수 없습니다.', true); return; }
+      const result = attemptRankUp(entry);
+      if (result.success) {
+        toast(`🏅 ${result.reason}`);
+      } else {
+        toast(`❌ ${result.reason}`, true);
+      }
+      await saveDb(); await saveState(); renderApp();
     });
     // ── 경매장 핸들러 ──────────────────────────────────────────────────────────────
     on('[data-auction-tab]', 'click', async (ev) => {
