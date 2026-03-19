@@ -6939,6 +6939,57 @@ function seedNpcAuctionListings() {
     model.db.auctionListings.push({ id: `auc_npc_${uid}`, item, askPrice, marketPrice, priceRatio: ratio, isNpc: true, listedAt: Date.now() });
   }
 
+    // ── 커스텀 장비 경매 등록 (일반/레어 등급만, 유니크/레전더리 제외) ──
+    const customEquips = (model.db.customEquipment || []).filter(eq => {
+      const r = (eq.rarity || 'Normal').toLowerCase();
+      return r === 'normal' || r === 'rare';
+    });
+    if (customEquips.length > 0) {
+      const existingCustomIds = new Set(model.db.auctionListings.filter(l => l.isCustom).map(l => l.sourceId));
+      customEquips.forEach(eq => {
+        if (existingCustomIds.has(eq.id)) return; // 이미 등록된 커스텀 장비 스킵
+        if (Math.random() > 0.3) return; // 30% 확률로 등록
+        const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const basePrice = calcEquipRandomPrice(eq.rank || 'E', eq.part || 'weapon');
+        const ratio = randomAuctionRatio();
+        const askPrice = Math.round(basePrice * ratio);
+        const item = deepClone(eq);
+        item.id = `custom_auction_${eq.id}_${uid}`;
+        item.category = 'equipment';
+        item.stackable = false;
+        item.stackKey = `equipment:custom_auction_${uid}`;
+        item.note = `커스텀 장비 경매`;
+        if (!item.unitWeightG) item.unitWeightG = EQUIP_WEIGHT_G[item.part] || 1000;
+        model.db.auctionListings.push({ id: `auc_custom_${uid}`, item, askPrice, marketPrice: basePrice, priceRatio: ratio, isNpc: true, isCustom: true, sourceId: eq.id, listedAt: Date.now() });
+      });
+    }
+    // ── 커스텀 스킬 경매 등록 (스킬북으로) ──
+    const customSkills = (model.db.customSkills || []).filter(sk => sk.id && sk.name);
+    if (customSkills.length > 0) {
+      const existingCustomSkillIds = new Set(model.db.auctionListings.filter(l => l.isCustomSkill).map(l => l.sourceSkillId));
+      customSkills.forEach(sk => {
+        if (existingCustomSkillIds.has(sk.id)) return;
+        if (Math.random() > 0.25) return; // 25% 확률로 등록
+        const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const cat = sk.category || 'utility';
+        const tier = SKILL_BOOK_TIERS[cat] || 4;
+        const sbRank = sk.grade || 'E';
+        const bookPrice = calcSkillBookPrice(sbRank, tier);
+        const ratio = randomAuctionRatio();
+        const askPrice = Math.round(bookPrice * ratio);
+        const item = {
+          id: `custom_skillbook_${sk.id}_${uid}`,
+          name: `📖 ${sk.name} 스킬북`,
+          category: 'skillbook', rank: sbRank, skillId: sk.id,
+          skillCategory: cat, skillTier: tier,
+          price: bookPrice, stackable: false,
+          unitWeightG: 200,
+          note: `${sbRank}급 T${tier} 커스텀 스킬북 [${cat}]`
+        };
+        model.db.auctionListings.push({ id: `auc_custom_sk_${uid}`, item, askPrice, marketPrice: bookPrice, priceRatio: ratio, isNpc: true, isCustomSkill: true, sourceSkillId: sk.id, listedAt: Date.now() });
+      });
+    }
+
   // ── 희귀재료 매물 ──
   if (!Array.isArray(model.db.auctionRareMats)) model.db.auctionRareMats = [];
   const rareMatCount = model.db.auctionRareMats.filter(l => l.isNpc).length;
@@ -7701,24 +7752,24 @@ function renderAssociationView() {
 const SHOP_ITEMS = {
   convenience: [], // 편의점 식량은 getConvFoodDb()에서 동적으로 로드
   consumable: [
-    { id:'pickaxe_E',  name:'E급 곡괭이',  price:70000,      unit:'개', note:'E등급 광맥 채굴용 (2.5kg)', buildFn: () => buildPickaxeItem('E', 1) },
-    { id:'pickaxe_D',  name:'D급 곡괭이',  price:300000,     unit:'개', note:'D등급 광맥 채굴용 (2.5kg)', buildFn: () => buildPickaxeItem('D', 1) },
-    { id:'pickaxe_C',  name:'C급 곡괭이',  price:2000000,    unit:'개', note:'C등급 광맥 채굴용 (2.5kg)', buildFn: () => buildPickaxeItem('C', 1) },
-    { id:'pickaxe_B',  name:'B급 곡괭이',  price:10000000,   unit:'개', note:'B등급 광맥 채굴용 (2.5kg)', buildFn: () => buildPickaxeItem('B', 1) },
-    { id:'pickaxe_A',  name:'A급 곡괭이',  price:70000000,   unit:'개', note:'A등급 광맥 채굴용 (2.5kg)', buildFn: () => buildPickaxeItem('A', 1) },
-    { id:'pickaxe_S',  name:'S급 곡괭이',  price:250000000,  unit:'개', note:'S등급 광맥 채굴용 (2.5kg)', buildFn: () => buildPickaxeItem('S', 1) },
-    { id:'bag_E', name:'E급 기본가방',     price:30000,      unit:'개', note:'+8칸/무게+7kg', buildFn: () => buildBagItem('bag_E', 1) },
-    { id:'bag_D', name:'D급 멀티백',       price:70000,      unit:'개', note:'+12칸/무게+10kg/무게효율5%', buildFn: () => buildBagItem('bag_D', 1) },
-    { id:'bag_C', name:'C급 마정백팩',     price:270000,     unit:'개', note:'+16칸/무게+15kg/무게효율10%', buildFn: () => buildBagItem('bag_C', 1) },
-    { id:'bag_B', name:'B급 원정필드백',   price:750000,     unit:'개', note:'+20칸/무게+20kg/무게효율15%', buildFn: () => buildBagItem('bag_B', 1) },
-    { id:'bag_A', name:'A급 게이트백팩',   price:2300000,    unit:'개', note:'+24칸/무게+25kg/무게효율20%', buildFn: () => buildBagItem('bag_A', 1) },
-    { id:'bag_S', name:'S급 마정공간백팩', price:7500000,    unit:'개', note:'+28칸/무게+30kg/무게효율30%', buildFn: () => buildBagItem('bag_S', 1) },
-    { id:'tent_E', name:'E급 기본원터치텐트',   price:130000,    unit:'개', note:'효과없음 (3kg)', buildFn: () => buildTentItem('E', 1) },
-    { id:'tent_D', name:'D급 필드원터치텐트',   price:350000,    unit:'개', note:'야영효율+5% (6kg)', buildFn: () => buildTentItem('D', 1) },
-    { id:'tent_C', name:'C급 게이트필드텐트',   price:870000,    unit:'개', note:'야영효율+10% (9kg)', buildFn: () => buildTentItem('C', 1) },
-    { id:'tent_B', name:'B급 럭셔리야영텐트',   price:2300000,   unit:'개', note:'야영효율+15% (12kg)', buildFn: () => buildTentItem('B', 1) },
-    { id:'tent_A', name:'A급 스타야영지',       price:7200000,   unit:'개', note:'야영효율+20% (15kg)', buildFn: () => buildTentItem('A', 1) },
-    { id:'tent_S', name:'S급 게이트펜션야영지', price:38000000,  unit:'개', note:'야영효율+30% (20kg)', buildFn: () => buildTentItem('S', 1) },
+    { id:'pickaxe_E',  name:'E급 곡괭이',  price:70000,       unit:'개', note:'일반 곡괭이 (2.5kg)', buildFn: () => buildPickaxeItem('E', 1) },
+    { id:'pickaxe_D',  name:'D급 곡괭이',  price:300000,      unit:'개', note:'최하급마정석을 함유해 좀더 정교한 광질이 가능한 곡괭이 (2.5kg)', buildFn: () => buildPickaxeItem('D', 1) },
+    { id:'pickaxe_C',  name:'C급 곡괭이',  price:2000000,     unit:'개', note:'하급마정석을 가공해 넣은 좀더 가볍고 실용적인 곡괭이 (2.5kg)', buildFn: () => buildPickaxeItem('C', 1) },
+    { id:'pickaxe_B',  name:'B급 곡괭이',  price:10000000,    unit:'개', note:'중급마정석을 가공해 들어도 무게가 느껴지지않는 곡괭이 (2.5kg)', buildFn: () => buildPickaxeItem('B', 1) },
+    { id:'pickaxe_A',  name:'A급 마정드릴', price:120000000,  unit:'개', note:'헌터가 직접 곡괭이질 할 필요가 없어진 마정석으로 만들어진 마정드릴 (2.5kg)', buildFn: () => buildPickaxeItem('A', 1) },
+    { id:'pickaxe_S',  name:'S급 마정드론', price:2000000000, unit:'개', note:'최상급 마정석도 캘수있는 소음기능까지 갖춘 마정드릴을 탑재한 마정드론 (2.5kg)', buildFn: () => buildPickaxeItem('S', 1) },
+    { id:'bag_E', name:'E급 일반가방',      price:60000,       unit:'개', note:'일반가방 +8칸/무게+7kg', buildFn: () => buildBagItem('bag_E', 1) },
+    { id:'bag_D', name:'D급 마정가방',      price:270000,      unit:'개', note:'최하급 마정석을 가공해 만든 튼튼한 가방 +12칸/무게+10kg/무게효율5%', buildFn: () => buildBagItem('bag_D', 1) },
+    { id:'bag_C', name:'C급 마정백팩',      price:1800000,     unit:'개', note:'순도높은 하급마정석을 가공해 마법적인 효과를 넣은 가방 +16칸/무게+15kg/무게효율10%', buildFn: () => buildBagItem('bag_C', 1) },
+    { id:'bag_B', name:'B급 공간마법가방',  price:9000000,     unit:'개', note:'중급 마정석을 통째로 가공해 공간마법과 무게효율 마법을 이용해 만든 가방 +20칸/무게+20kg/무게효율15%', buildFn: () => buildBagItem('bag_B', 1) },
+    { id:'bag_A', name:'A급 게이트백팩',    price:100000000,   unit:'개', note:'순도높은 중상급마정석을 이용해 더욱 거대한 공간과 효율을 자랑하는 가방 +24칸/무게+25kg/무게효율20%', buildFn: () => buildBagItem('bag_A', 1) },
+    { id:'bag_S', name:'S급 궁극의가방',    price:1800000000,  unit:'개', note:'최상급 마정석을 가공해 만든 디자인도 효율도 챙긴 궁극의 가방 +28칸/무게+30kg/무게효율30%', buildFn: () => buildBagItem('bag_S', 1) },
+    { id:'tent_E', name:'E급 일반텐트',          price:170000,     unit:'개', note:'일반 텐트 (3kg)', buildFn: () => buildTentItem('E', 1) },
+    { id:'tent_D', name:'D급 마정텐트',          price:650000,     unit:'개', note:'최하급 마정석을 가공해 저급마수들이 기척을 느끼지못하게 만든 튼튼한 텐트 야영효율+5% (6kg)', buildFn: () => buildTentItem('D', 1) },
+    { id:'tent_C', name:'C급 은신텐트',          price:3500000,    unit:'개', note:'하급마정석을 2개를 통째로 가공해 은신효과를 넣어 만든 텐트 야영효율+10% (9kg)', buildFn: () => buildTentItem('C', 1) },
+    { id:'tent_B', name:'B급 거대야영텐트',      price:17000000,   unit:'개', note:'중급마정석을 이용해 왠만한 마수들은 기척도 느끼지못하게 만든 거대한 텐트 야영효율+15% (12kg)', buildFn: () => buildTentItem('B', 1) },
+    { id:'tent_A', name:'A급 최고급야영지',      price:150000000,  unit:'개', note:'중상급마정석을 이용해 거대한 야영지 전체에 은신효과를 넣은 최고급 야영지 야영효율+20% (15kg)', buildFn: () => buildTentItem('A', 1) },
+    { id:'tent_S', name:'S급 파티야영지',        price:2300000000, unit:'개', note:'상급마정석을 이용해 거대한 야영지 전체에 은신효과와 더불어 소리차단마법까지 넣어 게이트내부에서 파티를 즐길수있는 야영지 야영효율+30% (20kg)', buildFn: () => buildTentItem('S', 1) },
   ],
 };
 SHOP_ITEMS.potion = POTION_CATALOG.map(p => ({
@@ -8025,6 +8076,33 @@ function seedNpcUsedListings() {
       id: `hm_npc_${uid}`, item, usedPrice, conditionPct: Math.round(conditionMul * 100), isNpc: true, listedAt: Date.now()
     });
   }
+    // ── 커스텀 장비 중고 등록 (일반/레어만) ──
+    const hmCustomEquips = (model.db.customEquipment || []).filter(eq => {
+      const r = (eq.rarity || 'Normal').toLowerCase();
+      return r === 'normal' || r === 'rare';
+    });
+    if (hmCustomEquips.length > 0) {
+      const existingHmCustomIds = new Set((model.db.hmUsedListings||[]).filter(l => l.isCustom).map(l => l.sourceId));
+      hmCustomEquips.forEach(eq => {
+        if (existingHmCustomIds.has(eq.id)) return;
+        if (Math.random() > 0.25) return; // 25% 확률로 등록
+        const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const conditionMul = 0.40 + Math.random() * 0.55; // 40~95%
+        const durMul = conditionMul;
+        const item = deepClone(eq);
+        item.id = `hm_custom_${eq.id}_${uid}`;
+        item.category = 'equipment';
+        item.stackable = false;
+        item.stackKey = `equipment:hm_custom_${uid}`;
+        item.durability = Math.round((item.maxDurability || 100) * durMul);
+        item.maxDurability = 80 + Math.floor(Math.random() * 20); // 80~99
+        if (!item.unitWeightG) item.unitWeightG = EQUIP_WEIGHT_G[item.part] || 1000;
+        const basePrice = calcEquipRandomPrice(eq.rank || 'E', eq.part || 'weapon');
+        const usedPrice = Math.round(basePrice * conditionMul * 0.65);
+        item.note = `커스텀 장비 중고`;
+        model.db.hmUsedListings.push({ id: `hm_custom_${uid}`, item, usedPrice, conditionPct: Math.round(conditionMul * 100), isNpc: true, isCustom: true, sourceId: eq.id, listedAt: Date.now() });
+      });
+    }
 }
 
 function renderHunterMarketHtml() {
@@ -9718,6 +9796,15 @@ function renderCommandPanel(runtime) {
           <button class="gb-btn" id="gb-battle-potion">🧪 물약</button>
           <button class="gb-btn danger" id="gb-retreat-battle" ${model.state.runtime.round > 0 ? 'disabled title="전투 중에는 후퇴할 수 없다."' : ''}>🏳️ 후퇴</button>
         </div>
+        ${(() => {
+          const rt = model.state.runtime;
+          const recentLogs = (rt.logs || []).slice(-8);
+          if (!recentLogs.length) return '';
+          return `<div class="gb-panel" style="margin-top:8px;max-height:150px;overflow:auto;">
+            <div class="gb-section-title" style="font-size:11px;">📜 최근 전투 요약</div>
+            <div class="gb-log" style="font-size:10px;">${recentLogs.map(row => `<div style="padding:1px 0;border-bottom:1px solid rgba(148,163,184,0.05);">• ${escapeHtml(row)}</div>`).join('')}</div>
+          </div>`;
+        })()}
       </div>
     `;
   }
@@ -9775,18 +9862,17 @@ function renderCommandPanel(runtime) {
       const spPct = u.maxSp > 0 ? Math.round(u.sp / u.maxSp * 100) : 0;
       const hpColor = hpPct > 50 ? '#22c55e' : hpPct > 25 ? '#f59e0b' : '#ef4444';
       const statusIcons = getStatusIcons(u.statuses, true);
-      return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:10px;border-left:3px solid ${hpColor};margin-bottom:4px;">
+      return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:4px 8px;border-left:3px solid ${hpColor};margin-bottom:2px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div><strong style="font-size:14px;">${escapeHtml(u.name)}</strong> <span class="gb-badge">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="font-size:9px;">${escapeHtml(rowLabel(u.row))}</span></div>
-          <div style="font-size:10px;color:#94a3b8;">${escapeHtml(u.job||'')} / ${escapeHtml(u.position||'')}</div>
+          <div><strong style="font-size:12px;">${escapeHtml(u.name)}</strong> <span class="gb-badge" style="font-size:8px;">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="font-size:8px;">${escapeHtml(rowLabel(u.row))}</span>${statusIcons.length ? ` ${statusIcons.join('')}` : ''}</div>
+          <div style="font-size:9px;color:#94a3b8;">${escapeHtml(u.job||'')}</div>
         </div>
-        ${statusIcons.length ? `<div style="margin:3px 0;font-size:10px;">${statusIcons.join(' ')}</div>` : ''}
-        <div class="gb-bar-wrap" style="margin-top:4px;"><span style="font-size:11px;color:${hpColor};">❤️ ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
-        <div style="display:flex;gap:8px;">
-          <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:10px;color:#60a5fa;">💧 ${Math.floor(u.mp)}/${Math.floor(u.maxMp)}</span><div class="gb-bar"><div class="gb-bar-fill mp" style="width:${mpPct}%"></div></div></div>
-          <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:10px;color:#fbbf24;">⚡ ${Math.floor(u.sp)}/${Math.floor(u.maxSp)}</span><div class="gb-bar"><div class="gb-bar-fill sp" style="width:${spPct}%"></div></div></div>
+        <div style="display:flex;gap:4px;align-items:center;margin-top:2px;">
+          <div class="gb-bar-wrap" style="flex:2;"><span style="font-size:9px;color:${hpColor};">❤️${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar" style="height:6px;"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
+          <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:8px;color:#60a5fa;">💧${Math.floor(u.mp)}</span><div class="gb-bar" style="height:4px;"><div class="gb-bar-fill mp" style="width:${mpPct}%"></div></div></div>
+          <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:8px;color:#fbbf24;">⚡${Math.floor(u.sp)}</span><div class="gb-bar" style="height:4px;"><div class="gb-bar-fill sp" style="width:${spPct}%"></div></div></div>
         </div>
-        ${u.lastAction ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
+        ${u.lastAction ? `<div style="font-size:9px;color:#94a3b8;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
       </div>`;
     }
 
@@ -9795,13 +9881,13 @@ function renderCommandPanel(runtime) {
       const hpPct = u.maxHp > 0 ? Math.round(u.hp / u.maxHp * 100) : 0;
       const kindColor = u.kind === 'Boss' ? '#dc2626' : u.kind === 'Elite' ? '#d97706' : '#64748b';
       const statusIcons = getStatusIcons(u.statuses, false);
-      return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:8px;border-left:3px solid ${kindColor};margin-bottom:4px;">
+      return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:4px 8px;border-left:3px solid ${kindColor};margin-bottom:2px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div><strong style="font-size:13px;">${escapeHtml(u.name)}</strong> <span class="gb-badge">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="background:rgba(239,68,68,0.18);color:#fca5a5;font-size:9px;">${escapeHtml(u.kind||'')}</span> ${statusIcons.join('')}</div>
-          <span style="font-size:10px;color:#94a3b8;">${escapeHtml(rowLabel(u.row))}</span>
+          <div><strong style="font-size:11px;">${escapeHtml(u.name)}</strong> <span class="gb-badge" style="font-size:8px;">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="background:rgba(239,68,68,0.18);color:#fca5a5;font-size:8px;">${escapeHtml(u.kind||'')}</span>${statusIcons.length ? ` ${statusIcons.join('')}` : ''}</div>
+          <span style="font-size:9px;color:#94a3b8;">${escapeHtml(rowLabel(u.row))}</span>
         </div>
-        <div class="gb-bar-wrap" style="margin-top:4px;"><span style="font-size:11px;">HP ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
-        ${u.lastAction ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
+        <div class="gb-bar-wrap" style="margin-top:2px;"><span style="font-size:9px;">HP ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar" style="height:6px;"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
+        ${u.lastAction ? `<div style="font-size:9px;color:#94a3b8;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
       </div>`;
     }
 
@@ -9843,6 +9929,26 @@ function renderCommandPanel(runtime) {
           <textarea id="gb-llm-block" class="gb-textarea short" readonly style="margin-top:8px;">${escapeHtml(rt.llmBlock || '')}</textarea>
           <div class="gb-btn-row"><button class="gb-btn" id="gb-copy-llm">결과 블록 복사</button></div>
         </div>`;
+    } else if (battleTab === 'inventory') {
+      const inv = getActiveInventory();
+      const personalInv = (() => { try { const run = activeGateRun ? activeGateRun() : null; if (run && run.partyState && run.partyState.length > 0) { const first = run.partyState[0]; return getPersonalInv(first._sourceType || 'persona', first.id || first._sourceId) || null; } } catch(e){} return null; })();
+      const allItems = [];
+      if (inv && inv.items) inv.items.forEach(it => allItems.push({ ...it, _source: '공용' }));
+      if (personalInv && personalInv.items) personalInv.items.forEach(it => allItems.push({ ...it, _source: '개인' }));
+      const itemsHtml = allItems.length ? allItems.map((it, idx) => {
+        const ikey = inventoryItemKey(it);
+        return `<div class="gb-unit" style="padding:4px 8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:11px;"><span class="gb-badge" style="font-size:8px;">${escapeHtml(it._source)}</span> <strong>${escapeHtml(it.name||it.id)}</strong>${it.count > 1 ? ` x${it.count}` : ''} <span class="gb-sub">${escapeHtml(it.note||'')}</span></div>
+            <button class="gb-btn tiny danger" data-battle-discard="${escapeHtml(it._source)}:${escapeHtml(ikey)}">버리기</button>
+          </div>
+        </div>`;
+      }).join('') : '<div class="gb-sub">인벤토리가 비어있다.</div>';
+      tabContent = `<div class="gb-panel" style="max-height:350px;overflow:auto;">
+        <div class="gb-section-title">📦 인벤토리 (전투 중)</div>
+        <div class="gb-sub">공용/개인 인벤토리 아이템 확인 및 버리기.</div>
+        ${itemsHtml}
+      </div>`;
     }
 
     return `
@@ -9871,11 +9977,11 @@ function renderCommandPanel(runtime) {
 
         <!-- 유닛 패널: 아군 vs 적 -->
         <div class="gb-grid two" style="align-items:start;margin-bottom:10px;">
-          <div class="gb-panel" style="max-height:380px;overflow:auto;">
+          <div class="gb-panel" style="max-height:320px;overflow:auto;">
             <div class="gb-section-title" style="color:#60a5fa;">👥 아군 (${aliveParty.length}/${rt.party.length})</div>
             ${rt.party.map(u => immersivePartyCard(u)).join('')}
           </div>
-          <div class="gb-panel" style="max-height:380px;overflow:auto;">
+          <div class="gb-panel" style="max-height:320px;overflow:auto;">
             <div class="gb-section-title" style="color:#fca5a5;">👹 적 (${aliveEnemies.length}/${rt.enemies.length})</div>
             ${rt.enemies.map(u => immersiveEnemyCard(u)).join('')}
           </div>
@@ -9886,6 +9992,7 @@ function renderCommandPanel(runtime) {
           <button class="gb-btn${battleTab==='action'?' primary':''}" data-battle-tab="action">⚔️ 행동 지정</button>
           <button class="gb-btn${battleTab==='log'?' primary':''}" data-battle-tab="log">📜 전투 로그</button>
           <button class="gb-btn${battleTab==='summary'?' primary':''}" data-battle-tab="summary">📊 요약/결과</button>
+          <button class="gb-btn${battleTab==='inventory'?' primary':''}" data-battle-tab="inventory">📦 인벤</button>
         </div>
 
         ${tabContent}
@@ -10124,13 +10231,27 @@ function renderCommandPanel(runtime) {
         if (eq) {
           const dur = Number(eq.durability ?? 100);
           const maxDur = Number(eq.maxDurability ?? 100);
-          const traitTxt = (eq.traits||[]).length ? ` [${(eq.traits||[]).map(t=>equipTraitDisplay(t, eq.rank)).join(',')}]` : '';
+          const traitTxt = (eq.traits||[]).length ? (eq.traits||[]).map(t=>equipTraitDisplay(t, eq.rank)).join(', ') : '';
           const enhTxt = eq.enhance > 0 ? ` +${eq.enhance}` : '';
+          const atkVal = Number(eq.atk || 0);
+          const pdefVal = Number(eq.pdef || 0);
+          const mdefVal = Number(eq.mdef || 0);
+          const mainStatLabel = eq.mainStat ? `주스탯: ${(eq.mainStat||'').toUpperCase()}` : '';
+          const infuseInfo = eq.maxInfuse > 0 ? `주입: ${eq.infuse||0}/${eq.maxInfuse}` : '';
+          const statsLine = [
+            atkVal > 0 ? `ATK ${atkVal}` : '',
+            pdefVal > 0 ? `물방 ${pdefVal}` : '',
+            mdefVal > 0 ? `마방 ${mdefVal}` : '',
+            mainStatLabel,
+            infuseInfo
+          ].filter(Boolean).join(' | ');
           return `<div class="gb-unit"><div class="gb-unit-top">
             <div>
               <span class="gb-sub" style="font-size:0.8em;">${label}</span>
-              <div><strong style="${rarityStyle(eq.rarity)}">${escapeHtml(eq.name||eq.id)}${enhTxt}</strong>${eq.rarity && eq.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(eq.rarity)};color:#000;font-size:9px;">${escapeHtml(eq.rarity)}</span>` : ''}${traitTxt ? `<span class="gb-sub">${escapeHtml(traitTxt)}</span>` : ''}</div>
+              <div><strong style="${rarityStyle(eq.rarity)}">${escapeHtml(eq.name||eq.id)}${enhTxt}</strong>${eq.rarity && eq.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(eq.rarity)};color:#000;font-size:9px;">${escapeHtml(eq.rarity)}</span>` : ''}</div>
               <div class="gb-sub">내구도 ${fmtDur(dur)}/${fmtDur(maxDur)} | ${escapeHtml(eq.rank||'E')}등급</div>
+              ${statsLine ? `<div class="gb-sub" style="color:#60a5fa;">${escapeHtml(statsLine)}</div>` : ''}
+              ${traitTxt ? `<div class="gb-sub" style="color:#a78bfa;">특성: ${escapeHtml(traitTxt)}</div>` : ''}
             </div>
             <button class="gb-btn tiny" data-personal-unequip="${type}:${entityId}:${part}">해제</button>
           </div></div>`;
@@ -10201,6 +10322,7 @@ function renderCommandPanel(runtime) {
             </div>
             <div>
               <button class="gb-btn tiny" data-personal-to-shared="${type}:${entityId}:${escapeHtml(ikey)}">공용으로 이동</button>
+              ${it.category === 'skillbook' ? `<button class="gb-btn tiny primary" data-personal-learn-skill="${type}:${entityId}:${escapeHtml(ikey)}">📖 스킬 배우기</button>` : ''}
             </div>
           </div></div>`;
         }).join('');
@@ -13432,6 +13554,35 @@ async function saveMaterialTraitFromForm() {
       model.state.battleTab = ev.currentTarget.getAttribute('data-battle-tab') || 'action';
       renderApp();
     });
+    // 전투 중 인벤토리 아이템 버리기
+    on('[data-battle-discard]', 'click', async (ev) => {
+      try {
+        const val = ev.currentTarget.getAttribute('data-battle-discard') || '';
+        const colonIdx = val.indexOf(':');
+        if (colonIdx < 0) throw new Error('잘못된 데이터.');
+        const source = val.substring(0, colonIdx);
+        const ikey = val.substring(colonIdx + 1);
+        if (!confirm(`정말 이 아이템을 버리시겠습니까?`)) return;
+        let inv;
+        if (source === '공용') {
+          inv = getActiveInventory();
+        } else {
+          const run = activeGateRun ? activeGateRun() : null;
+          if (run && run.partyState && run.partyState.length > 0) {
+            const first = run.partyState[0];
+            inv = getPersonalInv(first._sourceType || 'persona', first.id || first._sourceId);
+          }
+        }
+        if (!inv) throw new Error('인벤토리를 찾을 수 없다.');
+        const idx = inv.items.findIndex(it => inventoryItemKey(it) === ikey);
+        if (idx < 0) throw new Error('아이템을 찾을 수 없다.');
+        const item = inv.items[idx];
+        if (item.count > 1) { item.count--; }
+        else { inv.items.splice(idx, 1); }
+        await saveDb(); await saveState(); renderApp();
+        toast(`🗑️ ${item.name||item.id} 버림`);
+      } catch(e) { toast(e.message || String(e), true); }
+    });
     // 게이트 파티탭 파티원 클릭 → 상세 펼침/접기
     on('[data-gate-party-detail]', 'click', (ev) => {
       const uid = ev.currentTarget.getAttribute('data-gate-party-detail') || '';
@@ -13681,6 +13832,10 @@ async function saveMaterialTraitFromForm() {
         if (!target || target.dead || target.hp <= 0) throw new Error('대상이 유효하지 않다.');
         const msg = usePotionOnUnit(potionItem, target);
         consumePotionFromInventory(potionKey);
+        target.lastAction = '🧪 물약 사용 (행동 소모)';
+        if (rt.pendingActions) {
+          rt.pendingActions[target.uid] = { type: 'potion', skillId: '', target: '' };
+        }
         await saveState();
         renderApp();
         toast(msg);
@@ -13833,10 +13988,13 @@ async function saveMaterialTraitFromForm() {
           // 단일 힐: 선택한 대상에게 회복
           const target = party[targetIdx];
           if (!target) throw new Error('대상이 유효하지 않다.');
-          const mainStat = Number((caster.stats && caster.stats.int) || caster.int || 10);
+          // 스킬의 statTypes에 따라 주스탯 결정 (int/str/agi/sense/con)
+          const statTypes = skill.statTypes || ['int'];
+          const mainStat = Math.max(...statTypes.map(st => Number((caster.stats && caster.stats[st]) || caster[st] || 10)));
           const coef = Number(skill.coef || 1.0);
           const healBase = mainStat * 0.5;
-          const healAmt = Math.max(1, Math.round(healBase * coef));
+          const healDoneBonus = 1 + Number((caster.traitBonuses && caster.traitBonuses.healing_done) || 0) / 100;
+          const healAmt = Math.max(1, Math.round(healBase * coef * healDoneBonus));
           const maxHp = Number(target.hp || target.maxHp || 1);
           const before = Number(target.currentHp != null ? target.currentHp : target.hp || 0);
           target.currentHp = Math.min(maxHp, before + healAmt);
@@ -13844,10 +14002,12 @@ async function saveMaterialTraitFromForm() {
           resultMsg = `${caster.name} → ${target.name}에게 ${skill.name} 사용! HP +${actual} (${Math.floor(before)}→${Math.floor(target.currentHp)})`;
         } else if (cat === 'aoeHeal') {
           // 광역 힐: 생존 아군 전체 회복
-          const mainStat = Number((caster.stats && caster.stats.int) || caster.int || 10);
+          const statTypes = skill.statTypes || ['int'];
+          const mainStat = Math.max(...statTypes.map(st => Number((caster.stats && caster.stats[st]) || caster[st] || 10)));
           const coef = Number(skill.coef || 1.0);
           const healBase = mainStat * 0.5;
-          const healAmt = Math.max(1, Math.round(healBase * coef));
+          const healDoneBonus = 1 + Number((caster.traitBonuses && caster.traitBonuses.healing_done) || 0) / 100;
+          const healAmt = Math.max(1, Math.round(healBase * coef * healDoneBonus));
           const healed = [];
           party.forEach(u => {
             const maxHp = Number(u.hp || u.maxHp || 1);
@@ -14089,6 +14249,45 @@ async function saveMaterialTraitFromForm() {
         await saveDb(); await saveState(); renderApp();
         toast(`📦 ${itClone.name} → 공용 인벤 이동 완료`);
       } catch(e) { toast(e.message||String(e), true); }
+    });
+    // ── 스킬북 스킬 배우기 ──
+    on('[data-personal-learn-skill]', 'click', async (ev) => {
+      try {
+        const val = ev.currentTarget.getAttribute('data-personal-learn-skill') || '';
+        const parts = val.split(':');
+        const type = parts[0], entityId = parts[1];
+        const itemKey = parts.slice(2).join(':');
+        if (!type || !entityId || !itemKey) throw new Error('잘못된 데이터.');
+        const entry = type === 'persona' ? getPersonaById(entityId) : getCharById(entityId);
+        if (!entry) throw new Error('캐릭터를 찾을 수 없다.');
+        const inv = getPersonalInv(type, entityId);
+        if (!inv) throw new Error('인벤토리를 찾을 수 없다.');
+        const itemIdx = inv.items.findIndex(it => inventoryItemKey(it) === itemKey);
+        if (itemIdx < 0) throw new Error('아이템을 찾을 수 없다.');
+        const item = inv.items[itemIdx];
+        if (item.category !== 'skillbook') throw new Error('스킬북이 아니다.');
+        const skillId = item.skillId;
+        if (!skillId) throw new Error('스킬 ID가 없다.');
+        const allSkills = Object.assign({}, BUILTIN_SKILLS || {});
+        (model.db.customSkills || []).forEach(s => { allSkills[s.id] = s; });
+        const skill = allSkills[skillId];
+        if (!skill) throw new Error(`스킬 "${skillId}"을 찾을 수 없다.`);
+        const charRank = (entry.rank || 'E').toUpperCase();
+        const skillRank = (skill.grade || item.rank || 'E').toUpperCase();
+        if (charRank !== skillRank) throw new Error(`등급이 맞지 않음! 캐릭터: ${charRank}급 / 스킬: ${skillRank}급. 같은 등급만 배울 수 있다.`);
+        const skillStats = skill.statTypes || [];
+        const charMainStat = (entry.attackStat || (entry.damageType === 'magic' ? 'int' : 'str'));
+        if (skillStats.length > 0 && !skillStats.includes(charMainStat)) {
+          throw new Error(`주스탯 불일치! 스킬 요구: ${skillStats.join('/')} / 캐릭터 주스탯: ${charMainStat}. 주스탯이 같아야 배울 수 있다.`);
+        }
+        if ((entry.skills || []).includes(skillId)) throw new Error(`이미 배운 스킬이다: ${skill.name}`);
+        if (!Array.isArray(entry.skills)) entry.skills = [];
+        entry.skills.push(skillId);
+        if (item.count > 1) { item.count--; }
+        else { inv.items.splice(itemIdx, 1); }
+        await saveDb(); await saveState(); renderApp();
+        toast(`📖 ${entry.name}이(가) "${skill.name}" 스킬을 배웠다!`);
+      } catch (e) { toast(e.message || String(e), true); }
     });
 
     on('#gb-mat-new', 'click', async () => { model.state.selected.materials = ''; await saveState(); renderApp(); });
