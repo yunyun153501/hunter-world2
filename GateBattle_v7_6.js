@@ -4782,11 +4782,11 @@ function renderGateRunPanel(run) {
   const alive = (run.partyState || []).filter(u => Number(u.currentHp || u.hp || 0) > 0);
   const dead = (run.partyState || []).filter(u => Number(u.currentHp || u.hp || 0) <= 0);
   function gatePartyCard(u) {
-    const hp = Number(u.currentHp || u.hp || 0);
+    const hp = Number(u.currentHp != null ? u.currentHp : (u.hp || 0));
     const maxHp = Number(u.hp || 1);
-    const mp = Number(u.currentMp || u.mp || 0);
+    const mp = Number(u.currentMp != null ? u.currentMp : (u.mp || 0));
     const maxMp = Number(u.mp || 1);
-    const sp = Number(u.currentSp || u.sp || 0);
+    const sp = Number(u.currentSp != null ? u.currentSp : (u.sp || 0));
     const maxSp = Number(u.sp || 1);
     const hpPct = maxHp > 0 ? Math.round(hp / maxHp * 100) : 0;
     const mpPct = maxMp > 0 ? Math.round(mp / maxMp * 100) : 0;
@@ -4838,11 +4838,11 @@ function renderGateRunPanel(run) {
       <div class="gb-panel">
         <div class="gb-section-title">👥 파티원 상세 <span class="gb-sub" style="font-size:11px;">(클릭하면 상세정보)</span></div>
         ${(run.partyState || []).map(u => {
-          const hp = Number(u.currentHp || u.hp || 0);
+          const hp = Number(u.currentHp != null ? u.currentHp : (u.hp || 0));
           const maxHp = Number(u.hp || 1);
-          const mp = Number(u.currentMp || u.mp || 0);
+          const mp = Number(u.currentMp != null ? u.currentMp : (u.mp || 0));
           const maxMp = Number(u.mp || 1);
-          const sp = Number(u.currentSp || u.sp || 0);
+          const sp = Number(u.currentSp != null ? u.currentSp : (u.sp || 0));
           const maxSp = Number(u.sp || 1);
           const isDead = hp <= 0;
           const stats = u.stats || {};
@@ -7385,22 +7385,35 @@ function renderAssociationView() {
     const settleDate = st.settleDate || '';
     const isGuild   = settleType === 'guild';
 
-    // 판매할 아이템 선택 UI (항상 표시)
+    // 판매할 아이템 선택 UI (공용 + 파티원 전체 인벤)
     const inv = getInventory();
     const fmtS = n => { const v = Math.floor((n||0) / 10) * 10; return v >= 1e8 ? `${(v/1e8).toFixed(2)}억원` : `${v.toLocaleString('en-US')}원`; };
     // ── 아이템 단가 계산 헬퍼 ────────────────────────────────────────────────
     const calcSellPrice = (it, guild) => calcInventorySellPrice(it, guild);
-    const sellableItems = (inv.items||[]).filter(it => {
+    const _sellFilter = it => {
       if (it.category === 'equipment') {
-        // 중고 장비(사용 이력 있음)는 협회에서 판매 불가 — 헌터마켓 이용
         const isUsed = it.isUsed || Number(it.maxDurability ?? 100) < 100 || Number(it.durability ?? 100) < Number(it.maxDurability ?? 100);
         return !isUsed;
       }
       return it.category === 'rareMaterial' || it.category === 'normalMaterial' || it.category === 'manaStone';
+    };
+    const _sKey = (it, src) => inventoryItemKey(it) + '\u00a7' + src;
+    // 공용 + 파티원 전체 인벤 수집
+    const sellableItems = [];
+    (inv.items||[]).filter(_sellFilter).forEach(it => { it._settleSource = 'shared'; it._settleLabel = '공용'; sellableItems.push(it); });
+    ((model.db.battleSetup && model.db.battleSetup.partySlots) || []).filter(Boolean).forEach(pid => {
+      const isChar = (model.db.characters || []).find(c => c.id === pid);
+      const isPers = !isChar && (model.db.personas || []).find(p => p.id === pid);
+      const type = isChar ? 'character' : (isPers ? 'persona' : null);
+      if (!type) return;
+      const pInv = getPersonalInv(type, pid);
+      if (!pInv) return;
+      const ownerName = (isChar || isPers).name || pid;
+      (pInv.items || []).filter(_sellFilter).forEach(it => { it._settleSource = `${type}:${pid}`; it._settleLabel = ownerName; sellableItems.push(it); });
     });
     const settleItemSel = st.settleItemSel || {};
     const selectedTotal = sellableItems.reduce((sum, it) => {
-      const key = inventoryItemKey(it);
+      const key = _sKey(it, it._settleSource || 'shared');
       if (!settleItemSel[key]) return sum;
       return sum + calcSellPrice(it, isGuild);
     }, 0);
@@ -7410,12 +7423,13 @@ function renderAssociationView() {
     const sellItemsHtml = sellableItems.length === 0
       ? '<div class="gb-sub">인벤토리에 판매 가능한 아이템이 없다.</div>'
       : sellableItems.map(it => {
-          const key = inventoryItemKey(it);
+          const key = _sKey(it, it._settleSource || 'shared');
           const sel = !!settleItemSel[key];
           const price = calcSellPrice(it, isGuild);
+          const srcBadge = it._settleSource !== 'shared' ? ` <span class="gb-sub" style="font-size:10px;">[${escapeHtml(it._settleLabel||'')}]</span>` : '';
           return `<label style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(148,163,184,0.08);cursor:pointer;">
             <input type="checkbox" data-settle-item-sel="${escapeHtml(key)}" ${sel?'checked':''}>
-            <span style="flex:1;font-size:12px;"><strong>${escapeHtml(it.name||it.id)}</strong> <span class="gb-badge">${escapeHtml(it.rank||'')}</span>${it.count>1?` ×${it.count}`:''}</span>
+            <span style="flex:1;font-size:12px;"><strong>${escapeHtml(it.name||it.id)}</strong>${srcBadge} <span class="gb-badge">${escapeHtml(it.rank||'')}</span>${it.count>1?` ×${it.count}`:''}</span>
             <span style="font-size:11px;color:#94a3b8;">${fmtS(price)}</span>
           </label>`;
         }).join('');
@@ -7445,7 +7459,7 @@ function renderAssociationView() {
     }).join('') : '';
 
     // 선택된 아이템 목록 (체크된 것만)
-    const selectedItemLines = sellableItems.filter(it => settleItemSel[inventoryItemKey(it)]).map(it => {
+    const selectedItemLines = sellableItems.filter(it => settleItemSel[_sKey(it, it._settleSource || 'shared')]).map(it => {
       const price = calcSellPrice(it, isGuild);
       const countTxt = it.count > 1 ? ` ×${it.count}` : '';
       return `<div class="gb-sub">• [${escapeHtml(it.rank||'E')}] ${escapeHtml(it.name||it.id)}${countTxt} = ${fmtS(price)}</div>`;
@@ -12046,15 +12060,26 @@ async function saveMaterialTraitFromForm() {
     on('#gb-settle-item-sel-all', 'click', async () => {
       const inv = getInventory();
       if (!model.state.settleItemSel) model.state.settleItemSel = {};
-      (inv.items||[]).forEach(it => {
-        const k = inventoryItemKey(it);
+      const _sf = it => {
         if (it.category === 'equipment') {
-          // 중고 장비 제외 (협회 판매 불가)
           const isUsed = it.isUsed || Number(it.maxDurability ?? 100) < 100 || Number(it.durability ?? 100) < Number(it.maxDurability ?? 100);
-          if (!isUsed) model.state.settleItemSel[k] = true;
-        } else if (['rareMaterial','normalMaterial','manaStone'].includes(it.category)) {
-          model.state.settleItemSel[k] = true;
+          return !isUsed;
         }
+        return ['rareMaterial','normalMaterial','manaStone'].includes(it.category);
+      };
+      (inv.items||[]).filter(_sf).forEach(it => {
+        model.state.settleItemSel[inventoryItemKey(it) + '\u00a7shared'] = true;
+      });
+      ((model.db.battleSetup && model.db.battleSetup.partySlots) || []).filter(Boolean).forEach(pid => {
+        const isChar = (model.db.characters || []).find(c => c.id === pid);
+        const isPers = !isChar && (model.db.personas || []).find(p => p.id === pid);
+        const type = isChar ? 'character' : (isPers ? 'persona' : null);
+        if (!type) return;
+        const pInv = getPersonalInv(type, pid);
+        if (!pInv) return;
+        (pInv.items || []).filter(_sf).forEach(it => {
+          model.state.settleItemSel[inventoryItemKey(it) + '\u00a7' + type + ':' + pid] = true;
+        });
       });
       await saveState(); renderApp();
     });
@@ -12073,15 +12098,37 @@ async function saveMaterialTraitFromForm() {
         const fmtS = n => { const v = Math.floor((n||0) / 10) * 10; return v >= 1e8 ? `${(v/1e8).toFixed(2)}억원` : `${v.toLocaleString('en-US')}원`; };
         let total = 0;
         const toRemove = [];
+        // 공용 인벤
         (inv.items||[]).forEach(it => {
-          const key = inventoryItemKey(it);
-          if (!sel[key]) return;
-          const price = calcInventorySellPrice(it, isGuild);
-          total += price;
-          toRemove.push(key);
+          const sk = inventoryItemKey(it) + '\u00a7shared';
+          if (!sel[sk]) return;
+          total += calcInventorySellPrice(it, isGuild);
+          toRemove.push({ key: inventoryItemKey(it), source: 'shared' });
+        });
+        // 파티원 인벤
+        ((model.db.battleSetup && model.db.battleSetup.partySlots) || []).filter(Boolean).forEach(pid => {
+          const isChar = (model.db.characters || []).find(c => c.id === pid);
+          const isPers = !isChar && (model.db.personas || []).find(p => p.id === pid);
+          const type = isChar ? 'character' : (isPers ? 'persona' : null);
+          if (!type) return;
+          const pInv = getPersonalInv(type, pid);
+          if (!pInv) return;
+          (pInv.items || []).forEach(it => {
+            const sk = inventoryItemKey(it) + '\u00a7' + type + ':' + pid;
+            if (!sel[sk]) return;
+            total += calcInventorySellPrice(it, isGuild);
+            toRemove.push({ key: inventoryItemKey(it), source: type + ':' + pid, inv: pInv });
+          });
         });
         if (toRemove.length === 0) { toast('판매할 아이템을 선택하라.', true); return; }
-        toRemove.forEach(k => removeInventoryItem(k, 'all'));
+        toRemove.forEach(entry => {
+          if (entry.source === 'shared') {
+            removeInventoryItem(entry.key, 'all');
+          } else {
+            const idx = entry.inv.items.findIndex(x => inventoryItemKey(x) === entry.key);
+            if (idx >= 0) entry.inv.items.splice(idx, 1);
+          }
+        });
         // 5% 수수료 적용
         const fee = Math.floor(total * 0.05);
         const net = total - fee;
@@ -12111,14 +12158,37 @@ async function saveMaterialTraitFromForm() {
         const fmtS = n => { const v = Math.floor((n||0) / 10) * 10; return v >= 1e8 ? `${(v/1e8).toFixed(2)}억원` : `${v.toLocaleString('en-US')}원`; };
         let total = 0;
         const toRemove = [];
+        // 공용 인벤
         (inv.items||[]).forEach(it => {
-          const key = inventoryItemKey(it);
-          if (!sel[key]) return;
+          const sk = inventoryItemKey(it) + '\u00a7shared';
+          if (!sel[sk]) return;
           total += calcInventorySellPrice(it, isGuild);
-          toRemove.push(key);
+          toRemove.push({ key: inventoryItemKey(it), source: 'shared' });
+        });
+        // 파티원 인벤
+        ((model.db.battleSetup && model.db.battleSetup.partySlots) || []).filter(Boolean).forEach(pid => {
+          const isChar = (model.db.characters || []).find(c => c.id === pid);
+          const isPers = !isChar && (model.db.personas || []).find(p => p.id === pid);
+          const type = isChar ? 'character' : (isPers ? 'persona' : null);
+          if (!type) return;
+          const pInv = getPersonalInv(type, pid);
+          if (!pInv) return;
+          (pInv.items || []).forEach(it => {
+            const sk = inventoryItemKey(it) + '\u00a7' + type + ':' + pid;
+            if (!sel[sk]) return;
+            total += calcInventorySellPrice(it, isGuild);
+            toRemove.push({ key: inventoryItemKey(it), source: type + ':' + pid, inv: pInv });
+          });
         });
         if (toRemove.length === 0) { toast('판매할 아이템을 선택하라.', true); return; }
-        toRemove.forEach(k => removeInventoryItem(k, 'all'));
+        toRemove.forEach(entry => {
+          if (entry.source === 'shared') {
+            removeInventoryItem(entry.key, 'all');
+          } else {
+            const idx = entry.inv.items.findIndex(x => inventoryItemKey(x) === entry.key);
+            if (idx >= 0) entry.inv.items.splice(idx, 1);
+          }
+        });
         // 5% 수수료 적용
         const fee = Math.floor(total * 0.05);
         const netTotal = total - fee;
