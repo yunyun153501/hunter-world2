@@ -2304,7 +2304,8 @@ function flushExpToDb(runtime) {
   const results = [];
   (runtime.party || []).forEach(unit => {
     if (!unit.sourceId) return;
-    const charEntry = (model.db.characters || []).find(c => c.id === unit.sourceId);
+    const charEntry = (model.db.characters || []).find(c => c.id === unit.sourceId)
+                   || (model.db.personas || []).find(p => p.id === unit.sourceId);
     if (!charEntry) return;
     const r = applyExpToCharacter(charEntry, totalExp);
     results.push({ name: charEntry.name, exp: totalExp, ...r });
@@ -3372,6 +3373,18 @@ function depositRewardBucketToInventory(bucket) {
         existing.count = Number(existing.count || 0) + Number(itemClone.count || 0);
         return;
       }
+      // 개인 인벤 슬롯 체크
+      const cap = personalInvCapacity ? personalInvCapacity(char.type || (model.db.characters||[]).find(c=>c.id===char.id) ? 'character' : 'persona', char.id) : null;
+      if (cap && charInv.items.length >= cap.slots) {
+        // 개인 인벤 꽉 참 → 공용 인벤으로
+        overflowLogs.push(`⚠️ ${charLabel} 가방 공간 부족 → ${itemClone.name} 공용 인벤으로 이동`);
+        const sharedRes = addInventoryItem(itemClone);
+        if (!sharedRes.ok) {
+          pushInventoryOverflow(itemClone);
+          overflowLogs.push(`⚠️ ${itemClone.name} → 공용 인벤도 꽉 참, 오버플로우로 이동`);
+        }
+        return;
+      }
       charInv.items.push(itemClone);
       return;
     }
@@ -4431,14 +4444,19 @@ function resolveGateBattleAftermath(victory) {
   const rt = model.state.runtime;
   if (!rt.started || !rt.finished) throw new Error('전투가 아직 끝나지 않았다.');
   if (!victory) {
-    // 전멸 시 HP 상태를 캐릭터 DB에 저장 + 전멸 날짜 기록
+    // 전멸 시 체력 1로 설정 후 캐릭터 DB에 저장 + 전멸 날짜 기록
+    (run.partyState || []).forEach(u => {
+      u.currentHp = 1;
+      u.currentMp = 1;
+      u.currentSp = 1;
+    });
     syncPartyHpToDb(run);
     const gd = model.db.gameDate || { year:2026, month:1, day:1 };
     model.db.lastWipeDate = { year: gd.year, month: gd.month, day: gd.day };
     run.failed = true;
     run.postBattle = null;
     run.pendingBattleRoomId = '';
-    pushGateLog(run, `게이트 실패: ${roomDisplayLabel(room, true)} 방에서 패퇴.`);
+    pushGateLog(run, `게이트 실패: ${roomDisplayLabel(room, true)} 방에서 패퇴. 생존자 HP/MP/SP → 1`);
     model.state.view = 'gate';
     model.state.runtime = buildDefaultRuntime();
     return;
@@ -9011,9 +9029,14 @@ function optionHtml(value, label, selected) {
   function targetOptions(runtime, actor, selected) {
     const foes = actor.side === 'party' ? getAlive(runtime.enemies) : getAlive(runtime.party);
     const allies = actor.side === 'party' ? getAlive(runtime.party) : getAlive(runtime.enemies);
+    const reachableRows = getAccessibleRows(actor, null, foes);
     const out = ['<option value="">(자동/기본)</option>'];
     out.push('<optgroup label="적">');
-    foes.forEach(u => out.push(optionHtml(u.uid, `${u.name} [${rowLabel(u.row)}]`, selected === u.uid)));
+    foes.forEach(u => {
+      const inRange = reachableRows.includes(u.row);
+      const label = `${u.name} [${rowLabel(u.row)}]${inRange ? '' : ' ⛔사거리밖'}`;
+      out.push(`<option value="${escapeHtml(u.uid)}"${selected === u.uid ? ' selected' : ''}${inRange ? '' : ' data-out-of-range="1" style="color:#ef4444;"'}>${escapeHtml(label)}</option>`);
+    });
     out.push('</optgroup><optgroup label="아군">');
     allies.forEach(u => out.push(optionHtml(u.uid, `${u.name} [${rowLabel(u.row)}]`, selected === u.uid)));
     out.push('</optgroup>');
@@ -9578,7 +9601,7 @@ function renderCommandPanel(runtime) {
           <button class="gb-btn" id="gb-auto-one">1라운드 자동</button>
           <button class="gb-btn" id="gb-auto-battle">끝까지 자동</button>
           <button class="gb-btn" id="gb-battle-potion">🧪 물약</button>
-          <button class="gb-btn" id="gb-reset-battle">전투 종료/리셋</button>
+          <button class="gb-btn danger" id="gb-retreat-battle" ${model.state.runtime.round > 0 ? 'disabled title="전투 중에는 후퇴할 수 없다."' : ''}>🏳️ 후퇴</button>
         </div>
       </div>
     `;
@@ -13302,6 +13325,14 @@ async function saveMaterialTraitFromForm() {
     on('#gb-room-next', 'click', async () => {
       try {
         const run = getGateRun();
+        const room = getActiveRoom(run);
+        if (room && roomHasMineableVeins(room) && !run._mineWarningShown) {
+          run._mineWarningShown = true;
+          toast('⚠️ 아직 광맥채굴을 하지 않았습니다! 다시 누르면 채굴하지 않고 진행합니다.', true);
+          renderApp();
+          return;
+        }
+        run._mineWarningShown = false;
         continueAfterClearedRoom(run);
         await saveState();
         renderApp();
@@ -13378,6 +13409,23 @@ async function saveMaterialTraitFromForm() {
 
     on('#gb-run-round', 'click', async () => {
       try {
+        // 사거리 검증: 선택한 타겟이 사거리 밖이면 경고
+        const rt = model.state.runtime;
+        if (rt && rt.party) {
+          const pending = rt.pendingActions || {};
+          const foes = rt.enemies;
+          for (const unit of getAlive(rt.party)) {
+            const pa = pending[unit.uid];
+            if (!pa || !pa.target) continue;
+            const targetUnit = (foes || []).find(u => u.uid === pa.target);
+            if (!targetUnit || targetUnit.dead) continue;
+            const reachable = getAccessibleRows(unit, pa.skill ? getAllSkillMap()[pa.skill] : null, foes);
+            if (!reachable.includes(targetUnit.row)) {
+              toast(`⛔ ${unit.name}의 사거리가 ${targetUnit.name}에게 닿지 않습니다! 대상을 변경하세요.`, true);
+              return;
+            }
+          }
+        }
         collectPendingActions();
         resolveOneRound();
         autoHandleFinishedGateBattle();
@@ -13433,10 +13481,22 @@ async function saveMaterialTraitFromForm() {
         toast(msg);
       } catch (e) { toast(e.message || String(e), true); }
     });
-    on('#gb-reset-battle', 'click', async () => {
+    on('#gb-retreat-battle', 'click', async () => {
+      const rt = model.state.runtime;
+      if (rt.round > 0) { toast('전투가 시작된 후에는 후퇴할 수 없다.', true); return; }
+      if (!confirm('⚠️ 후퇴하면 게이트가 초기화되고 실패 처리됩니다.\n그래도 후퇴하시겠습니까?')) return;
+      const run = activeGateRun ? activeGateRun() : null;
+      if (run) {
+        syncPartyHpToDb(run);
+        run.failed = true;
+        run.postBattle = null;
+        pushGateLog(run, '후퇴: 전투 시작 전 자발적 후퇴. 게이트 실패 처리.');
+      }
       model.state.runtime = buildDefaultRuntime();
-      await saveState();
+      model.state.view = run ? 'gate' : model.state.view;
+      await saveDb(); await saveState();
       renderApp();
+      toast('🏳️ 게이트에서 후퇴했습니다. 실패 처리되었습니다.');
     });
     on('#gb-copy-llm', 'click', async () => {
       const text = model.state.runtime.llmBlock || '';
@@ -13454,6 +13514,17 @@ async function saveMaterialTraitFromForm() {
     on('#gb-postbattle-next', 'click', async () => {
       try {
         const run = getGateRun();
+        // 광맥 미채굴 경고
+        if (run && run.postBattle) {
+          const afterRoom = getRoomById(run, run.postBattle.roomId);
+          if (afterRoom && roomHasMineableVeins(afterRoom) && !run._mineWarningShown) {
+            run._mineWarningShown = true;
+            toast('⚠️ 아직 광맥채굴을 하지 않았습니다! 다시 누르면 채굴하지 않고 진행합니다.', true);
+            renderApp();
+            return;
+          }
+        }
+        run._mineWarningShown = false;
         continueAfterGateBattle(run);
         await saveState();
         renderApp();
@@ -13670,14 +13741,26 @@ async function saveMaterialTraitFromForm() {
         const sharedInv = getInventory();
         const idx = (sharedInv.items||[]).findIndex(it => inventoryItemKey(it) === ikey);
         if (idx < 0) throw new Error('공용 인벤에서 아이템을 찾을 수 없다.');
-        const it = deepClone(sharedInv.items[idx]);
-        sharedInv.items.splice(idx, 1);
         const personalInv = getPersonalInv(type, entityId);
         if (!personalInv) throw new Error('개인 인벤 없음');
         if (!Array.isArray(personalInv.items)) personalInv.items = [];
-        personalInv.items.push(it);
+        // 용량 체크
+        const it = sharedInv.items[idx];
+        const key = inventoryItemKey(it);
+        const existing = personalInv.items.find(x => inventoryItemKey(x) === key);
+        if (!(existing && it.stackable !== false)) {
+          const cap = personalInvCapacity ? personalInvCapacity(type, entityId) : null;
+          if (cap && personalInv.items.length >= cap.slots) throw new Error('개인 인벤이 꽉 차서 이동할 수 없습니다.');
+        }
+        const itClone = deepClone(sharedInv.items[idx]);
+        sharedInv.items.splice(idx, 1);
+        if (existing && itClone.stackable !== false) {
+          existing.count = Number(existing.count || 0) + Number(itClone.count || 0);
+        } else {
+          personalInv.items.push(itClone);
+        }
         await saveDb(); await saveState(); renderApp();
-        toast(`📦 ${it.name} → 개인 인벤 이동 완료`);
+        toast(`📦 ${itClone.name} → 개인 인벤 이동 완료`);
       } catch(e) { toast(e.message||String(e), true); }
     });
     // ── 개인 인벤 → 공용 인벤 이동 ──
@@ -13691,11 +13774,26 @@ async function saveMaterialTraitFromForm() {
         if (!personalInv) throw new Error('개인 인벤 없음');
         const idx = (personalInv.items||[]).findIndex(it => inventoryItemKey(it) === ikey);
         if (idx < 0) throw new Error('개인 인벤에서 아이템을 찾을 수 없다.');
-        const it = deepClone(personalInv.items[idx]);
+        // 공용 인벤 용량 체크
+        const sharedInv = getInventory();
+        const it = personalInv.items[idx];
+        const key = inventoryItemKey(it);
+        const existing = sharedInv.items.find(x => inventoryItemKey(x) === key);
+        if (!(existing && it.stackable !== false)) {
+          const cap = inventoryCapacity();
+          const usedSlots = inventoryUsedSlots(sharedInv);
+          if (usedSlots >= cap.slots) throw new Error('공용 인벤이 꽉 차서 이동할 수 없습니다.');
+        }
+        const itClone = deepClone(personalInv.items[idx]);
         personalInv.items.splice(idx, 1);
-        grantInventoryItem(it);
+        if (existing && itClone.stackable !== false) {
+          existing.count = Number(existing.count || 0) + Number(itClone.count || 0);
+        } else {
+          sharedInv.items.push(itClone);
+          pushInventoryRecent(`${itClone.name} x${itClone.count || 1}`);
+        }
         await saveDb(); await saveState(); renderApp();
-        toast(`📦 ${it.name} → 공용 인벤 이동 완료`);
+        toast(`📦 ${itClone.name} → 공용 인벤 이동 완료`);
       } catch(e) { toast(e.message||String(e), true); }
     });
 
