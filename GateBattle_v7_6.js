@@ -320,6 +320,28 @@ function prevMonth(y, m) { return m <= 1 ? { year: y-1, month: 12 } : { year: y,
 function monthDiff(y1,m1,y2,m2) { return (y2 - y1) * 12 + (m2 - m1); }
 const GATE_SECRET_DISCOVER_CHANCE = 0.30;
 const GATE_PUZZLE_ELITE_REWARD_CHANCE = 0.50;
+// ── 퍼즐방/비밀방 선택지 (장식용) ──────────────────────────────────────────
+const PUZZLE_ROOM_CHOICES = [
+  '수상해 보이는 버튼을 눌러본다',
+  '알맞은 돌을 찾아 끼워넣는다',
+  '내려와있는 밧줄을 당겨본다',
+  '석상을 서로 바라보게 한다',
+  '쓰러져있는 인형을 세워놓는다',
+  '상자를 열어본다',
+  '숨겨진 물건을 찾아본다',
+  '틈에 손을 넣어본다',
+  '촛불에 불을 켜본다',
+  '향을 피워본다'
+];
+const SECRET_ROOM_CHOICES = [
+  '금빛 상자를 열어본다',
+  '은빛 상자를 열어본다',
+  '동빛 상자를 열어본다',
+  '나무 상자를 열어본다',
+  '어둠에 가려져있는 물건을 빼낸다',
+  '틈에 손을 넣어 물건을 빼낸다',
+  '석상이 들고있는 물건을 빼낸다'
+];
 const RARE_TRAIT_LABELS = {
   // ── snake_case IDs (재료 JSON 기준 35개) ──────────────────────────────
   physical_damage:'물리 피해 증가', magic_damage:'마법 피해 증가',
@@ -4003,12 +4025,18 @@ function resolveTrapRoom(run, room) {
   room.discovered = true;
   const alive = randomAlivePartyIndices(run);
   const lines = [];
-  // 파티원 중 최고 감각 기준 함정 무력화 판정
+  // 파티원 중 최고 감각 기준 함정 무력화 판정 (비율 기반 그라데이션)
   const maxSense = Math.max(0, ...alive.map(row => Number((row.u.stats && row.u.stats.sense) || row.u.sense || 0)));
   const threshold = SENSE_CHECK_BY_RANK[String(run.rank||'E').toUpperCase()] || 15;
-  if (maxSense > threshold) {
-    lines.push(`감각 ${maxSense} > ${threshold}: 함정 무력화 성공!`);
+  // 감각/기준 비율로 성공률 결정 (등급 무관하게 균일)
+  // >= 100%: 100%, >= 90%: 80%, >= 80%: 70%, >= 70%: 60%, < 70%: 50%
+  const ratio = threshold > 0 ? maxSense / threshold : 1;
+  const disarmChance = ratio >= 1.0 ? 1.0 : ratio >= 0.9 ? 0.80 : ratio >= 0.8 ? 0.70 : ratio >= 0.7 ? 0.60 : 0.50;
+  const disarmed = Math.random() < disarmChance;
+  if (disarmed) {
+    lines.push(`감각 ${maxSense} (기준 ${threshold}, 성공률 ${Math.round(disarmChance*100)}%): 함정 무력화 성공!`);
   } else {
+    lines.push(`감각 ${maxSense} (기준 ${threshold}, 성공률 ${Math.round(disarmChance*100)}%): 함정 해제 실패!`);
     // 실패: 전원 최대 HP의 10~40% 피해
     alive.forEach(row => {
       const unit = row.u;
@@ -4384,19 +4412,20 @@ function resolvePuzzleRoom(run, room) {
   const alive = randomAlivePartyIndices(run);
   const maxSense = Math.max(0, ...alive.map(row => Number((row.u.stats && row.u.stats.sense) || row.u.sense || 0)));
   const threshold = SENSE_CHECK_BY_RANK[String(run.rank||'E').toUpperCase()] || 15;
-  if (maxSense > threshold) {
+  // 감각 >= threshold 면 성공 (>=로 변경)
+  if (maxSense >= threshold) {
     // 감각 통과: 70% 엘리트, 30% 일반재료
     if (Math.random() < 0.70) {
       addEliteLoot(bundle, run.rank);
-      bundle.notes.push(`퍼즐 보상 판정 (감각 ${maxSense} > ${threshold}): 엘리트급 보상`);
+      bundle.notes.push(`감각 ${maxSense} ≥ ${threshold}: 대박보상!! 엘리트급 보상 획득!`);
     } else {
       addNormalMaterial(bundle, run.rank, randInt(2, 4));
-      bundle.notes.push(`퍼즐 보상 판정 (감각 ${maxSense} > ${threshold}): 일반재료`);
+      bundle.notes.push(`감각 ${maxSense} ≥ ${threshold}: 중간보상! 일반재료 획득!`);
     }
   } else {
     // 감각 미달: 일반재료만
     addNormalMaterial(bundle, run.rank, randInt(2, 4));
-    bundle.notes.push(`퍼즐 보상 판정 (감각 ${maxSense} ≤ ${threshold}): 일반재료`);
+    bundle.notes.push(`감각 ${maxSense} < ${threshold}: 소박한 보상! 일반재료 획득`);
   }
   mergeRewardBucket(run.stash, bundle);
   const invLogs = depositRewardBucketToInventory(bundle);
@@ -4420,6 +4449,7 @@ function resolveSecretRoom(run, room) {
   room.discovered = true;
   const bundle = createRewardBucket();
   addBossLoot(bundle, run.rank);
+  bundle.notes.push('🔮 대박보상!! 비밀방 특별 보상 획득!');
   mergeRewardBucket(run.stash, bundle);
   const invLogs = depositRewardBucketToInventory(bundle);
   if (invLogs.length) bundle.notes = (bundle.notes || []).concat(invLogs);
@@ -4480,7 +4510,7 @@ function resolveGateBattleAftermath(victory) {
     roomType: room.type,
     stageIndex: run.currentStage,
     restUsed:false,
-    actionUsed:false,
+    actionUsed:{},  // 캐릭터별 행동 사용 여부 {charId: true}
     allowRest:true,
     rewardLines: deepClone(room.rewardLines || []),
     sideRoom: !!run.sideRoomActive,
@@ -4676,55 +4706,112 @@ function currentGatePrompt(run) {
     const nextLabel = run.postBattle.roomType === 'boss' ? '게이트 종료' : '다음방 진입';
     const canMine = roomHasMineableVeins(afterRoom);
     const allowRest = run.postBattle.allowRest !== false;
-    const actionUsed = !!run.postBattle.actionUsed;
+    const actionsUsed = (typeof run.postBattle.actionUsed === 'object' && run.postBattle.actionUsed) ? run.postBattle.actionUsed : {};
+    const aliveParty = (run.partyState || []).filter(u => Number(u.currentHp != null ? u.currentHp : u.hp || 0) > 0);
+    const allActionsUsed = aliveParty.length > 0 && aliveParty.every(u => actionsUsed[u.id || u.name]);
+    // 캐릭터별 행동 현황 목록
+    const actionStatusHtml = aliveParty.map(u => {
+      const uid = u.id || u.name;
+      const used = !!actionsUsed[uid];
+      return `<span style="color:${used?'#fbbf24':'#4ade80'}; margin-right:8px;">${escapeHtml(u.name)}: ${used?'행동완료':'행동가능'}</span>`;
+    }).join('');
     return `
       <div class="gb-panel">
         <div class="gb-section-title">${allowRest ? '전투 후 선택' : '방 정리'}</div>
-        <div class="gb-sub">${allowRest ? '전투가 끝났다. 다음 행동을 고를 수 있다. (휴식 1회 / 행동 1회)' : '방을 정리했다. 다음 행동을 고를 수 있다.'}</div>
+        <div class="gb-sub">${allowRest ? '전투가 끝났다. 다음 행동을 고를 수 있다. (휴식 1회 / 캐릭터별 행동 1회)' : '방을 정리했다. 다음 행동을 고를 수 있다.'}</div>
         ${run.postBattle.rewardLines && run.postBattle.rewardLines.length ? `<div class="gb-log">${run.postBattle.rewardLines.map(t => `<div>• ${escapeHtml(t)}</div>`).join('')}</div>` : ''}
         ${allowRest ? (run.postBattle.restUsed ? '<div class="gb-sub">이 방에서는 이미 휴식을 사용했다.</div>' : '<div class="gb-sub">휴식: 30분 경과 / 생존 파티 HP·MP·SP 2% 회복</div>') : ''}
-        ${actionUsed ? '<div class="gb-sub" style="color:#fbbf24;">이 방에서 행동을 이미 사용했다. (1회 제한)</div>' : ''}
+        <div class="gb-sub" style="margin-top:4px;">🎯 캐릭터별 행동: ${actionStatusHtml}</div>
+        ${allActionsUsed ? '<div class="gb-sub" style="color:#fbbf24;">모든 캐릭터가 행동을 사용했다.</div>' : ''}
         ${run.postBattle.llmBlock ? `<textarea class="gb-textarea short" readonly>${escapeHtml(run.postBattle.llmBlock)}</textarea>` : ''}
         <div class="gb-btn-row">
           <button class="gb-btn primary" id="gb-postbattle-next">${nextLabel}</button>
           ${allowRest ? `<button class="gb-btn" id="gb-postbattle-rest" ${run.postBattle.restUsed ? 'disabled' : ''}>휴식</button>` : ''}
           ${canMine ? '<button class="gb-btn" id="gb-postbattle-mine">광맥 채굴</button>' : ''}
-          <button class="gb-btn" id="gb-postbattle-potion" ${actionUsed ? 'disabled' : ''}>🧪 물약</button>
+          <button class="gb-btn" id="gb-postbattle-potion" ${allActionsUsed ? 'disabled' : ''}>🧪 물약/스킬</button>
           <button class="gb-btn danger" id="gb-postbattle-retreat">후퇴</button>
           ${run.postBattle.llmBlock ? '<button class="gb-btn" id="gb-postbattle-copy-llm">결과 블록 복사</button>' : ''}
         </div>
       </div>
-      ${run.showPotionPanel ? renderPostBattlePotionPanel(run) : ''}`;
+      ${run.showPotionPanel ? renderPostBattleActionPanel(run) : ''}`;
   }
-  function renderPostBattlePotionPanel(run) {
+  function renderPostBattleActionPanel(run) {
     const inv = getActiveInventory();
     const potions = inv.items.filter(it => it.category === 'potion');
-    if (!potions.length) return '<div class="gb-panel"><div class="gb-sub">소지 중인 물약이 없다.</div><div class="gb-btn-row"><button class="gb-btn" id="gb-pb-potion-close">닫기</button></div></div>';
     const daily = getPotionUsesToday();
     const remaining = Math.max(0, POTION_DAILY_MAX_RECOVERY - daily.recovery);
-    const party = (run.partyState || []).filter(u => Number(u.currentHp || u.hp || 0) > 0);
+    const actionsUsed = (run.postBattle && run.postBattle.actionUsed) || {};
+    const party = (run.partyState || []).filter(u => Number(u.currentHp != null ? u.currentHp : u.hp || 0) > 0);
+    // 행동 가능한 캐릭터만 필터
+    const actionableParty = party.filter(u => !actionsUsed[u.id || u.name]);
+    if (!actionableParty.length) return '<div class="gb-panel"><div class="gb-sub">모든 캐릭터가 행동을 사용했다.</div><div class="gb-btn-row"><button class="gb-btn" id="gb-pb-potion-close">닫기</button></div></div>';
+    // 사용자 선택 옵션: 행동 가능한 캐릭터만
+    const casterOpts = actionableParty.map((u, i) => `<option value="${i}">${escapeHtml(u.name)} ${actionsUsed[u.id || u.name] ? '(사용완료)' : '(행동가능)'}</option>`).join('');
+    const targetOpts = party.map((u, i) => {
+      const hp = Number(u.currentHp != null ? u.currentHp : u.hp || 0);
+      const maxHp = Number(u.hp || 0);
+      const mp = Number(u.currentMp != null ? u.currentMp : u.mp || 0);
+      const maxMp = Number(u.mp || 0);
+      return `<option value="${i}">${escapeHtml(u.name)} (HP ${Math.floor(hp)}/${Math.floor(maxHp)} MP ${Math.floor(mp)}/${Math.floor(maxMp)})</option>`;
+    }).join('');
+    // 힐/버프 스킬 수집 (행동 가능한 캐릭터들의 스킬)
+    const skillMap = {};
+    const allSkills = Object.assign({}, BUILTIN_SKILLS || {});
+    (model.db.customSkills || []).forEach(s => { allSkills[s.id] = s; });
+    const healSkillOpts = [];
+    actionableParty.forEach((u, uIdx) => {
+      (u.skills || []).forEach(sId => {
+        const sk = allSkills[sId];
+        if (!sk) return;
+        if (['singleHeal','aoeHeal','buff'].includes(sk.category)) {
+          const mpCost = Number((sk.costs && sk.costs.mp) || 0);
+          const spCost = Number((sk.costs && sk.costs.sp) || 0);
+          const curMp = Number(u.currentMp != null ? u.currentMp : u.mp || 0);
+          const curSp = Number(u.currentSp != null ? u.currentSp : u.sp || 0);
+          const canUse = curMp >= mpCost && curSp >= spCost;
+          healSkillOpts.push(`<option value="${uIdx}:${escapeHtml(sId)}" ${canUse ? '' : 'disabled'}>${escapeHtml(u.name)} → ${escapeHtml(sk.name)} (MP${mpCost} SP${spCost})${canUse ? '' : ' [자원 부족]'}</option>`);
+        }
+      });
+    });
     const potionOpts = potions.map(p => `<option value="${escapeHtml(p.stackKey)}">${escapeHtml(p.name)} x${p.count} — ${escapeHtml(p.note||'')}</option>`).join('');
-    const targetOpts = party.map((u, i) => `<option value="${i}">${escapeHtml(u.name)} (HP ${Math.floor(Number(u.currentHp||0))}/${Math.floor(Number(u.hp||0))})</option>`).join('');
     return `
       <div class="gb-panel">
-        <div class="gb-section-title">🧪 물약 사용 (전투 후)</div>
-        <div class="gb-sub">회복포션: ${remaining}/${POTION_DAILY_MAX_RECOVERY + 1}회 남음${daily.recovery >= POTION_DAILY_MAX_RECOVERY ? ' ⚠️ 다음 사용 시 효율 20%' : ''}${daily.recovery > POTION_DAILY_MAX_RECOVERY ? ' (한도초과)' : ''} | 버프포션: ${Math.max(0, POTION_DAILY_MAX_BUFF - daily.buff)}/${POTION_DAILY_MAX_BUFF}회 | 해제포션: 무제한</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0;">
-          <select class="gb-input" id="gb-pb-potion-select">${potionOpts}</select>
-          <span style="color:#94a3b8;">→</span>
-          <select class="gb-input" id="gb-pb-potion-target">${targetOpts}</select>
-          <button class="gb-btn primary" id="gb-pb-potion-apply">사용</button>
-        </div>
+        <div class="gb-section-title">🎯 전투 후 행동 (캐릭터별 1회)</div>
+        <div class="gb-sub">각 캐릭터가 1회씩 행동 가능. 물약 또는 힐/버프 스킬 사용 가능.</div>
+        ${potions.length ? `
+        <div style="border:1px solid rgba(148,163,184,0.2);padding:8px;border-radius:6px;margin:8px 0;">
+          <div class="gb-sub" style="font-weight:bold;">🧪 물약 사용</div>
+          <div class="gb-sub">회복포션: ${remaining}/${POTION_DAILY_MAX_RECOVERY + 1}회 남음${daily.recovery >= POTION_DAILY_MAX_RECOVERY ? ' ⚠️ 다음 사용 시 효율 20%' : ''} | 버프포션: ${Math.max(0, POTION_DAILY_MAX_BUFF - daily.buff)}/${POTION_DAILY_MAX_BUFF}회</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0;">
+            <select class="gb-input" id="gb-pb-potion-caster" style="min-width:100px;">${casterOpts}</select>
+            <span style="color:#94a3b8;">사용:</span>
+            <select class="gb-input" id="gb-pb-potion-select">${potionOpts}</select>
+            <span style="color:#94a3b8;">→</span>
+            <select class="gb-input" id="gb-pb-potion-target">${targetOpts}</select>
+            <button class="gb-btn primary" id="gb-pb-potion-apply">사용</button>
+          </div>
+        </div>` : '<div class="gb-sub" style="margin:4px 0;">소지 중인 물약이 없다.</div>'}
+        ${healSkillOpts.length ? `
+        <div style="border:1px solid rgba(148,163,184,0.2);padding:8px;border-radius:6px;margin:8px 0;">
+          <div class="gb-sub" style="font-weight:bold;">✨ 스킬 사용 (힐/버프)</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0;">
+            <select class="gb-input" id="gb-pb-skill-select">${healSkillOpts.join('')}</select>
+            <span style="color:#94a3b8;">→</span>
+            <select class="gb-input" id="gb-pb-skill-target">${targetOpts}</select>
+            <button class="gb-btn primary" id="gb-pb-skill-apply">스킬 사용</button>
+          </div>
+        </div>` : '<div class="gb-sub" style="margin:4px 0;">사용 가능한 힐/버프 스킬이 없다.</div>'}
         <div class="gb-btn-row"><button class="gb-btn" id="gb-pb-potion-close">닫기</button></div>
       </div>`;
   }
 
   if (run.secretPlan && run.secretPlan.offered && !run.sideRoomActive && !run.secretPlan.resolved) {
     return `
-      <div class="gb-panel">
-        <div class="gb-section-title">비밀방 발견</div>
-        <div class="gb-sub">벽 너머에 숨겨진 공간이 열렸다. 진입할지, 그냥 진행할지 고를 수 있다.</div>
-        <div class="gb-btn-row"><button class="gb-btn primary" id="gb-secret-enter">비밀방 진입</button><button class="gb-btn" id="gb-secret-skip">그냥 진행</button></div>
+      <div class="gb-panel" style="border: 2px solid #a855f7; background: rgba(168,85,247,0.08);">
+        <div class="gb-section-title" style="color:#a855f7;">✨🔮 비밀방 발견! 🔮✨</div>
+        <div class="gb-sub" style="font-size:14px;">벽 너머에 숨겨진 공간이 열렸다! 비밀방에서는 특별한 보상이 기다린다.</div>
+        <div class="gb-sub" style="color:#fbbf24; margin-top:4px;">⚠️ 비밀방은 한 게이트에서 한 번만 나타날 수 있다. 이 기회를 놓치면 다시 볼 수 없다!</div>
+        <div class="gb-btn-row"><button class="gb-btn primary" id="gb-secret-enter" style="background:#a855f7;">🔮 비밀방 진입</button><button class="gb-btn" id="gb-secret-skip">그냥 진행</button></div>
       </div>`;
   }
   const room = getActiveRoom(run);
@@ -4756,9 +4843,23 @@ function currentGatePrompt(run) {
       ${used ? '<div class="gb-sub">이 게이트에서는 이미 야영을 사용했다.</div>' : ''}
       <button class="gb-btn primary" id="gb-room-camp" ${ok ? '' : 'disabled'}>야영</button>
       <button class="gb-btn" id="gb-room-skip-camp">그냥 지나가기</button>`;
-  } else if (room.type === 'puzzle' && !room.cleared) actions = '<button class="gb-btn primary" id="gb-room-solve-puzzle">퍼즐 해결</button>';
-  else if (room.type === 'secret' && !room.cleared) actions = '<button class="gb-btn primary" id="gb-room-open-secret">비밀방 탐색</button>';
-  else if (['combat','elite','boss'].includes(room.type) && !room.cleared) actions = '<button class="gb-btn primary" id="gb-room-enter">전투 시작</button>';
+  } else if (room.type === 'puzzle' && !room.cleared) {
+    // 퍼즐방: 2~3개 선택지 표시 (장식용 — 결과는 확률로 결정)
+    if (!room._puzzleChoices) {
+      const shuffled = PUZZLE_ROOM_CHOICES.slice().sort(() => Math.random() - 0.5);
+      room._puzzleChoices = shuffled.slice(0, randInt(2, 3));
+    }
+    actions = `<div class="gb-sub" style="margin-bottom:6px;">방 안에 수상한 구조물이 보인다. 어떻게 할까?</div>` +
+      room._puzzleChoices.map((c, i) => `<button class="gb-btn primary gb-puzzle-choice" data-puzzle-idx="${i}">${escapeHtml(c)}</button>`).join(' ');
+  } else if (room.type === 'secret' && !room.cleared) {
+    // 비밀방: 2개 선택지 표시 (장식용)
+    if (!room._secretChoices) {
+      const shuffled = SECRET_ROOM_CHOICES.slice().sort(() => Math.random() - 0.5);
+      room._secretChoices = shuffled.slice(0, 2);
+    }
+    actions = `<div class="gb-sub" style="margin-bottom:6px;">비밀방 안쪽에 무언가가 보인다. 무엇을 선택할까?</div>` +
+      room._secretChoices.map((c, i) => `<button class="gb-btn primary gb-secret-choice" data-secret-idx="${i}">${escapeHtml(c)}</button>`).join(' ');
+  } else if (['combat','elite','boss'].includes(room.type) && !room.cleared) actions = '<button class="gb-btn primary" id="gb-room-enter">전투 시작</button>';
   else if (!room.cleared) actions = '<button class="gb-btn primary" id="gb-room-enter">방 진입</button>';
   else if (room.cleared) actions = `${roomHasMineableVeins(room) ? '<button class="gb-btn" id="gb-room-mine">광맥 채굴</button>' : ''}<button class="gb-btn primary" id="gb-room-next">다음방 진입</button><button class="gb-btn danger" id="gb-room-retreat">후퇴</button>`;
   return `
@@ -13380,6 +13481,19 @@ async function saveMaterialTraitFromForm() {
         renderApp();
       } catch (e) { toast(e.message || String(e), true); }
     });
+    // 퍼즐방 선택지 클릭 (장식용 — 어떤 걸 골라도 결과는 동일)
+    on('.gb-puzzle-choice', 'click', async (ev) => {
+      try {
+        const run = getGateRun();
+        const room = getActiveRoom(run);
+        if (!run || !room || room.type !== 'puzzle') throw new Error('현재 퍼즐방이 아니다.');
+        const choiceText = ev.currentTarget.textContent || '퍼즐 해결';
+        resolvePuzzleRoom(run, room);
+        await saveState();
+        renderApp();
+        toast(`🧩 "${choiceText}" 선택!`);
+      } catch (e) { toast(e.message || String(e), true); }
+    });
     on('#gb-room-open-secret', 'click', async () => {
       try {
         const run = getGateRun();
@@ -13388,6 +13502,19 @@ async function saveMaterialTraitFromForm() {
         resolveSecretRoom(run, room);
         await saveState();
         renderApp();
+      } catch (e) { toast(e.message || String(e), true); }
+    });
+    // 비밀방 선택지 클릭 (장식용 — 어떤 걸 골라도 결과는 동일)
+    on('.gb-secret-choice', 'click', async (ev) => {
+      try {
+        const run = getGateRun();
+        const room = getActiveRoom(run);
+        if (!run || !room || room.type !== 'secret') throw new Error('현재 비밀방이 아니다.');
+        const choiceText = ev.currentTarget.textContent || '비밀방 탐색';
+        resolveSecretRoom(run, room);
+        await saveState();
+        renderApp();
+        toast(`🔮 "${choiceText}" 선택!`);
       } catch (e) { toast(e.message || String(e), true); }
     });
     on('#gb-room-mine', 'click', async () => {
@@ -13639,11 +13766,18 @@ async function saveMaterialTraitFromForm() {
       try {
         const run = getGateRun();
         if (!run) throw new Error('게이트 런을 찾을 수 없다.');
-        if (run.postBattle && run.postBattle.actionUsed) throw new Error('이 방에서는 이미 행동을 사용했다. (1회 제한)');
+        const actionsUsed = (run.postBattle && run.postBattle.actionUsed) || {};
+        // 사용자(시전자) 선택
+        const casterIdx = Number(fieldValue('#gb-pb-potion-caster') || '0');
+        const party = (run.partyState || []).filter(u => Number(u.currentHp != null ? u.currentHp : u.hp || 0) > 0);
+        const actionableParty = party.filter(u => !actionsUsed[u.id || u.name]);
+        const caster = actionableParty[casterIdx];
+        if (!caster) throw new Error('행동 가능한 캐릭터가 없다.');
+        const casterId = caster.id || caster.name;
+        if (actionsUsed[casterId]) throw new Error(`${caster.name}은(는) 이미 행동을 사용했다.`);
         const potionKey = fieldValue('#gb-pb-potion-select');
         const targetIdx = Number(fieldValue('#gb-pb-potion-target'));
         if (!potionKey) throw new Error('물약을 선택해.');
-        const party = (run.partyState || []).filter(u => Number(u.currentHp || u.hp || 0) > 0);
         const target = party[targetIdx];
         if (!target) throw new Error('대상이 유효하지 않다.');
         const inv = getActiveInventory();
@@ -13651,10 +13785,92 @@ async function saveMaterialTraitFromForm() {
         if (!potionItem) throw new Error('해당 물약을 찾을 수 없다.');
         const msg = usePotionOnUnit(potionItem, target);
         consumePotionFromInventory(potionKey);
-        if (run.postBattle) { run.postBattle.actionUsed = true; run.showPotionPanel = false; }
+        if (run.postBattle) {
+          if (!run.postBattle.actionUsed || typeof run.postBattle.actionUsed !== 'object') run.postBattle.actionUsed = {};
+          run.postBattle.actionUsed[casterId] = true;
+        }
+        pushGateLog(run, `전투 후 행동: ${caster.name} → ${target.name}에게 물약 사용`);
         await saveDb(); await saveState();
         renderApp();
-        toast(msg);
+        toast(`${caster.name}: ${msg}`);
+      } catch (e) { toast(e.message || String(e), true); }
+    });
+    // 전투 후 스킬 사용 핸들러
+    on('#gb-pb-skill-apply', 'click', async () => {
+      try {
+        const run = getGateRun();
+        if (!run) throw new Error('게이트 런을 찾을 수 없다.');
+        const actionsUsed = (run.postBattle && run.postBattle.actionUsed) || {};
+        const skillVal = fieldValue('#gb-pb-skill-select') || '';
+        const colonIdx = skillVal.indexOf(':');
+        if (colonIdx < 0) throw new Error('스킬을 선택해.');
+        const casterIdx = Number(skillVal.substring(0, colonIdx));
+        const skillId = skillVal.substring(colonIdx + 1);
+        const party = (run.partyState || []).filter(u => Number(u.currentHp != null ? u.currentHp : u.hp || 0) > 0);
+        const actionableParty = party.filter(u => !actionsUsed[u.id || u.name]);
+        const caster = actionableParty[casterIdx];
+        if (!caster) throw new Error('행동 가능한 캐릭터가 없다.');
+        const casterId = caster.id || caster.name;
+        if (actionsUsed[casterId]) throw new Error(`${caster.name}은(는) 이미 행동을 사용했다.`);
+        // 스킬 정보
+        const allSkills = Object.assign({}, BUILTIN_SKILLS || {});
+        (model.db.customSkills || []).forEach(s => { allSkills[s.id] = s; });
+        const skill = allSkills[skillId];
+        if (!skill) throw new Error('스킬을 찾을 수 없다.');
+        // MP/SP 비용 체크 & 차감
+        const mpCost = Number((skill.costs && skill.costs.mp) || 0);
+        const spCost = Number((skill.costs && skill.costs.sp) || 0);
+        const curMp = Number(caster.currentMp != null ? caster.currentMp : caster.mp || 0);
+        const curSp = Number(caster.currentSp != null ? caster.currentSp : caster.sp || 0);
+        if (curMp < mpCost) throw new Error(`MP 부족 (${caster.name}: MP ${Math.floor(curMp)}/${mpCost})`);
+        if (curSp < spCost) throw new Error(`SP 부족 (${caster.name}: SP ${Math.floor(curSp)}/${spCost})`);
+        caster.currentMp = curMp - mpCost;
+        caster.currentSp = curSp - spCost;
+        const cat = skill.category || '';
+        const targetIdx = Number(fieldValue('#gb-pb-skill-target') || '0');
+        let resultMsg = '';
+        if (cat === 'singleHeal') {
+          // 단일 힐: 선택한 대상에게 회복
+          const target = party[targetIdx];
+          if (!target) throw new Error('대상이 유효하지 않다.');
+          const mainStat = Number((caster.stats && caster.stats.int) || caster.int || 10);
+          const coef = Number(skill.coef || 1.0);
+          const healBase = mainStat * 0.5;
+          const healAmt = Math.max(1, Math.round(healBase * coef));
+          const maxHp = Number(target.hp || target.maxHp || 1);
+          const before = Number(target.currentHp != null ? target.currentHp : target.hp || 0);
+          target.currentHp = Math.min(maxHp, before + healAmt);
+          const actual = Math.floor(target.currentHp - before);
+          resultMsg = `${caster.name} → ${target.name}에게 ${skill.name} 사용! HP +${actual} (${Math.floor(before)}→${Math.floor(target.currentHp)})`;
+        } else if (cat === 'aoeHeal') {
+          // 광역 힐: 생존 아군 전체 회복
+          const mainStat = Number((caster.stats && caster.stats.int) || caster.int || 10);
+          const coef = Number(skill.coef || 1.0);
+          const healBase = mainStat * 0.5;
+          const healAmt = Math.max(1, Math.round(healBase * coef));
+          const healed = [];
+          party.forEach(u => {
+            const maxHp = Number(u.hp || u.maxHp || 1);
+            const before = Number(u.currentHp != null ? u.currentHp : u.hp || 0);
+            u.currentHp = Math.min(maxHp, before + healAmt);
+            const actual = Math.floor(u.currentHp - before);
+            if (actual > 0) healed.push(`${u.name} HP+${actual}`);
+          });
+          resultMsg = `${caster.name} → ${skill.name} 전체 회복! ${healed.join(', ')}`;
+        } else if (cat === 'buff') {
+          // 버프: 전투 밖이므로 간략 처리 (효과 알림만)
+          resultMsg = `${caster.name} → ${skill.name} 사용! (전투 밖 버프 — 다음 전투 시작 시 적용)`;
+        } else {
+          throw new Error('전투 후에는 힐/버프 스킬만 사용할 수 있다.');
+        }
+        if (run.postBattle) {
+          if (!run.postBattle.actionUsed || typeof run.postBattle.actionUsed !== 'object') run.postBattle.actionUsed = {};
+          run.postBattle.actionUsed[casterId] = true;
+        }
+        pushGateLog(run, `전투 후 행동: ${resultMsg}`);
+        await saveDb(); await saveState();
+        renderApp();
+        toast(`✨ ${resultMsg}`);
       } catch (e) { toast(e.message || String(e), true); }
     });
     on('#gb-postbattle-retreat', 'click', async () => {
