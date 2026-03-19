@@ -644,19 +644,35 @@ passiveMods: {
 | A | 11 | 0~100 | 5 |
 | S | 16 | 0~200 | 6 |
 
-- **방어구 PDEF** = 방어 범위 × 50%
-- **보조무기 PDEF** = 방어 범위 × 25%
-- **방어구 MDEF** = 방어 범위 × 50%
+### 18.3.1 방어구 종류 (ARMOR_SUBTYPES)
+
+| 종류 | 키 | 방어 배율(defMul) | ATK 보정(atkMul) | 주스탯 보너스(statBonusMul) | 스탯 풀(statPool) |
+|:----:|:---:|:---------:|:--------:|:------------:|:-------:|
+| **중갑** | `heavy` | 90~100% | -10% | 0% | CON, STR |
+| **경갑** | `light` | 70~80% | 0% | 0% | CON, STR, AGI |
+| **가죽갑** | `leather` | 50~60% | 0% | +10% | STR, AGI, INT, SENSE |
+| **로브** | `robe` | 40~50% | 0% | +20% | AGI, INT, SENSE |
+
+```
+방어구 PDEF = 방어 범위 × defMul(종류별 배율)
+방어구 MDEF = 방어 범위 × defMul(종류별 배율)
+보조무기 PDEF = 방어 범위 × 25%
+방어구 주스탯 보너스 = totalStatSum × (1 + statBonusMul)
+  예: C등급 가죽갑 → 5 × 1.10 = 6 (반올림)
+  예: C등급 로브 → 5 × 1.20 = 6 (반올림)
+중갑 ATK 패널티 = 무기 기본 ATK × -10%
+```
 
 ### 18.4 장비 스탯 합산 (calcEquippedStatBonus)
 
 ```
-총 ATK = Σ(무기 ATK + 강화 ATK)
+총 ATK = Σ(무기 ATK + 강화 ATK + 중갑 ATK 패널티)
 총 PDEF = Σ(방어구 PDEF + 보조무기 PDEF + 강화 PDEF)
 총 MDEF = Σ(방어구 MDEF + 강화 MDEF)
-방어구 주스탯 보너스 = ARMOR_STAT_BY_RANK[등급].totalStatSum {E:0, D:2, C:5, B:8, A:11, S:16}
+방어구 주스탯 보너스 = ARMOR_STAT_BY_RANK[등급].totalStatSum × (1 + statBonusMul) {E:0, D:2, C:5, B:8, A:11, S:16}
 악세서리 주스탯 보너스 = ACCESSORY_STAT_BY_RANK[등급].totalStatSum {E:0, D:1, C:3, B:5, A:8, S:12}
 ※ 무기/보조무기는 주스탯 보너스 없음
+※ 주스탯(mainStat)은 방어구 종류별 스탯 풀에서 랜덤 선택됨
 ```
 
 ### 18.5 무기 강화 ATK 보너스

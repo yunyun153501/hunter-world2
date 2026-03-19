@@ -7198,7 +7198,7 @@ function renderAuctionHouseHtml() {
                     ${catBadge}
                     ${isEquip && it.rarity && it.rarity !== 'Normal' ? `<span class="gb-badge" style="background:${rarityColor(it.rarity)};color:#000;">${escapeHtml(it.rarity)}</span>` : ''}
                     ${npcBadge} ${traitTxt}
-                    ${isEquip ? `<div class="gb-sub">${it.part === 'armor' && it.armorSubtype && ARMOR_SUBTYPES[it.armorSubtype] ? '['+ARMOR_SUBTYPES[it.armorSubtype].label+'] ' : ''}${it.atk ? 'ATK+'+it.atk+' | ' : ''}${it.pdef ? 'PDEF+'+it.pdef+' | ' : ''}${it.mdef ? 'MDEF+'+it.mdef+' | ' : ''}주입 최대 ${it.maxInfuse||1}회 | 내구 ${fmtDur(it.durability)}/${fmtDur(it.maxDurability)}</div>` : ''}
+                    ${isEquip ? `<div class="gb-sub">${it.part === 'armor' && it.armorSubtype && ARMOR_SUBTYPES[it.armorSubtype] ? '['+ARMOR_SUBTYPES[it.armorSubtype].label+(ARMOR_SUBTYPES[it.armorSubtype].atkMul ? ' ATK'+Math.round(ARMOR_SUBTYPES[it.armorSubtype].atkMul*100)+'%' : '')+(ARMOR_SUBTYPES[it.armorSubtype].statBonusMul ? ' 스탯+'+Math.round(ARMOR_SUBTYPES[it.armorSubtype].statBonusMul*100)+'%' : '')+'] ' : ''}${it.atk ? 'ATK+'+it.atk+' | ' : ''}${it.pdef ? 'PDEF+'+it.pdef+' | ' : ''}${it.mdef ? 'MDEF+'+it.mdef+' | ' : ''}주입 최대 ${it.maxInfuse||1}회 | 내구 ${fmtDur(it.durability)}/${fmtDur(it.maxDurability)}</div>` : ''}
                     ${isSkillbook ? `<div class="gb-sub">${escapeHtml(it.note||'')}</div>` : ''}
                     <div class="gb-sub">시장가: ${fmt(mktPrice)}</div>
                   </div>
@@ -7906,7 +7906,7 @@ function renderEquipShopHtml() {
         const price = (e.price != null && e.price !== '' && Number(e.price) >= 0) ? Number(e.price) : calcEquipEnhancedPrice(calcEquipBasePrice(e.rank, e.part), e.enhance||0, e.rank);
         const canAfford = price === 0 || gold >= price;
         const traitTags = (e.traits||[]).map(t => `<span class="gb-badge">${escapeHtml(equipTraitDisplay(t, e.rank))}</span>`).join(' ');
-        const atkLine = e.part==='weapon' ? `ATK+${e.atk||WEAPON_BASE_ATK[e.rank]||0}` : e.part==='subweapon' ? (Number(e.pdef||0)>0 ? `물리방어+${e.pdef} / ATK${-Math.ceil(e.pdef/2)}` : '특수효과 전용') : e.part==='armor' ? `${e.armorSubtype && ARMOR_SUBTYPES[e.armorSubtype] ? '['+ARMOR_SUBTYPES[e.armorSubtype].label+'] ' : ''}물리방어+${e.pdef||0} / 마법방어+${e.mdef||0}${e.resistType?` / ${escapeHtml(EQUIP_TRAIT_LABELS[''+e.resistType]||e.resistType)} 저항 ${e.resistPct||0}%`:''}` : e.part==='accessory' ? (e.traits&&e.traits.length ? `특성: ${(e.traits||[]).map(t=>equipTraitDisplay(t,e.rank)).join(', ')}` : '특성 없음') : '';
+        const atkLine = e.part==='weapon' ? `ATK+${e.atk||WEAPON_BASE_ATK[e.rank]||0}` : e.part==='subweapon' ? (Number(e.pdef||0)>0 ? `물리방어+${e.pdef} / ATK${-Math.ceil(e.pdef/2)}` : '특수효과 전용') : e.part==='armor' ? `${e.armorSubtype && ARMOR_SUBTYPES[e.armorSubtype] ? '['+ARMOR_SUBTYPES[e.armorSubtype].label+(ARMOR_SUBTYPES[e.armorSubtype].atkMul ? ' ATK'+Math.round(ARMOR_SUBTYPES[e.armorSubtype].atkMul*100)+'%' : '')+(ARMOR_SUBTYPES[e.armorSubtype].statBonusMul ? ' 스탯+'+Math.round(ARMOR_SUBTYPES[e.armorSubtype].statBonusMul*100)+'%' : '')+'] ' : ''}물리방어+${e.pdef||0} / 마법방어+${e.mdef||0}${e.resistType?` / ${escapeHtml(EQUIP_TRAIT_LABELS[''+e.resistType]||e.resistType)} 저항 ${e.resistPct||0}%`:''}` : e.part==='accessory' ? (e.traits&&e.traits.length ? `특성: ${(e.traits||[]).map(t=>equipTraitDisplay(t,e.rank)).join(', ')}` : '특성 없음') : '';
         const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
         return `<div class="gb-unit">
           <div class="gb-unit-top">
@@ -8156,7 +8156,14 @@ function renderHunterMarketHtml() {
   // 장비 상세 툴팁 헬퍼
   function hmItemTooltip(e) {
     const lines = [`${e.name}${e.rank ? ` [${e.rank}급]` : ''}`, `부위: ${EQUIP_PART_LABELS[e.part||'weapon']||e.part||''}  |  내구도: ${fmtDur(e.durability)}/${fmtDur(e.maxDurability)}`];
-    if (e.part === 'armor' && e.armorSubtype && ARMOR_SUBTYPES[e.armorSubtype]) lines.push(`종류: ${ARMOR_SUBTYPES[e.armorSubtype].label}`);
+    if (e.part === 'armor' && e.armorSubtype && ARMOR_SUBTYPES[e.armorSubtype]) {
+      const _sub = ARMOR_SUBTYPES[e.armorSubtype];
+      const _defPct = `방어${Math.round(_sub.defMul[0]*100)}~${Math.round(_sub.defMul[1]*100)}%`;
+      const _atkPct = _sub.atkMul ? ` / ATK${Math.round(_sub.atkMul*100)}%` : '';
+      const _statBonus = _sub.statBonusMul ? ` / 주스탯+${Math.round(_sub.statBonusMul*100)}%` : '';
+      const _pool = _sub.statPool.map(s=>s.toUpperCase()).join('/');
+      lines.push(`종류: ${_sub.label} (${_defPct}${_atkPct}${_statBonus} / 스탯풀: ${_pool})`);
+    }
     if (e.enhance > 0) lines.push(`강화: +${e.enhance}`);
     if (Number(e.atk||0) > 0) lines.push(`ATK: +${e.atk}`);
     if (Number(e.pdef||0) > 0) lines.push(`물리방어: +${e.pdef}`);
@@ -9270,7 +9277,14 @@ function renderInventoryView() {
       `분류: ${it.category || '기타'} | 수량: ${Number(it.count||1)} | 무게: ${formatWeightG(Math.round(inventoryBaseWeightG(it) * cap.weightMul))}`
     ];
     if (it.part) lines.push(`부위: ${EQUIP_PART_LABELS[it.part] || it.part}`);
-    if (it.part === 'armor' && it.armorSubtype && ARMOR_SUBTYPES[it.armorSubtype]) lines.push(`갑옷 종류: ${ARMOR_SUBTYPES[it.armorSubtype].label}`);
+    if (it.part === 'armor' && it.armorSubtype && ARMOR_SUBTYPES[it.armorSubtype]) {
+      const _sub = ARMOR_SUBTYPES[it.armorSubtype];
+      const _defPct = `방어${Math.round(_sub.defMul[0]*100)}~${Math.round(_sub.defMul[1]*100)}%`;
+      const _atkPct = _sub.atkMul ? ` / ATK${Math.round(_sub.atkMul*100)}%` : '';
+      const _statBonus = _sub.statBonusMul ? ` / 주스탯+${Math.round(_sub.statBonusMul*100)}%` : '';
+      const _pool = _sub.statPool.map(s=>s.toUpperCase()).join('/');
+      lines.push(`갑옷 종류: ${_sub.label} (${_defPct}${_atkPct}${_statBonus} / 스탯풀: ${_pool})`);
+    }
     if (it.enhance > 0) lines.push(`강화: +${it.enhance}`);
     if (it.durability != null) lines.push(`내구도: ${fmtDur(it.durability)}/${fmtDur(it.maxDurability||it.durability)}`);
     if (it.category === 'equipment') {
@@ -10127,7 +10141,7 @@ function renderCommandPanel(runtime) {
       const maxInfuse = eq.maxInfuse ?? (typeof EQUIP_MAX_INFUSE !== 'undefined' ? EQUIP_MAX_INFUSE[p] : 1) ?? 1;
       const curInfuse = eq.infuse || 0;
       const traitTxt = (eq.traits||[]).length ? (eq.traits||[]).map(t=>equipTraitDisplay(t, eq.rank)).join(', ') : '';
-      return `<div style="margin:2px 0;font-size:11px;">${EQUIP_PART_LABELS[p]}: <strong style="${rarityStyle(eq.rarity)}">${escapeHtml(eq.name||eq.id)}${enhTxt}</strong>${eq.rarity && eq.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(eq.rarity)};color:#000;font-size:9px;">${escapeHtml(eq.rarity)}</span>` : ''} <span class="gb-sub">${escapeHtml(eq.rank||'E')}등급${p === 'armor' && eq.armorSubtype && ARMOR_SUBTYPES[eq.armorSubtype] ? ' '+escapeHtml(ARMOR_SUBTYPES[eq.armorSubtype].label) : ''}</span>${statParts.length ? ` <span style="color:#94a3b8;">[${statParts.join('/')}]</span>` : ''} <span class="gb-sub">강화 ${eq.enhance||0}/${maxEnhance} | 주입 ${curInfuse}/${maxInfuse} | 내구 ${Math.floor(dur)}/${Math.floor(maxDur)}</span>${traitTxt ? ` <span style="color:#a78bfa;font-size:10px;">(${escapeHtml(traitTxt)})</span>` : ''}</div>`;
+      return `<div style="margin:2px 0;font-size:11px;">${EQUIP_PART_LABELS[p]}: <strong style="${rarityStyle(eq.rarity)}">${escapeHtml(eq.name||eq.id)}${enhTxt}</strong>${eq.rarity && eq.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(eq.rarity)};color:#000;font-size:9px;">${escapeHtml(eq.rarity)}</span>` : ''} <span class="gb-sub">${escapeHtml(eq.rank||'E')}등급${p === 'armor' && eq.armorSubtype && ARMOR_SUBTYPES[eq.armorSubtype] ? ' '+escapeHtml(ARMOR_SUBTYPES[eq.armorSubtype].label)+(ARMOR_SUBTYPES[eq.armorSubtype].atkMul ? ' ATK'+Math.round(ARMOR_SUBTYPES[eq.armorSubtype].atkMul*100)+'%' : '')+(ARMOR_SUBTYPES[eq.armorSubtype].statBonusMul ? ' 스탯+'+Math.round(ARMOR_SUBTYPES[eq.armorSubtype].statBonusMul*100)+'%' : '') : ''}</span>${statParts.length ? ` <span style="color:#94a3b8;">[${statParts.join('/')}]</span>` : ''} <span class="gb-sub">강화 ${eq.enhance||0}/${maxEnhance} | 주입 ${curInfuse}/${maxInfuse} | 내구 ${Math.floor(dur)}/${Math.floor(maxDur)}</span>${traitTxt ? ` <span style="color:#a78bfa;font-size:10px;">(${escapeHtml(traitTxt)})</span>` : ''}</div>`;
     }).filter(Boolean);
 
     // 기본값: 스탯 기반 (장비 제외) — PDEF/MDEF는 기본 0, ATK는 스탯 보너스만
@@ -10207,7 +10221,7 @@ function renderCommandPanel(runtime) {
             <div>
               <span class="gb-sub" style="font-size:0.8em;">${label}</span>
               <div><strong style="${rarityStyle(eq.rarity)}">${escapeHtml(eq.name||eq.id)}${enhTxt}</strong>${eq.rarity && eq.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(eq.rarity)};color:#000;font-size:9px;">${escapeHtml(eq.rarity)}</span>` : ''}</div>
-              <div class="gb-sub">내구도 ${fmtDur(dur)}/${fmtDur(maxDur)} | ${escapeHtml(eq.rank||'E')}등급${eq.part === 'armor' && eq.armorSubtype && ARMOR_SUBTYPES[eq.armorSubtype] ? ` | ${escapeHtml(ARMOR_SUBTYPES[eq.armorSubtype].label)}` : ''}</div>
+              <div class="gb-sub">내구도 ${fmtDur(dur)}/${fmtDur(maxDur)} | ${escapeHtml(eq.rank||'E')}등급${eq.part === 'armor' && eq.armorSubtype && ARMOR_SUBTYPES[eq.armorSubtype] ? ` | ${escapeHtml(ARMOR_SUBTYPES[eq.armorSubtype].label)}${ARMOR_SUBTYPES[eq.armorSubtype].atkMul ? ' ATK'+Math.round(ARMOR_SUBTYPES[eq.armorSubtype].atkMul*100)+'%' : ''}${ARMOR_SUBTYPES[eq.armorSubtype].statBonusMul ? ' 스탯+'+Math.round(ARMOR_SUBTYPES[eq.armorSubtype].statBonusMul*100)+'%' : ''}` : ''}</div>
               ${statsLine ? `<div class="gb-sub" style="color:#60a5fa;">${escapeHtml(statsLine)}</div>` : ''}
               ${traitTxt ? `<div class="gb-sub" style="color:#a78bfa;">특성: ${escapeHtml(traitTxt)}</div>` : ''}
             </div>
