@@ -4109,7 +4109,7 @@ function buildDropEquipment(rank, forcePart) {
     // 특수효과는 주입이 아니므로 maxInfuse를 늘리지 않음
     traitName = EQUIP_TRAIT_LABELS[traitId] || traitId;
   }
-  // 특수효과(내장 특성)는 주입과 별도 — 생성 시 주입 0
+  // 모든 생성 장비는 주입 0으로 시작 — 특수효과(특성)는 주입과 별도
   const infuseCount = 0;
   // 보조무기 서브타입 결정 (방패 여부)
   let subSuffix = null;
