@@ -2183,6 +2183,18 @@ function buildDefaultState() {
     // 최대 500건 유지
     if (model.db.activityLog.length > 500) model.db.activityLog = model.db.activityLog.slice(-500);
   }
+  function activeGoldLabel() {
+    const inv = getActiveInventory();
+    return `잔액 ₩${formatWon(inv.gold || 0)}`;
+  }
+  function activeStatusSummary() {
+    const ch = getActiveCharacter();
+    if (!ch) return '';
+    const hp = ch.currentHp != null ? ch.currentHp : ch.hp;
+    const mp = ch.currentMp != null ? ch.currentMp : ch.mp;
+    const sp = ch.currentSp != null ? ch.currentSp : ch.sp;
+    return ` [${ch.name} Lv${ch.level||1} HP${hp}/${ch.hp} MP${mp}/${ch.mp} SP${sp}/${ch.sp}]`;
+  }
 
   const model = {
     db: buildDefaultDb(),
@@ -13331,6 +13343,7 @@ async function saveMaterialTraitFromForm() {
         const res = grantActiveInventoryItem(item);
         if (!res.ok) pushInventoryOverflow(item);
         await saveDb(); await saveState(); renderApp();
+        pushActivityLog(getActiveLabel(), '상점 구매', `${shopItem.name} ₩${Number(shopItem.price).toLocaleString('en-US')} 차감 / ${activeGoldLabel()}`);
         toast(`${shopItem.name} 구매 완료 (₩${Number(shopItem.price).toLocaleString('en-US')} 차감)`);
       } catch (e) { toast(e.message || String(e), true); }
     });
@@ -13355,6 +13368,7 @@ async function saveMaterialTraitFromForm() {
         const res = grantActiveInventoryItem(item);
         if (!res.ok) pushInventoryOverflow(item);
         await saveDb(); renderApp();
+        pushActivityLog(getActiveLabel(), '편의점 구매', `${f.name} ₩${f.price.toLocaleString('en-US')} 차감 / ${activeGoldLabel()}`);
         toast(`${f.name} 구매 완료 (₩${f.price.toLocaleString('en-US')} 차감)`);
       } catch(e) { toast(e.message||String(e), true); }
     });
@@ -13536,6 +13550,7 @@ async function saveMaterialTraitFromForm() {
         }
         inv.gold = Number(inv.gold||0) + sellPrice;
         await saveDb(); await saveState(); renderApp();
+        pushActivityLog(getActiveLabel(), '헌터마켓 판매', `${it.name} [${it.rank||'?'}] 중고 판매 +₩${sellPrice.toLocaleString('en-US')} / ${activeGoldLabel()}`);
         toast(`🏷️ ${it.name} 중고 판매 완료 (+₩${sellPrice.toLocaleString('en-US')}) [${getActiveLabel()}]`);
       } catch (e) { toast(e.message || String(e), true); }
     });
@@ -13561,6 +13576,7 @@ async function saveMaterialTraitFromForm() {
         grantActiveInventoryItem(buyItem);
         model.db.hmUsedListings.splice(idx, 1);
         await saveDb(); await saveState(); renderApp();
+        pushActivityLog(getActiveLabel(), '헌터마켓 구매', `${buyItem.name} [${buyItem.rank||'?'}] 중고 구매 -₩${usedPrice.toLocaleString('en-US')} / ${activeGoldLabel()}`);
         toast(`🏷️ ${buyItem.name} 중고 구매 완료 (-₩${usedPrice.toLocaleString('en-US')}) [${getActiveLabel()}]`);
       } catch (e) { toast(e.message || String(e), true); }
     });
@@ -13585,6 +13601,7 @@ async function saveMaterialTraitFromForm() {
         inv.gold = Math.max(0, Number(inv.gold||0) - fee);
         applyRepair(it, maxDur);
         await saveDb(); await saveState(); renderApp();
+        pushActivityLog(getActiveLabel(), '장비 수리', `${it.name} [${it.rank||'E'}] 수리 — 내구도 ${fmtDur(it.durability)}/${fmtDur(it.maxDurability)}${fee>0 ? ` / -₩${fee.toLocaleString('en-US')}` : ' (무료)'} / ${activeGoldLabel()}`);
         toast(`🔧 ${it.name} 수리 완료. 내구도 ${fmtDur(it.durability)}/${fmtDur(it.maxDurability)}${fee>0?` (-₩${fee.toLocaleString('en-US')})`:' (무료)'}`);
       } catch (e) { toast(e.message || String(e), true); }
     });
@@ -13613,6 +13630,7 @@ async function saveMaterialTraitFromForm() {
         inv.gold = Math.max(0, Number(inv.gold||0) - fee);
         applyRepair(it, Math.min(maxDur, targetDur));
         await saveDb(); await saveState(); renderApp();
+        pushActivityLog(getActiveLabel(), '장비 수리', `${it.name} [${it.rank||'E'}] 부분 수리 — 내구도 ${fmtDur(it.durability)}/${fmtDur(it.maxDurability)}${fee>0 ? ` / -₩${fee.toLocaleString('en-US')}` : ' (무료)'} / ${activeGoldLabel()}`);
         toast(`🔧 ${it.name} 부분 수리 완료. 내구도 ${fmtDur(it.durability)}/${fmtDur(it.maxDurability)}${fee>0?` (-₩${fee.toLocaleString('en-US')})`:' (무료)'}`);
       } catch (e) { toast(e.message || String(e), true); }
     });
@@ -14038,6 +14056,11 @@ async function saveMaterialTraitFromForm() {
         // 전멸 상태 해제
         model.db.lastWipeDate = null;
         await saveDb(); await saveState(); renderApp();
+        {
+          const _members = (model.db.characters || []).concat(model.db.personas || []).filter(c => c.stats);
+          const _statusLines = _members.map(c => `${c.name}(Lv${c.level||1} HP${c.hp}/${c.hp} MP${c.mp}/${c.mp} SP${c.sp}/${c.sp})`).join(', ');
+          pushActivityLog(getActiveLabel(), '집에서 휴식', `${gd.year}년 ${gd.month}월 ${gd.day}일 — 모든 파티원 HP/MP/SP 완전 회복 / ${_statusLines} / ${activeGoldLabel()}`);
+        }
         for (const msg of evictMsgs) toast(msg, true);
         toast(`🛏️ 하루 휴식 완료! ${gd.year}년 ${gd.month}월 ${gd.day}일 — 모든 파티원 HP/MP/SP 완전 회복.`);
       } catch (e) { toast(e.message || String(e), true); }
@@ -15084,6 +15107,10 @@ async function saveMaterialTraitFromForm() {
         // 장비 장착 후 캐릭터 파생 스탯 재계산 (ATK/HP/MP/SP 등)
         if (entity && entity.stats) recalcCharDerivedStats(entity);
         await saveDb(); await saveState(); renderApp();
+        {
+          const _entityName = entity ? entity.name : getActiveLabel();
+          pushActivityLog(_entityName, '장비 장착', `${it.name} [${it.rank||'?'}/${EQUIP_PART_LABELS[slot]||slot}] 장착${!isBag ? ` — 내구도 ${fmtDur(it.durability)}/${fmtDur(it.maxDurability)}` : ''}`);
+        }
         const msg = isBag ? `🎒 ${it.name} 가방 장착 완료` : `⚔️ ${it.name} 장착 완료 (${EQUIP_PART_LABELS[slot]||slot}) — 내구도 ${fmtDur(it.durability)}/${fmtDur(it.maxDurability)}`;
         toast(msg);
       } catch(e) { toast(e.message||String(e), true); }
@@ -15108,6 +15135,10 @@ async function saveMaterialTraitFromForm() {
         // 장비 해제 후 캐릭터 파생 스탯 재계산
         if (entity && entity.stats) recalcCharDerivedStats(entity);
         await saveDb(); await saveState(); renderApp();
+        {
+          const _entityName = entity ? entity.name : getActiveLabel();
+          pushActivityLog(_entityName, '장비 해제', `${it.name} [${it.rank||'?'}/${EQUIP_PART_LABELS[slot]||slot}] 해제`);
+        }
         toast(`↩️ ${it.name} 해제 완료`);
       } catch(e) { toast(e.message||String(e), true); }
     });
