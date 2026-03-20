@@ -1947,7 +1947,7 @@ const RARE_FAMILY_PRESETS = {
     };
   }
 
-  // ── DB 마이그레이션: JSON 불러오기 시 누락된 NPC/스킬/필드 자동 보충 ──
+  // ── DB 마이그레이션: JSON 불러오기 시 누락된 NPC/스킬/필드 자동 보충 + 빌트인 스킬 자동 업데이트 ──
   function migrateDb() {
     const defaults = buildDefaultDb();
 
@@ -1958,23 +1958,43 @@ const RARE_FAMILY_PRESETS = {
       }
     }
 
-    // 2) NPC 캐릭터 보충 — char_yuna, char_haneul이 없으면 추가
+    // 2) NPC 캐릭터 보충 + 스킬 목록 동기화 — 레벨/랭크 등 플레이 진행 데이터는 보존
     if (!Array.isArray(model.db.characters)) model.db.characters = [];
     const defaultChars = defaults.characters.filter(c => c.id && c.id.startsWith('char_') && c.id !== 'char_guide');
     for (const defChar of defaultChars) {
-      if (!model.db.characters.find(c => c.id === defChar.id)) {
+      const existing = model.db.characters.find(c => c.id === defChar.id);
+      if (!existing) {
         model.db.characters.push(deepClone(defChar));
+      } else {
+        // NPC 캐릭터의 빌트인 필드(skills, note, job, position, row, damageType, attackStat, threatBase)만 최신으로 갱신
+        // 플레이 진행 데이터(rank, level, stats, hp, mp, sp, atk, pdef, mdef, equipments 등)는 보존
+        existing.skills = deepClone(defChar.skills);
+        existing.note = defChar.note;
+        if (defChar.job) existing.job = defChar.job;
+        if (defChar.position) existing.position = defChar.position;
+        if (defChar.row) existing.row = defChar.row;
+        if (defChar.damageType) existing.damageType = defChar.damageType;
+        if (defChar.attackStat) existing.attackStat = defChar.attackStat;
+        if (defChar.threatBase != null) existing.threatBase = defChar.threatBase;
       }
     }
 
-    // 3) NPC 전용 스킬 보충 — skill_yuna_*, skill_haneul_*이 없으면 추가
+    // 3) 빌트인 스킬 자동 업데이트 — NPC 전용 스킬 + 가이드 스킬을 항상 최신 정의로 교체
     if (!Array.isArray(model.db.customSkills)) model.db.customSkills = [];
-    const npcSkillPrefixes = ['skill_yuna_', 'skill_haneul_'];
-    const defaultNpcSkills = (defaults.customSkills || []).filter(s =>
-      s.id && npcSkillPrefixes.some(p => s.id.startsWith(p))
-    );
-    for (const defSkill of defaultNpcSkills) {
-      if (!model.db.customSkills.find(s => s.id === defSkill.id)) {
+    const builtinSkillIds = new Set();
+    const builtinSkills = (defaults.customSkills || []).filter(s => {
+      if (!s.id) return false;
+      if (s.id === 'skill_guide') return true;
+      if (s.id.startsWith('skill_yuna_') || s.id.startsWith('skill_haneul_')) return true;
+      return false;
+    });
+    for (const defSkill of builtinSkills) {
+      builtinSkillIds.add(defSkill.id);
+      const idx = model.db.customSkills.findIndex(s => s.id === defSkill.id);
+      if (idx >= 0) {
+        // 기존 위치에서 최신 정의로 교체 (밸런스/계수/설명 등 코드 업데이트 반영)
+        model.db.customSkills[idx] = deepClone(defSkill);
+      } else {
         model.db.customSkills.push(deepClone(defSkill));
       }
     }
