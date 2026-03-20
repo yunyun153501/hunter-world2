@@ -7680,20 +7680,22 @@ function renderAuctionHouseHtml() {
       const myListings = (model.db.auctionListings||[]).filter(l => !l.isNpc);
       const selKey = model.state.auctionSellSel || '';
       const listableItems = (inv.items||[]).filter(it =>
-        (it.category === 'equipment') || (it.category === 'rareMaterial' && Number(it.suggestedPrice||0) > 0)
+        (it.category === 'equipment') || (it.category === 'rareMaterial' && Number(it.suggestedPrice||0) > 0) || (it.category === 'skillbook')
       );
 
       const itemListHtml = listableItems.length === 0
-        ? '<div class="gb-sub">등록할 수 있는 장비나 희귀재료가 없다.</div>'
+        ? '<div class="gb-sub">등록할 수 있는 장비·희귀재료·스킬북이 없다.</div>'
         : listableItems.map(it => {
             const ikey = inventoryItemKey(it);
             const isEq = it.category === 'equipment';
-            const mktPrice = isEq ? Number(it.price || calcEquipBasePrice(it.rank||'E', it.part||'weapon')) : Number(it.suggestedPrice||0);
+            const isSB = it.category === 'skillbook';
+            const mktPrice = isEq ? Number(it.price || calcEquipBasePrice(it.rank||'E', it.part||'weapon')) : isSB ? Number(it.price || 0) : Number(it.suggestedPrice||0);
             const traitTxt = isEq && (it.traits||[]).length ? ` [${(it.traits||[]).map(t=>equipTraitDisplay(t, it.rank)).join(', ')}]` : '';
             return `<button class="gb-list-item ${ikey===selKey?'is-active':''}" data-auction-sell-sel="${escapeHtml(ikey)}">
               <strong>${escapeHtml(it.name||it.id)}</strong>${escapeHtml(traitTxt)}
               <span class="gb-badge">${escapeHtml(it.rank||'E')}</span>
-              ${isEq ? `<span class="gb-badge">${escapeHtml(EQUIP_PART_LABELS[it.part]||it.part||'')}</span>` : '<span class="gb-badge">희귀재료</span>'}
+              ${isEq ? `<span class="gb-badge">${escapeHtml(EQUIP_PART_LABELS[it.part]||it.part||'')}</span>` : isSB ? `<span class="gb-badge" style="background:#d97706;">📖 스킬북</span>` : '<span class="gb-badge">희귀재료</span>'}
+              ${isSB && it.effect ? `<div class="gb-sub">${escapeHtml(it.effect)}</div>` : ''}
               <div class="gb-sub">시장가: ${fmt(mktPrice)}</div>
             </button>`;
           }).join('');
@@ -7703,7 +7705,8 @@ function renderAuctionHouseHtml() {
         const it = listableItems.find(x => inventoryItemKey(x) === selKey);
         if (it) {
           const isEq = it.category === 'equipment';
-          const mktPrice = isEq ? Number(it.price || calcEquipBasePrice(it.rank||'E', it.part||'weapon')) : Number(it.suggestedPrice||0);
+          const isSB = it.category === 'skillbook';
+          const mktPrice = isEq ? Number(it.price || calcEquipBasePrice(it.rank||'E', it.part||'weapon')) : isSB ? Number(it.price || 0) : Number(it.suggestedPrice||0);
           listActionHtml = `
             <div style="margin-top:10px;padding:10px;border:1px solid rgba(34,197,94,0.25);border-radius:6px;">
               <div class="gb-sub">📋 경매 등록: <strong>${escapeHtml(it.name||it.id)}</strong></div>
@@ -9871,6 +9874,7 @@ function renderInventoryView() {
           ${brief ? `<div class="gb-inv-slot-brief">${escapeHtml(brief)}</div>` : ''}
           <div class="gb-inv-slot-tooltip">${escapeHtml(buildItemTooltip(it))}</div>
           <div class="gb-inv-slot-btns">
+            ${it.category === 'skillbook' ? `<button class="gb-btn tiny primary" data-inv-learn-skill="${escapeHtml(key)}" title="스킬 배우기">📖배우기</button>` : ''}
             ${canUse ? `<button class="gb-btn tiny" data-inv-use="${escapeHtml(key)}" title="사용하기">사용</button>` : `<button class="gb-btn tiny" data-inv-drop-one="${escapeHtml(key)}" title="1개 버리기">−1</button>`}
             <button class="gb-btn tiny danger" data-inv-drop-all="${escapeHtml(key)}" title="전체 ${canUse ? '사용' : '버리기'}">${canUse ? '전체사용' : '全버리기'}</button>
           </div>
@@ -14109,6 +14113,54 @@ async function saveMaterialTraitFromForm() {
         await saveDb(); await saveState(); renderApp();
         toast(`${it.name} 사용 완료.`);
       } catch(e) { toast(e.message||String(e), true); }
+    });
+    // ── 공용 인벤 스킬북 배우기 핸들러 ───────────────────────────────────────
+    on('[data-inv-learn-skill]', 'click', async (ev) => {
+      try {
+        const key = ev.currentTarget.getAttribute('data-inv-learn-skill') || '';
+        const inv = getInventory();
+        const itemIdx = (inv.items||[]).findIndex(i => inventoryItemKey(i) === key);
+        if (itemIdx < 0) throw new Error('아이템을 찾을 수 없다.');
+        const item = inv.items[itemIdx];
+        if (item.category !== 'skillbook') throw new Error('스킬북이 아니다.');
+        // 현재 활성 캐릭터 확인
+        const activeRaw = model.state.activeCharId || '';
+        if (!activeRaw) throw new Error('먼저 캐릭터를 선택하라. (허브에서 활성 캐릭터 설정)');
+        let entryType, entryId, entry;
+        if (activeRaw.startsWith('persona:')) {
+          entryType = 'persona'; entryId = activeRaw.substring(8);
+          entry = getPersonaById(entryId);
+        } else if (activeRaw.startsWith('char:')) {
+          entryType = 'character'; entryId = activeRaw.substring(5);
+          entry = getCharById(entryId);
+        } else {
+          entryType = 'character'; entryId = activeRaw;
+          entry = getCharById(entryId);
+        }
+        if (!entry) throw new Error('활성 캐릭터를 찾을 수 없다.');
+        const skillId = item.skillId;
+        if (!skillId) throw new Error('스킬 ID가 없다.');
+        const allSkills = Object.assign({}, BUILTIN_SKILLS || {});
+        (model.db.customSkills || []).forEach(s => { allSkills[s.id] = s; });
+        const skill = allSkills[skillId];
+        if (!skill) throw new Error(`스킬 "${skillId}"을 찾을 수 없다.`);
+        const charRank = (entry.rank || 'E').toUpperCase();
+        const skillRank = (skill.grade || item.rank || 'E').toUpperCase();
+        if (!skill.growth && charRank !== skillRank) throw new Error(`등급이 맞지 않음! ${entry.name}: ${charRank}급 / 스킬: ${skillRank}급. 같은 등급만 배울 수 있다.`);
+        const skillStats = skill.statTypes || [];
+        const charMainStat = (entry.attackStat || (entry.damageType === 'magic' ? 'int' : 'str'));
+        if (skillStats.length > 0 && !skillStats.includes(charMainStat)) {
+          throw new Error(`주스탯 불일치! 스킬 요구: ${skillStats.join('/')} / ${entry.name} 주스탯: ${charMainStat}. 주스탯이 같아야 배울 수 있다.`);
+        }
+        if ((entry.skills || []).includes(skillId)) throw new Error(`${entry.name}은(는) 이미 배운 스킬이다: ${skill.name}`);
+        if (!Array.isArray(entry.skills)) entry.skills = [];
+        entry.skills.push(skillId);
+        if (item.count > 1) { item.count--; }
+        else { inv.items.splice(itemIdx, 1); }
+        await saveDb(); await saveState(); renderApp();
+        toast(`📖 ${entry.name}이(가) "${skill.name}" 스킬을 배웠다!`);
+        pushActivityLog(entry.name, '스킬 습득', `"${skill.name}" [${skill.grade || '?'}급/${skill.category || '?'}] 스킬북 사용 (공용 인벤)`);
+      } catch (e) { toast(e.message || String(e), true); }
     });
     // ── 골드 이동 핸들러 ─────────────────────────────────────────────────────
     on('[data-gold-to-shared]', 'click', async (ev) => {
