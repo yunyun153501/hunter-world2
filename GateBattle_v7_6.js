@@ -567,8 +567,8 @@ const EQUIP_RANK_PREFIX = {
 };
 const EQUIP_NAME_SUFFIXES = {
   weapon: ['검','대검','창','활','대궁','석궁','완드','지팡이','로드','도끼','쌍검','단검','레이피어','총','저격총','권갑','스파이크','투창','투척단검'],
-  subweapon: ['방패','화살','수정구','예비단검','신발','장갑','보호대'],
-  accessory: ['귀걸이','반지','목걸이','벨트','표식'],
+  subweapon: ['방패','예비검','예비대검','예비단검','예비지팡이','예비활'],
+  accessory: ['귀걸이','반지','목걸이','벨트','표식','장갑','보호대','수정구','화살','신발'],
   armor_heavy: ['강철갑옷','판금갑옷','백은중갑','중갑'],
   armor_light: ['사슬갑옷','전술경갑','백은경갑','경갑'],
   armor_leather: ['기동조끼','가죽외피','사냥꾼조끼','가죽갑옷'],
@@ -1804,8 +1804,8 @@ const RARE_FAMILY_PRESETS = {
           note: isAssoc ? '협회에서 신규 헌터에게 지급하는 표준 규격 무기.' : `${rank}급 표준 ${suff}.`
         });
       }
-      // ── 보조무기 3종 (기본 특성 1개, 주입 최대 2 — 특수효과는 주입이 아님) ──
-      const subSuffixes = ['방패','장갑','보호대'];
+      // ── 보조무기 3종 (방패 + 예비무기, 기본 특성 1개, 주입 최대 2) ──
+      const subSuffixes = ['방패','예비검','예비단검'];
       for (let s = 0; s < 3; s++) {
         const prefix = EQUIP_RANK_PREFIX[rank][s % EQUIP_RANK_PREFIX[rank].length];
         const suff = subSuffixes[s];
@@ -1854,7 +1854,7 @@ const RARE_FAMILY_PRESETS = {
         }
       }
       // ── 악세서리 8종 (기본 특성 1개, 주입 최대 1 — 특수효과는 주입이 아님) ──
-      const accSuffixes = ['귀걸이','반지','목걸이','벨트','표식','귀걸이','반지','목걸이'];
+      const accSuffixes = ['귀걸이','반지','목걸이','벨트','표식','장갑','보호대','귀걸이'];
       const accMainStats = ['str','int','agi','con','sense','str','int','agi'];
       for (let ac = 0; ac < 8; ac++) {
         const prefix = EQUIP_RANK_PREFIX[rank][ac % EQUIP_RANK_PREFIX[rank].length];
@@ -1910,11 +1910,25 @@ const RARE_FAMILY_PRESETS = {
           threatBase:1,
           inventory:{ gold:0, items:[], equipped:{
             weapon:{ id:'eq_npc_haneul_weapon', name:'협회지급 활', category:'equipment', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 활.' },
-            subweapon:{ id:'eq_npc_haneul_sub', name:'E급 조악한 장갑', category:'equipment', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['physical_damage'], durability:100, maxDurability:100, atk:0, pdef:0, mdef:0, mainStat:'', resistType:'', resistPct:0, price:300000, note:'E급 표준 장갑.' },
+            subweapon:{ id:'eq_npc_haneul_sub', name:'E급 조악한 예비활', category:'equipment', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['physical_damage'], durability:100, maxDurability:100, atk:0, pdef:0, mdef:0, mainStat:'', resistType:'', resistPct:0, price:300000, note:'E급 표준 예비활.' },
             armor:{ id:'eq_npc_haneul_armor', name:'E급 투박한 기동조끼', category:'equipment', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'leather', armorStatBonusMul:0.10, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:1, mdef:1, mainStat:'', resistType:'', resistPct:0, price:400000, note:'E급 표준 가죽갑.' },
-            accessory:null, bag:null
+            accessory:{ id:'eq_npc_haneul_acc', name:'E급 투박한 장갑', category:'equipment', part:'accessory', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:1, traits:['physical_damage'], durability:100, maxDurability:100, atk:0, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:300000, note:'E급 표준 장갑.' }, bag:null
           }},
-          note:'고유 NPC. E급 궁수. 전탄회수/파워샷/퀵샷/트리플샷(성장형 직업스킬) 보유.\n장비: 협회지급 활, E급 조악한 장갑, E급 투박한 기동조끼.' }
+          note:'고유 NPC. E급 궁수. 전탄회수/파워샷/퀵샷/트리플샷(성장형 직업스킬) 보유.\n장비: 협회지급 활, E급 조악한 예비활, E급 투박한 기동조끼, E급 투박한 장갑(악세서리).' },
+        // ── 오하나 ──
+        { id:'char_ohana', name:'오하나', job:'투척가', position:'원거리', row:'mid', rank:'E', level:5,
+          stats:{ str:10, con:10, int:10, agi:18, sense:16 },
+          hp:0, mp:0, sp:0, atk:0, pdef:0, mdef:0,
+          damageType:'physical', attackStat:'agi',
+          skills:['skill_ohana_quickthrow','skill_ohana_precision','skill_ohana_kniferecall'],
+          threatBase:1,
+          inventory:{ gold:0, items:[], equipped:{
+            weapon:{ id:'eq_npc_ohana_weapon', name:'협회지급 투척단검', category:'equipment', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 투척단검. 10개 1세트.' },
+            subweapon:{ id:'eq_npc_ohana_sub', name:'E급 조악한 예비단검', category:'equipment', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['physical_damage'], durability:100, maxDurability:100, atk:0, pdef:0, mdef:0, mainStat:'', resistType:'', resistPct:0, price:300000, note:'E급 표준 예비단검.' },
+            armor:{ id:'eq_npc_ohana_armor', name:'E급 투박한 기동조끼', category:'equipment', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'leather', armorStatBonusMul:0.10, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:1, mdef:1, mainStat:'', resistType:'', resistPct:0, price:400000, note:'E급 표준 가죽갑.' },
+            accessory:{ id:'eq_npc_ohana_acc', name:'E급 투박한 보호대', category:'equipment', part:'accessory', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:1, traits:['physical_damage'], durability:100, maxDurability:100, atk:0, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:300000, note:'E급 표준 보호대.' }, bag:null
+          }},
+          note:'고유 NPC. E급 투척가. 퀵스로/정밀조준(성장형)/나이프회수(성장형) 보유.\n투척단검 10개 1세트 — 기본공격/퀵스로 시 1개 소모, 나이프회수로 회수 가능, 전투 종료 시 자동 회수.\n장비: 협회지급 투척단검, E급 조악한 예비단검(물피+1%), E급 투박한 기동조끼, E급 투박한 보호대(물피+1%).' }
       ],
       monsters: buildSampleMonsters(),
       personas: [
@@ -1981,7 +1995,39 @@ const RARE_FAMILY_PRESETS = {
         { id:'skill_haneul_tripleshot', name:'트리플샷', grade:'E', rarity:'Rare', category:'singleAttack', target:'singleEnemy',
           growth: true, skillUsage: 'job',
           costs:{ mp:0, sp:40 }, coef:0, damageType:'physical', element:'none', statTypes:['agi'], duration:0,
-          desc:'[성장형/직업] 단일 등급계수 상한값을 3발로 나누어 발사. 대상 처치 시 남은 탄환은 다른 적에게 자동 전환.' }
+          desc:'[성장형/직업] 단일 등급계수 상한값을 3발로 나누어 발사. 대상 처치 시 남은 탄환은 다른 적에게 자동 전환.' },
+        // ── 오하나 전용 스킬 ──
+        { id:'skill_ohana_quickthrow', name:'퀵스로', grade:'E', rarity:'Rare', category:'singleAttack', target:'singleEnemy',
+          skillUsage: 'job',
+          costs:{ mp:0, sp:25 }, coef:1.5, damageType:'physical', element:'none', statTypes:['agi'], duration:0,
+          throwDagger: true,
+          desc:'[일반/직업] 투척단검을 하나 빠르게 던짐. 사용 시 투척단검 1개 소모. 계수 1.5.' },
+        { id:'skill_ohana_precision', name:'정밀조준', grade:'E', rarity:'Rare', category:'passive', target:'self',
+          growth: true, skillUsage: 'position',
+          costs:{ mp:0, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['sense'], duration:0,
+          passiveBonuses:{ sense:1 },
+          byRank:{
+            E:{ passiveBonuses:{ sense:1 }, desc:'[E] 감각 +1 (패시브). 정밀한 조준 훈련으로 감각이 상승한다.' },
+            D:{ passiveBonuses:{ sense:3 }, desc:'[D] 감각 +3 (패시브). 정밀한 조준 훈련으로 감각이 상승한다.' },
+            C:{ passiveBonuses:{ sense:4 }, desc:'[C] 감각 +4 (패시브). 정밀한 조준 훈련으로 감각이 상승한다.' },
+            B:{ passiveBonuses:{ sense:6 }, desc:'[B] 감각 +6 (패시브). 정밀한 조준 훈련으로 감각이 상승한다.' },
+            A:{ passiveBonuses:{ sense:8 }, desc:'[A] 감각 +8 (패시브). 정밀한 조준 훈련으로 감각이 상승한다.' },
+            S:{ passiveBonuses:{ sense:10 }, desc:'[S] 감각 +10 (패시브). 정밀한 조준 훈련으로 감각이 상승한다.' }
+          },
+          desc:'[성장형/포지션/패시브] 사용자 등급에 따라 감각 상승. 전투 시 자동 적용.' },
+        { id:'skill_ohana_kniferecall', name:'나이프회수', grade:'E', rarity:'Rare', category:'singleAttack', target:'singleEnemy',
+          growth: true, skillUsage: 'job',
+          costs:{ mp:10, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['agi'], duration:0,
+          knifeRecall: true,
+          byRank:{
+            E:{ grade:'E', knifeRecall:{ recoverChance:0.50, hitChance:0.30 }, desc:'[E] 투척단검 회수 시도. 회수확률 50%, 회수 시 적에게 명중확률 30%. 등급별 단일 상한 계수.' },
+            D:{ grade:'D', knifeRecall:{ recoverChance:0.60, hitChance:0.40 }, desc:'[D] 투척단검 회수 시도. 회수확률 60%, 회수 시 적에게 명중확률 40%.' },
+            C:{ grade:'C', knifeRecall:{ recoverChance:0.70, hitChance:0.50 }, desc:'[C] 투척단검 회수 시도. 회수확률 70%, 회수 시 적에게 명중확률 50%.' },
+            B:{ grade:'B', knifeRecall:{ recoverChance:0.80, hitChance:0.60 }, desc:'[B] 투척단검 회수 시도. 회수확률 80%, 회수 시 적에게 명중확률 60%.' },
+            A:{ grade:'A', knifeRecall:{ recoverChance:0.90, hitChance:0.70 }, desc:'[A] 투척단검 회수 시도. 회수확률 90%, 회수 시 적에게 명중확률 70%.' },
+            S:{ grade:'S', knifeRecall:{ recoverChance:1.00, hitChance:0.80 }, desc:'[S] 투척단검 회수 시도. 회수확률 100%, 회수 시 적에게 명중확률 80%.' }
+          },
+          desc:'[성장형/직업] 사용한 투척단검을 회수. 회수확률·명중확률이 등급에 따라 상승. 회수된 단검이 적에게 맞으면 등급별 단일 상한 계수 피해.' }
       ],
       rareMaterialPack: deepClone(DEFAULT_RARE_MATERIAL_PACK),
       rareMaterialCatalog: [],
@@ -1996,8 +2042,8 @@ const RARE_FAMILY_PRESETS = {
       incomeLog: [],
       activityLog: [],    // [{ ts, actor, action, detail }] LLM 전달용 활동 로그
       guildTaxLog: [],
-      assocEquipClaimed: { 'char_yuna': true, 'char_haneul': true },  // { [activeCharId]: true } — 협회지급 장비 무료 구매 기록
-      gateClearHistory: { 'char_yuna': { 'E_small': 3 }, 'char_haneul': { 'E_small': 4 } },  // { [characterId/personaId]: { "E_small":count, "E_medium":count, ... } }
+      assocEquipClaimed: { 'char_yuna': true, 'char_haneul': true, 'char_ohana': true },  // { [activeCharId]: true } — 협회지급 장비 무료 구매 기록
+      gateClearHistory: { 'char_yuna': { 'E_small': 3 }, 'char_haneul': { 'E_small': 4 }, 'char_ohana': { 'E_small': 2 } },  // { [characterId/personaId]: { "E_small":count, "E_medium":count, ... } }
       rankUpHistory: {},     // { [characterId/personaId]: { lastAttempt: timestamp, result: 'success'|'fail', targetRank } }
       homeRegions: [],   // [{id, name, homes:[{id, name, area, houseType, deposit, monthlyRent, maintenanceFee, purchasePrice, brokerFee, desc, features:[], storages:[{id,name,type,maxSlots,maxWeightKg,items:[]}]}]}]
       ownedHomes: {},    // { [activeCharId]: [ { regionId, homeId, moveInDate:'2026-01-01', lastRentPaidMonth:'2026-01', rentLog:[{month,amount,paidDate}] }, ... ] }
@@ -2018,7 +2064,7 @@ const RARE_FAMILY_PRESETS = {
   //   3) run() 안에서 model.db 를 직접 수정 (예: 새 필드 추가, 값 보정 등)
   // 저장 데이터의 dbVersion 이 현재보다 낮으면 해당 마이그레이션만 순차 실행됨.
   // 20시간 세이브든 100시간 세이브든 초기화 없이 자동 패치.
-  const DB_SCHEMA_VERSION = 1;
+  const DB_SCHEMA_VERSION = 2;
 
   function migrateDb() {
     const defaults = buildDefaultDb();
@@ -2057,7 +2103,7 @@ const RARE_FAMILY_PRESETS = {
     const builtinSkills = (defaults.customSkills || []).filter(s => {
       if (!s.id) return false;
       if (s.id === 'skill_guide') return true;
-      if (s.id.startsWith('skill_yuna_') || s.id.startsWith('skill_haneul_')) return true;
+      if (s.id.startsWith('skill_yuna_') || s.id.startsWith('skill_haneul_') || s.id.startsWith('skill_ohana_')) return true;
       return false;
     });
     for (const defSkill of builtinSkills) {
@@ -2143,12 +2189,83 @@ const RARE_FAMILY_PRESETS = {
       },
       // ── 다음 패치 예시 (추가 방법) ──
       // {
-      //   version: 2,
+      //   version: 3,
       //   name: '새로운 필드 추가',
       //   run() {
       //     // model.db.xxx 수정 로직
       //   }
       // },
+      {
+        version: 2,
+        name: '보조무기→예비무기 리워크 + 장갑/보호대 악세서리 이동 + 오하나 NPC 추가',
+        run() {
+          // 기존 장갑/보호대/수정구/화살/신발 보조무기 → 악세서리 슬롯 이동
+          const movedSuffixes = ['장갑','보호대','수정구','화살','신발'];
+          function isMovedItem(item) {
+            if (!item || item.part !== 'subweapon') return false;
+            return movedSuffixes.some(s => (item.name || '').includes(s));
+          }
+          function migrateToAccessory(item) {
+            item.part = 'accessory';
+            item.maxInfuse = 1;
+            if (!item.mainStat) item.mainStat = 'str';
+          }
+          const entities = [...(model.db.characters || []), ...(model.db.personas || [])];
+          for (const entity of entities) {
+            if (!entity.inventory) continue;
+            // 인벤토리 아이템 이동
+            (entity.inventory.items || []).forEach(it => {
+              if (isMovedItem(it)) migrateToAccessory(it);
+            });
+            // 장착 장비 이동
+            if (entity.inventory.equipped) {
+              const eq = entity.inventory.equipped;
+              if (eq.subweapon && isMovedItem(eq.subweapon)) {
+                const moved = eq.subweapon;
+                migrateToAccessory(moved);
+                if (!eq.accessory) {
+                  eq.accessory = moved;
+                  eq.subweapon = null;
+                } else {
+                  // 이미 악세서리가 있으면 인벤토리로 이동
+                  entity.inventory.items = entity.inventory.items || [];
+                  entity.inventory.items.push(moved);
+                  eq.subweapon = null;
+                }
+              }
+            }
+          }
+          // 공용 인벤토리 이동
+          if (model.db.inventory) {
+            (model.db.inventory.items || []).forEach(it => {
+              if (isMovedItem(it)) migrateToAccessory(it);
+            });
+            (model.db.inventory.overflow || []).forEach(it => {
+              if (isMovedItem(it)) migrateToAccessory(it);
+            });
+          }
+          // 장비 상점 이동
+          (model.db.equipments || []).forEach(it => {
+            if (isMovedItem(it)) migrateToAccessory(it);
+          });
+          // 경매장/중고장 이동
+          (model.db.auctionListings || []).forEach(l => {
+            if (l.item && isMovedItem(l.item)) migrateToAccessory(l.item);
+          });
+          (model.db.hmUsedListings || []).forEach(l => {
+            if (l.item && isMovedItem(l.item)) migrateToAccessory(l.item);
+          });
+          // 오하나 게이트클리어 기록 추가
+          if (!model.db.gateClearHistory) model.db.gateClearHistory = {};
+          if (!model.db.gateClearHistory['char_ohana']) {
+            model.db.gateClearHistory['char_ohana'] = { 'E_small': 2 };
+          }
+          if (!model.db.assocEquipClaimed) model.db.assocEquipClaimed = {};
+          if (!model.db.assocEquipClaimed['char_ohana']) {
+            model.db.assocEquipClaimed['char_ohana'] = true;
+          }
+        }
+      },
     ];
 
     const savedVersion = Number(model.db.dbVersion) || 0;
@@ -2398,6 +2515,14 @@ function buildDefaultState() {
         unit._anvilRegenPct = 0.05;
       }
     });
+    // 투척단검: 무기가 투척단검이면 단검 카운트 초기화 (전투 시작 시 10개)
+    if (!unit.isMonster && unit.inventory && unit.inventory.equipped && unit.inventory.equipped.weapon) {
+      const _tw = unit.inventory.equipped.weapon;
+      if ((_tw.name || '').includes('투척단검')) {
+        unit._throwingDaggers = 10;
+        unit._throwingDaggersMax = 10;
+      }
+    }
   }
   // 장비 특성 전투 보너스 계산 (장착 장비의 traits 배열 기반)
   function calcEquipTraitBonuses(entry) {
@@ -5669,13 +5794,19 @@ function getBuffedStat(unit, statKey) {
     const base = Object.assign({ mp:0, sp:0 }, (skill && skill.costs) || {});
     let mp = base.mp || 0;
     let sp = base.sp || 0;
-    // 방패숙련: 방패 계열 SP 감소
-    if ((skill.id === 'shieldBash' || skill.id === 'shockwave' || skill.id === 'shieldSmash') && unit.passiveMods && unit.passiveMods.shieldSpMul) {
-      sp = Math.ceil(sp * (unit.passiveMods.shieldSpMul || 1));
+    // 방패숙련: 방패 착용 시 전체 SP 감소
+    if (unit.passiveMods && unit.passiveMods.shieldSpMul != null && unit.passiveMods.shieldSpMul !== 1) {
+      const _sub = unit.inventory && unit.inventory.equipped && unit.inventory.equipped.subweapon;
+      if (_sub && ((_sub.name || '').includes('방패'))) {
+        sp = Math.ceil(sp * unit.passiveMods.shieldSpMul);
+      }
     }
-    // 단검숙련: 단검/투척 계열 SP 감소
-    if ((skill.id === 'quickThrow' || skill.id === 'knifeRecall') && unit.passiveMods && unit.passiveMods.daggerSpMul) {
-      sp = Math.ceil(sp * (unit.passiveMods.daggerSpMul || 1));
+    // 단검숙련: 단검 착용 시 전체 SP 감소
+    if (unit.passiveMods && unit.passiveMods.daggerSpMul != null && unit.passiveMods.daggerSpMul !== 1) {
+      const _wpn = unit.inventory && unit.inventory.equipped && unit.inventory.equipped.weapon;
+      if (_wpn && ((_wpn.name || '').includes('단검'))) {
+        sp = Math.ceil(sp * unit.passiveMods.daggerSpMul);
+      }
     }
     // 사기관리: 전투 시작 2턴 전 아군 MP/SP -12%
     if (unit.passiveMods && Number(unit.passiveMods.moraleCostReduce || 0) > 0) {
@@ -5705,6 +5836,10 @@ function getBuffedStat(unit, statKey) {
     if (Number(unit.cooldowns && unit.cooldowns[skill.id] || 0) > 0) return false;
     // 전탄회수: 축적 0이면 사용 불가 (첫 턴 등)
     if (skill.id === 'skill_haneul_reload' && Number(unit._reloadStacks || 0) === 0) return false;
+    // 투척단검 스킬: 단검 0이면 사용 불가 (나이프회수 제외)
+    if (skill.throwDagger && unit._throwingDaggers != null && unit._throwingDaggers <= 0) return false;
+    // 나이프회수: 단검이 이미 가득 차 있으면 사용 불가
+    if (skill.knifeRecall && unit._throwingDaggers != null && unit._throwingDaggers >= (unit._throwingDaggersMax || 10)) return false;
     // 침묵: 스킬 사용 불가 (기본 공격만 가능)
     if (Number(unit.statuses && unit.statuses.silence || 0) > 0) return false;
     // 몬스터는 MP/SP 비용 무시 (쿨타임만 적용)
@@ -6391,6 +6526,12 @@ function getBuffedStat(unit, statKey) {
   function chooseEnemyAction(unit, allies, foes, isPartyAuto) {
     // SP=0이면 행동 불가 — 대기 (파티 자동 모드)
     if (isPartyAuto && !unit.isMonster && (unit.sp || 0) < 1) return { type:'wait' };
+    // 투척단검 소진 시: 나이프회수 스킬 우선 사용, 불가하면 대기
+    if (isPartyAuto && !unit.isMonster && unit._throwingDaggers != null && unit._throwingDaggers <= 0) {
+      const recallSkill = listKnownSkillDefs(unit).find(sk => sk.knifeRecall && canUseSkill(unit, sk));
+      if (recallSkill) return { type:'skill', skillId:recallSkill.id };
+      return { type:'wait' };
+    }
     const aliveAllies = getAlive(allies);
     const aliveFoes = getAlive(foes);
     const skillPool = listKnownSkillDefs(unit).filter(sk => sk.category !== 'passive' && canUseSkill(unit, sk));
@@ -6488,6 +6629,13 @@ function getBuffedStat(unit, statKey) {
         pushBattleLog(runtime, `${actor.name} SP가 부족하여 행동할 수 없다`);
         return;
       }
+      // 투척단검 0이면 기본공격 불가
+      if (!actor.isMonster && actor._throwingDaggers != null && actor._throwingDaggers <= 0) {
+        actor.lastAction = '투척단검 소진 — 행동 불가';
+        addRoundHighlight(summary, `${actor.name} 투척단검이 없어 행동 불가`);
+        pushBattleLog(runtime, `${actor.name} 투척단검이 모두 소진되어 행동할 수 없다`);
+        return;
+      }
       const skill = { id:'basicAttack', name:'기본 공격', category:'singleAttack', target:'singleEnemy', coef:1.0, statTypes:[actor.attackStat || 'str'], damageType:actor.damageType || 'physical', element:'none', costs:{ mp:0, sp:0 } };
       const target = chooseWeightedTarget(actor, foes, skill, action.target);
       if (!target) return;
@@ -6524,6 +6672,11 @@ function getBuffedStat(unit, statKey) {
       if ((actor.skills || []).includes('skill_haneul_reload')) {
         actor._reloadStacks = Math.min(6, (Number(actor._reloadStacks) || 0) + 1);
       }
+      // 투척단검 소모: 기본공격 시 1개 소모
+      if (actor._throwingDaggers != null && actor._throwingDaggers > 0) {
+        actor._throwingDaggers = Math.max(0, actor._throwingDaggers - 1);
+        pushBattleLog(runtime, `  └ 투척단검 잔여: ${actor._throwingDaggers}/${actor._throwingDaggersMax || 10}`);
+      }
       return;
     }
 
@@ -6545,6 +6698,56 @@ function getBuffedStat(unit, statKey) {
     if (skill.id !== 'skill_haneul_reload' && (actor.skills || []).includes('skill_haneul_reload')
         && (skill.category === 'singleAttack' || skill.category === 'aoeAttack' || skill.category === 'singleCC' || skill.category === 'aoeCC')) {
       actor._reloadStacks = Math.min(6, (Number(actor._reloadStacks) || 0) + 1);
+    }
+
+    // ── 나이프회수 특수 처리: 소진된 단검 회수 + 명중 시 피해 ──
+    if (skill.knifeRecall && actor._throwingDaggers != null) {
+      const recall = skill.knifeRecall || { recoverChance:0.50, hitChance:0.30 };
+      const maxDag = actor._throwingDaggersMax || 10;
+      const used = maxDag - actor._throwingDaggers;
+      let recovered = 0;
+      let hitCount = 0;
+      const target = chooseWeightedTarget(actor, foes, skill, action.target);
+      let totalDmg = 0;
+      for (let d = 0; d < used; d++) {
+        if (Math.random() < recall.recoverChance) {
+          recovered++;
+          if (target && !target.dead && Math.random() < recall.hitChance) {
+            hitCount++;
+          }
+        }
+      }
+      actor._throwingDaggers = Math.min(maxDag, actor._throwingDaggers + recovered);
+      if (hitCount > 0 && target && !target.dead) {
+        const dmgPerHit = computeDamage(actor, target, skill, false);
+        totalDmg = Math.round(dmgPerHit * hitCount * 0.5);
+        const hpBefore = Number(target.hp || 0);
+        applyDamage(target, totalDmg);
+        if (actor.side === 'party') summary.partyDamage += totalDmg; else summary.enemyDamage += totalDmg;
+        if (target.dead) {
+          if (actor.side === 'party') { summary.partyKills += 1; recordKillExp(runtime, target); } else summary.enemyKills += 1;
+          addRoundHighlight(summary, `${actor.name}이(가) ${target.name} 처치`);
+        }
+        pushDamageEventLog(runtime, actor, target, skill.name, totalDmg, false, target.dead);
+        pushHpShiftLog(runtime, target, hpBefore);
+      }
+      pushBattleLog(runtime, `${actor.name} 나이프회수: ${used}개 중 ${recovered}개 회수, ${hitCount}개 명중${totalDmg > 0 ? ` → ${target.name} ${totalDmg} 피해` : ''}`);
+      addRoundHighlight(summary, `${actor.name}의 나이프회수 (${recovered}개 회수${hitCount > 0 ? `, ${hitCount}개 명중` : ''})`);
+      pushBattleLog(runtime, `  └ 투척단검 잔여: ${actor._throwingDaggers}/${maxDag}`);
+      actor.lastAction = `${skill.name} (${recovered}개 회수, ${hitCount}개 명중)`;
+      return;
+    }
+
+    // ── 퀵스로/투척단검 스킬: 투척단검 1개 소모 ──
+    if (skill.throwDagger && actor._throwingDaggers != null) {
+      if (actor._throwingDaggers <= 0) {
+        actor.lastAction = '투척단검 소진 — 행동 불가';
+        addRoundHighlight(summary, `${actor.name} 투척단검이 없어 ${skill.name} 사용 불가`);
+        pushBattleLog(runtime, `${actor.name} 투척단검이 소진되어 ${skill.name}을 사용할 수 없다`);
+        refundSkillCost(actor, cost);
+        return;
+      }
+      actor._throwingDaggers = Math.max(0, actor._throwingDaggers - 1);
     }
 
     actor.lastAction = skill.name;
@@ -6725,6 +6928,10 @@ function getBuffedStat(unit, statKey) {
     if (killedNames.length) addRoundHighlight(summary, `${actor.name}의 ${skill.name} → ${killedNames.join(', ')} 처치`);
     else addRoundHighlight(summary, `${actor.name}의 ${skill.name} → 피해 ${totalDamage}`);
     pushBattleLog(runtime, `${actor.name}의 ${skill.name} 총 피해 ${totalDamage}${killedNames.length ? ' / 처치: ' + killedNames.join(', ') : ''}`);
+    // 투척단검 잔여 표시
+    if (skill.throwDagger && actor._throwingDaggers != null) {
+      pushBattleLog(runtime, `  └ 투척단검 잔여: ${actor._throwingDaggers}/${actor._throwingDaggersMax || 10}`);
+    }
     actor.lastAction = `${skill.name} (MP-${cost.mp} / SP-${cost.sp})`;
   }
 
