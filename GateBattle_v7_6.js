@@ -1837,7 +1837,23 @@ const RARE_FAMILY_PRESETS = {
           stats:{ str:10, con:10, int:10, agi:10, sense:10 },
           hp:100, mp:100, sp:100, atk:0, pdef:0, mdef:0,
           damageType:'physical', attackStat:'str', skills:[],
-          note:'【캐릭터 만드는 법】\n1. "새 캐릭터" 클릭 → ID/이름/직업/포지션 입력\n2. 스탯 최소값=10. 모든 스탯 10일 때 HP=MP=SP=100\n3. HP=100+(CON-10)×10+(STR-10)×3\n4. MP=100+(INT-10)×10+(SEN-10)×3\n5. SP=100+(AGI-10)×10+(SEN-10)×3\n6. ATK/물방/마방은 기본 0 (장비·스킬로 증가)\n7. HP/MP/SP를 0으로 두면 스탯 기반 자동 계산\n8. 전열: front(탱커/근접) / mid(투척) / back(원거리/궁수/마법/힐러)\n9. 등급별 스탯합 기준: E:~70 / D:70~90 / C:90~120 / B:120~160 / A:160~200 / S:200~\n\n이 캐릭터는 삭제해도 됩니다.' }
+          note:'【캐릭터 만드는 법】\n1. "새 캐릭터" 클릭 → ID/이름/직업/포지션 입력\n2. 스탯 최소값=10. 모든 스탯 10일 때 HP=MP=SP=100\n3. HP=100+(CON-10)×10+(STR-10)×3\n4. MP=100+(INT-10)×10+(SEN-10)×3\n5. SP=100+(AGI-10)×10+(SEN-10)×3\n6. ATK/물방/마방은 기본 0 (장비·스킬로 증가)\n7. HP/MP/SP를 0으로 두면 스탯 기반 자동 계산\n8. 전열: front(탱커/근접) / mid(투척) / back(원거리/궁수/마법/힐러)\n9. 등급별 스탯합 기준: E:~70 / D:70~90 / C:90~120 / B:120~160 / A:160~200 / S:200~\n\n이 캐릭터는 삭제해도 됩니다.' },
+        // ── NPC: 최유나 ──
+        { id:'char_yuna', name:'최유나', job:'무직', position:'전열탱커', row:'front', rank:'E', level:6,
+          stats:{ str:12, con:22, int:10, agi:10, sense:14 },
+          hp:0, mp:0, sp:0, atk:0, pdef:0, mdef:0,
+          damageType:'physical', attackStat:'str',
+          skills:['skill_yuna_anvil','skill_yuna_shield','skill_yuna_dagger'],
+          threatBase:5,
+          note:'고유 NPC. E급 탱커. 강철모루(성장형 포지션스킬) 보유 — A급 달성 시 백금모루(유니크)로 승급.\n장비: 협회지급 단검, E급 조악한 방패, E급 조악한 판금갑옷.' },
+        // ── NPC: 송하늘 ──
+        { id:'char_haneul', name:'송하늘', job:'궁수', position:'원거리', row:'back', rank:'E', level:7,
+          stats:{ str:10, con:14, int:10, agi:24, sense:15 },
+          hp:0, mp:0, sp:0, atk:0, pdef:0, mdef:0,
+          damageType:'physical', attackStat:'agi',
+          skills:['skill_haneul_reload','skill_haneul_powershot','skill_haneul_quickshot','skill_haneul_tripleshot'],
+          threatBase:1,
+          note:'고유 NPC. E급 궁수. 전탄회수/파워샷/퀵샷/트리플샷(성장형 직업스킬) 보유.\n장비: 협회지급 활, E급 조악한 장갑, E급 투박한 기동조끼.' }
       ],
       monsters: buildSampleMonsters(),
       personas: [
@@ -1846,7 +1862,48 @@ const RARE_FAMILY_PRESETS = {
       customSkills: [
         { id:'skill_guide', name:'⭐ 스킬가이드', grade:'E', category:'singleAttack', target:'singleEnemy',
           costs:{ mp:0, sp:0 }, coef:1.0, damageType:'physical', element:'none', statTypes:['str'], duration:0,
-          desc:'【스킬 만드는 법】\n1. "새 스킬" 클릭 → ID/이름 입력\n2. 각 항목을 설정 후 저장\n\n【카테고리 설명】\nsingleAttack = 단일 공격 (적 1체)\naoeAttack = 광역 공격 (전체 적)\nsingleCC = 단일 CC (적 1체 + 행동방해)\naoeCC = 광역 CC (전체 적 + 행동방해)\nsingleHeal = 단일 회복 (아군 1체)\naoeHeal = 광역 회복 (전체 아군)\nbuff = 버프 (자신/아군 강화)\nutility = 유틸리티 (자원/상태 관리)\n\n【은신(stealth) 버프 만드는 법】\n은신은 buff 카테고리 스킬로 만듭니다.\n1. 카테고리: buff\n2. 대상: self (자기 자신)\n3. 버프 스탯: 원하는 스탯 (예: agi +5)\n4. 지속 턴: 원하는 턴수 (예: 3)\n5. 은신 체크박스: 체크 ✓\n효과: 은신 중에는 모든 공격 대상에서 제외됩니다.\n  보스를 포함한 모든 적의 공격에서 은신이 적용됩니다.\n  은신 상태에서 공격하면 즉시 은신이 해제됩니다.\n  지속 턴이 끝나도 자동 해제됩니다.\n\n【특수효과 설정법】\n장비와 스킬에 특수효과를 추가할 수 있습니다.\n1. 효과 종류: 버프(자신/아군 강화) 또는 디버프(적에게 받는 피해 증가)\n2. 발동확률: 0~100% (장비는 피격/공격 시, 스킬은 사용 시)\n3. 효과 선택: 버프는 다양한 효과, 디버프는 받는 피해 증가만 선택 가능\n4. 효과 수치: 효과의 크기 (%, 절대값 등)\n버프: 자신이나 아군의 해당 효과 증가\n디버프: 적에게 받는 피해 증가 적용 (물리/마법/속성별 받는 피해 증가)\n\n【대상 설명】\nsingleEnemy = 적 1체\nallEnemies = 전체 적 (광역)\nrowFront = 전열 적만 (전열 광역)\nrowMid = 중열 적만\nrowBack = 후열 적만\nrowFrontMid = 전열+중열 적\nrowMidBack = 중열+후열 적\nsingleAlly = 아군 1체\nallAllies = 전체 아군\nself = 자기 자신\n※ 열 공격: 해당 열이 비면 가장 앞 열의 적을 공격\n\n【CC 종류 설명】\nstun = 기절 (행동불가, 2턴, 이후 5턴 면역)\nbind = 속박 (감각-50%, 명중률-50%, 이후 5턴 면역)\nsleep = 수면 (행동불가, 3턴, 피격 시 해제, 이후 5턴 면역)\nsilence = 침묵 (스킬 사용불가)\nslow = 둔화 (명중률-30%, 회피율-50%)\nblind = 실명 (명중률-50%)\nfreeze = 빙결 (행동불가, 2턴, 이후 5턴 면역)\nparalyze = 마비 (행동불가, 2턴, 이후 5턴 면역)\n※ CC 확률: 비우면 해당 CC 타입의 기본 확률 적용 (기절16%, 속박18%, 수면16%, 침묵20%, 둔화25%). 0~1 사이 소수로 입력 (예: 0.3=30%)\n\n【속성-상태이상 매칭】\n빛→실명, 어둠→저주, 불→화상, 물→둔화, 대지→기절, 바람→출혈, 얼음→빙결, 전기→마비\n\n【상태이상 설명 및 기본 확률/턴수】\npoison = 독 — 확률23%, 3턴, 최대3중첩\n  효과: 매턴 방어무시 DoT (기본값×계수×0.2×중첩수)\nbleed = 출혈 — 확률23%, 3턴\n  효과: 발동 시 해당 공격 피해의 30% 추가피해(1회)\n  + 3턴간 받는 회복량 50% 감소\nburn = 화상 — 확률23%, 5턴, 최대5중첩\n  효과: 매턴 방어무시 DoT (기본값×계수×0.12×중첩수)\n  + 받는 데미지 +10% (중첩 무관)\ncurse = 저주 — 확률18%, 3턴 (하드CC, 이후 5턴 면역)\n  효과: 등급별 공격력 감소 + 받는 피해 증가 (E:10%~S:30%)\nsilence = 침묵 — 확률20%, 2턴\n  효과: 스킬 사용불가 (기본공격만 가능)\nslow = 둔화 — 확률25%, 3턴\n  효과: 명중률 -30%, 회피율 -50%\nbind = 속박 — 확률18%, 2턴 (하드CC, 이후 5턴 면역)\n  효과: 감각(SENSE) -50%, 명중률 -50% (크리율도 함께 감소)\n  둔화보다 명중 감소폭이 크고, 감각 감소로 크리티컬률도 하락\n\n※ 상태이상 확률: 비우면 위 기본값 자동 적용\n0~1 사이 소수로 입력 (예: 0.5=50%)\n\n【등급별 계수 — 순수 공격 (단일 기준)】\n하한 → 상한\nE: 1.2 → 1.5\nD: 1.92 → 2.4\nC: 2.88 → 3.6\nB: 4.8 → 6.0\nA: 7.68 → 9.6\nS: 11.52 → 14.4\n광역/열공격 = 단일 × 0.58\n\n【CC/상태이상 스킬 추천 계수】\n상태이상이 붙는 스킬은 직접 데미지를 낮추는 대신\n상태이상 효과로 총 가치를 보상하는 구조.\n추천: 순수공격 하한값 × 0.8 (20% 약화)\n\n단일 CC/상태이상 추천계수 (기본확률일 경우):\nE: 0.96 / D: 1.54 / C: 2.30\nB: 3.84 / A: 6.14 / S: 9.22\n\n광역 CC/상태이상 추천계수 (단일×0.58):\nE: 0.56 / D: 0.89 / C: 1.33\nB: 2.23 / A: 3.56 / S: 5.35\n\n※ 밸런스 기준:\n직접피해 + 상태이상 효과(DoT/추가피해/디버프)\n총합이 최소 상한계수급 이상이면 적절.\n독/화상: 총합≈상한의 102%\n출혈: 직접+즉시추가≈상한의 83% + 회복량50%감소 유틸\n상태이상이 강할수록 계수를 더 낮춰도 됨.\n\n【데미지 공식】\n데미지 기본값 = (2 × 주스탯) + (3 × ATK)\n회복 기본값 = 주스탯 × 0.5\n힐 전용 계수: E:1.2~1.3 / D:1.4~1.5 / C:1.6~1.7 / B:1.8~2.0 / A:2.1~2.3 / S:2.4~2.6\n광역힐 = 단일힐 계수 × 0.58\n최종데미지 = 기본값 × 계수 × 크리배율 × 속성배율\n※ 크리티컬: ×1.5 / 속성유리: ×1.25 / 속성불리: ×0.75\n\n【상태이상 효과 공식】\n독(DoT): 매턴 기본값 × 계수 × 0.2 × 중첩수 (최대3)\n화상(DoT): 매턴 기본값 × 계수 × 0.12 × 중첩수 (최대5)\n  + 받는 데미지 +10% (중첩 무관)\n출혈: 발동 시 해당 공격 피해의 30% 추가피해(1회)\n  + 3턴간 받는 회복량 50% 감소\n저주: 등급별 공격력 감소 + 받는 피해 증가 (E:10%~S:30%)\n\n【E급 예시 (주스탯15, ATK5)】\n기본값 = (2×15)+(3×5) = 45\n상한 직접피해 = 45×1.5 = 67.5\n\n■ 순수 단일공격 (계수1.35): 45×1.35 = 60.75\n■ 순수 광역공격 (계수0.78): 45×0.78 = 35.10\n\n■ 단일CC/상태이상 (추천계수0.96):\n  직접피해: 45×0.96 = 43.20\n  독1중첩 3턴합: 45×0.96×0.2×3 = 25.92\n  → 총합: 43.20+25.92 = 69.12 (상한의 102%) ✓\n  화상1중첩 5턴합: 45×0.96×0.12×5 = 25.92\n  → 총합: 43.20+25.92 = 69.12 + 피격+10% ✓\n  출혈 즉시추가: 43.20×0.3 = 12.96\n  → 총합: 43.20+12.96 = 56.16 (상한83%) + 회복량50%감소 ✓\n\n■ 광역CC/상태이상 (추천계수0.56):\n  직접피해: 45×0.56 = 25.20 (각 적)\n  독1중첩 3턴합: 45×0.56×0.2×3 = 15.12\n  → 총합: 25.20+15.12 = 40.32/적\n  출혈 즉시추가: 25.20×0.3 = 7.56\n  → 총합: 25.20+7.56 = 32.76/적 + 회복량50%감소\n\n이 스킬은 삭제해도 됩니다.' }
+          desc:'【스킬 만드는 법】\n1. "새 스킬" 클릭 → ID/이름 입력\n2. 각 항목을 설정 후 저장\n\n【카테고리 설명】\nsingleAttack = 단일 공격 (적 1체)\naoeAttack = 광역 공격 (전체 적)\nsingleCC = 단일 CC (적 1체 + 행동방해)\naoeCC = 광역 CC (전체 적 + 행동방해)\nsingleHeal = 단일 회복 (아군 1체)\naoeHeal = 광역 회복 (전체 아군)\nbuff = 버프 (자신/아군 강화)\nutility = 유틸리티 (자원/상태 관리)\n\n【은신(stealth) 버프 만드는 법】\n은신은 buff 카테고리 스킬로 만듭니다.\n1. 카테고리: buff\n2. 대상: self (자기 자신)\n3. 버프 스탯: 원하는 스탯 (예: agi +5)\n4. 지속 턴: 원하는 턴수 (예: 3)\n5. 은신 체크박스: 체크 ✓\n효과: 은신 중에는 모든 공격 대상에서 제외됩니다.\n  보스를 포함한 모든 적의 공격에서 은신이 적용됩니다.\n  은신 상태에서 공격하면 즉시 은신이 해제됩니다.\n  지속 턴이 끝나도 자동 해제됩니다.\n\n【특수효과 설정법】\n장비와 스킬에 특수효과를 추가할 수 있습니다.\n1. 효과 종류: 버프(자신/아군 강화) 또는 디버프(적에게 받는 피해 증가)\n2. 발동확률: 0~100% (장비는 피격/공격 시, 스킬은 사용 시)\n3. 효과 선택: 버프는 다양한 효과, 디버프는 받는 피해 증가만 선택 가능\n4. 효과 수치: 효과의 크기 (%, 절대값 등)\n버프: 자신이나 아군의 해당 효과 증가\n디버프: 적에게 받는 피해 증가 적용 (물리/마법/속성별 받는 피해 증가)\n\n【대상 설명】\nsingleEnemy = 적 1체\nallEnemies = 전체 적 (광역)\nrowFront = 전열 적만 (전열 광역)\nrowMid = 중열 적만\nrowBack = 후열 적만\nrowFrontMid = 전열+중열 적\nrowMidBack = 중열+후열 적\nsingleAlly = 아군 1체\nallAllies = 전체 아군\nself = 자기 자신\n※ 열 공격: 해당 열이 비면 가장 앞 열의 적을 공격\n\n【CC 종류 설명】\nstun = 기절 (행동불가, 2턴, 이후 5턴 면역)\nbind = 속박 (감각-50%, 명중률-50%, 이후 5턴 면역)\nsleep = 수면 (행동불가, 3턴, 피격 시 해제, 이후 5턴 면역)\nsilence = 침묵 (스킬 사용불가)\nslow = 둔화 (명중률-30%, 회피율-50%)\nblind = 실명 (명중률-50%)\nfreeze = 빙결 (행동불가, 2턴, 이후 5턴 면역)\nparalyze = 마비 (행동불가, 2턴, 이후 5턴 면역)\n※ CC 확률: 비우면 해당 CC 타입의 기본 확률 적용 (기절16%, 속박18%, 수면16%, 침묵20%, 둔화25%). 0~1 사이 소수로 입력 (예: 0.3=30%)\n\n【속성-상태이상 매칭】\n빛→실명, 어둠→저주, 불→화상, 물→둔화, 대지→기절, 바람→출혈, 얼음→빙결, 전기→마비\n\n【상태이상 설명 및 기본 확률/턴수】\npoison = 독 — 확률23%, 3턴, 최대3중첩\n  효과: 매턴 방어무시 DoT (기본값×계수×0.2×중첩수)\nbleed = 출혈 — 확률23%, 3턴\n  효과: 발동 시 해당 공격 피해의 30% 추가피해(1회)\n  + 3턴간 받는 회복량 50% 감소\nburn = 화상 — 확률23%, 5턴, 최대5중첩\n  효과: 매턴 방어무시 DoT (기본값×계수×0.12×중첩수)\n  + 받는 데미지 +10% (중첩 무관)\ncurse = 저주 — 확률18%, 3턴 (하드CC, 이후 5턴 면역)\n  효과: 등급별 공격력 감소 + 받는 피해 증가 (E:10%~S:30%)\nsilence = 침묵 — 확률20%, 2턴\n  효과: 스킬 사용불가 (기본공격만 가능)\nslow = 둔화 — 확률25%, 3턴\n  효과: 명중률 -30%, 회피율 -50%\nbind = 속박 — 확률18%, 2턴 (하드CC, 이후 5턴 면역)\n  효과: 감각(SENSE) -50%, 명중률 -50% (크리율도 함께 감소)\n  둔화보다 명중 감소폭이 크고, 감각 감소로 크리티컬률도 하락\n\n※ 상태이상 확률: 비우면 위 기본값 자동 적용\n0~1 사이 소수로 입력 (예: 0.5=50%)\n\n【등급별 계수 — 순수 공격 (단일 기준)】\n하한 → 상한\nE: 1.2 → 1.5\nD: 1.92 → 2.4\nC: 2.88 → 3.6\nB: 4.8 → 6.0\nA: 7.68 → 9.6\nS: 11.52 → 14.4\n광역/열공격 = 단일 × 0.58\n\n【CC/상태이상 스킬 추천 계수】\n상태이상이 붙는 스킬은 직접 데미지를 낮추는 대신\n상태이상 효과로 총 가치를 보상하는 구조.\n추천: 순수공격 하한값 × 0.8 (20% 약화)\n\n단일 CC/상태이상 추천계수 (기본확률일 경우):\nE: 0.96 / D: 1.54 / C: 2.30\nB: 3.84 / A: 6.14 / S: 9.22\n\n광역 CC/상태이상 추천계수 (단일×0.58):\nE: 0.56 / D: 0.89 / C: 1.33\nB: 2.23 / A: 3.56 / S: 5.35\n\n※ 밸런스 기준:\n직접피해 + 상태이상 효과(DoT/추가피해/디버프)\n총합이 최소 상한계수급 이상이면 적절.\n독/화상: 총합≈상한의 102%\n출혈: 직접+즉시추가≈상한의 83% + 회복량50%감소 유틸\n상태이상이 강할수록 계수를 더 낮춰도 됨.\n\n【데미지 공식】\n데미지 기본값 = (2 × 주스탯) + (3 × ATK)\n회복 기본값 = 주스탯 × 0.5\n힐 전용 계수: E:1.2~1.3 / D:1.4~1.5 / C:1.6~1.7 / B:1.8~2.0 / A:2.1~2.3 / S:2.4~2.6\n광역힐 = 단일힐 계수 × 0.58\n최종데미지 = 기본값 × 계수 × 크리배율 × 속성배율\n※ 크리티컬: ×1.5 / 속성유리: ×1.25 / 속성불리: ×0.75\n\n【상태이상 효과 공식】\n독(DoT): 매턴 기본값 × 계수 × 0.2 × 중첩수 (최대3)\n화상(DoT): 매턴 기본값 × 계수 × 0.12 × 중첩수 (최대5)\n  + 받는 데미지 +10% (중첩 무관)\n출혈: 발동 시 해당 공격 피해의 30% 추가피해(1회)\n  + 3턴간 받는 회복량 50% 감소\n저주: 등급별 공격력 감소 + 받는 피해 증가 (E:10%~S:30%)\n\n【E급 예시 (주스탯15, ATK5)】\n기본값 = (2×15)+(3×5) = 45\n상한 직접피해 = 45×1.5 = 67.5\n\n■ 순수 단일공격 (계수1.35): 45×1.35 = 60.75\n■ 순수 광역공격 (계수0.78): 45×0.78 = 35.10\n\n■ 단일CC/상태이상 (추천계수0.96):\n  직접피해: 45×0.96 = 43.20\n  독1중첩 3턴합: 45×0.96×0.2×3 = 25.92\n  → 총합: 43.20+25.92 = 69.12 (상한의 102%) ✓\n  화상1중첩 5턴합: 45×0.96×0.12×5 = 25.92\n  → 총합: 43.20+25.92 = 69.12 + 피격+10% ✓\n  출혈 즉시추가: 43.20×0.3 = 12.96\n  → 총합: 43.20+12.96 = 56.16 (상한83%) + 회복량50%감소 ✓\n\n■ 광역CC/상태이상 (추천계수0.56):\n  직접피해: 45×0.56 = 25.20 (각 적)\n  독1중첩 3턴합: 45×0.56×0.2×3 = 15.12\n  → 총합: 25.20+15.12 = 40.32/적\n  출혈 즉시추가: 25.20×0.3 = 7.56\n  → 총합: 25.20+7.56 = 32.76/적 + 회복량50%감소\n\n이 스킬은 삭제해도 됩니다.' },
+        // ── 최유나 전용 스킬 ──
+        { id:'skill_yuna_anvil', name:'강철모루', grade:'E', rarity:'Rare', category:'buff', target:'self',
+          growth: true, skillUsage: 'position',
+          costs:{ mp:0, sp:30 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:0,
+          buff:{ stats:{ con:0 } },
+          byRank:{
+            E:{ desc:'[E] 물리방어력+2. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            D:{ desc:'[D] 물리방어력+4. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            C:{ desc:'[C] 물리방어력+6. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            B:{ desc:'[B] 물리방어력+8. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            A:{ name:'백금모루', rarity:'Unique', desc:'[A] 유니크 승급! 물리방어력+31(+20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' },
+            S:{ name:'백금모루', rarity:'Unique', desc:'[S] 유니크! 물리방어력+34(+20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' }
+          },
+          desc:'[성장형/포지션] 등급별로 물리방어력 상승. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.\n★ A급 달성 시 백금모루(유니크)로 승급: 물방 20% 추가 상승 / 최대 70% / HP 40% 이하 시 회복.' },
+        { id:'skill_yuna_shield', name:'방패숙련', grade:'E', rarity:'Normal', category:'buff', target:'self',
+          skillUsage: 'general',
+          costs:{ mp:0, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:0,
+          buff:{ stats:{} },
+          desc:'[범용/패시브] 방패 착용 시 SP 소모량 -10%.' },
+        { id:'skill_yuna_dagger', name:'단검숙련', grade:'E', rarity:'Normal', category:'buff', target:'self',
+          skillUsage: 'general',
+          costs:{ mp:0, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['str'], duration:0,
+          buff:{ stats:{} },
+          desc:'[범용/패시브] 단검 착용 시 SP 소모량 -10%.' },
+        // ── 송하늘 전용 스킬 ──
+        { id:'skill_haneul_reload', name:'전탄회수', grade:'E', rarity:'Rare', category:'aoeAttack', target:'allEnemies',
+          growth: true, skillUsage: 'job',
+          costs:{ mp:0, sp:40 }, coef:0, damageType:'physical', element:'none', statTypes:['agi'], duration:0,
+          desc:'[성장형/직업] 공격/스킬로 화살 사용 시마다 해당 등급 광역 계수의 30%씩 상승(최대 180%, 6턴 축적). 발동 시 적 전체에 축적된 계수로 공격.\nex) 3발 발사 후 사용 → 적 전체에 해당 등급 광역계수 × 0.9 피해.' },
+        { id:'skill_haneul_powershot', name:'파워샷', grade:'E', rarity:'Rare', category:'singleAttack', target:'singleEnemy',
+          growth: true, skillUsage: 'job', cooldown:3,
+          costs:{ mp:20, sp:20 }, coef:0, damageType:'physical', element:'none', statTypes:['agi'], duration:0,
+          desc:'[성장형/직업] 단일 등급계수 하한값×2배 공격. 쿨타임 3턴. 비용: SP 50% + MP 50% (상한 기준 분배).' },
+        { id:'skill_haneul_quickshot', name:'퀵샷', grade:'E', rarity:'Rare', category:'singleAttack', target:'singleEnemy',
+          growth: true, skillUsage: 'job',
+          costs:{ mp:0, sp:20 }, coef:0, damageType:'physical', element:'none', statTypes:['agi'], duration:0,
+          desc:'[성장형/직업] 단일 등급계수 하한값 공격. 최소 SP 소모.' },
+        { id:'skill_haneul_tripleshot', name:'트리플샷', grade:'E', rarity:'Rare', category:'singleAttack', target:'singleEnemy',
+          growth: true, skillUsage: 'job',
+          costs:{ mp:0, sp:40 }, coef:0, damageType:'physical', element:'none', statTypes:['agi'], duration:0,
+          desc:'[성장형/직업] 단일 등급계수 상한값을 3발로 나누어 발사. 대상 처치 시 남은 탄환은 다른 적에게 자동 전환.' }
       ],
       rareMaterialPack: deepClone(DEFAULT_RARE_MATERIAL_PACK),
       rareMaterialCatalog: [],
@@ -12104,8 +12161,10 @@ async function saveMaterialTraitFromForm() {
       if (!entry) { toast('캐릭터를 찾을 수 없습니다.', true); return; }
       const result = attemptRankUp(entry);
       if (result.success) {
+        pushActivityLog(entry.name || charId, '승급 성공', result.reason);
         toast(`🏅 ${result.reason}`);
       } else {
+        if (!result.noRecord) pushActivityLog(entry.name || charId, '승급 실패', result.reason);
         toast(`❌ ${result.reason}`, true);
       }
       await saveDb(); await saveState(); renderApp();
@@ -12441,7 +12500,7 @@ async function saveMaterialTraitFromForm() {
           guildName:  guildName,
           participant: _settleCharName,
         });
-        pushActivityLog(_settleCharName, '게이트 정산', `${runTitle} — ₩${formatWon(goldGain)} 획득`);
+        pushActivityLog(_settleCharName, '게이트 정산', `${runTitle} — ${isGuildSettle ? '길드(' + guildName + ')' : '협회'} 정산 / 총수익 ₩${formatWon(result ? result.subtotal : 0)} → 수수료 차감 → 최종 ₩${formatWon(goldGain)} 획득 / 인원 ${st.settlePartyCount || '?'}명`);
         // Write guild tax log for guild settlements
         if (isGuildSettle) {
           if (!Array.isArray(model.db.guildTaxLog)) model.db.guildTaxLog = [];
@@ -12567,7 +12626,7 @@ async function saveMaterialTraitFromForm() {
         const _dsChar = getActiveCharacter();
         const _participantName = _dsChar ? (_dsChar.name || _directSellActiveId) : '공용';
         model.db.incomeLog.push({ date: dateVal||'날짜 미입력', charKey: _directSellActiveId, runTitle: '직접 판매', gross: total, fee, net, perPerson: net, final: net, type: isGuild ? 'guild' : 'association', participant: _participantName });
-        pushActivityLog(_participantName, '직접 판매', `₩${formatWon(net)} 획득 (수수료 5% 적용)`);
+        pushActivityLog(_participantName, '직접 판매', `${isGuild ? '길드' : '협회'} 정산 / ${toRemove.length}개 아이템 판매 — 세전 ₩${formatWon(total)} → 수수료 5% 차감 → ₩${formatWon(net)} 획득`);
         await saveDb(); await saveState(); renderApp();
         toast(`💰 ${toRemove.length}개 아이템 판매 완료 (세전 ${fmtS(total)} → 수수료 5% 차감 후 ${fmtS(net)})`);
       } catch(e) { toast(e.message || String(e), true); }
@@ -12644,7 +12703,7 @@ async function saveMaterialTraitFromForm() {
         const _tsChar = getActiveCharacter();
         const _firstPersonaName = _tsChar ? (_tsChar.name || _teamSellActiveId) : '공용';
         model.db.incomeLog.push({ date: dateVal||'날짜 미입력', charKey: _teamSellActiveId, runTitle: '직접 판매 (팀 분배)', gross: total, fee, net: netTotal, perPerson: netTotal, final: netTotal, type: isGuild?'guild':'association', participant: _firstPersonaName });
-        pushActivityLog(_firstPersonaName, '직접 판매 (팀 분배)', `₩${formatWon(netTotal)} 획득`);
+        pushActivityLog(_firstPersonaName, '직접 판매 (팀 분배)', `${isGuild ? '길드' : '협회'} 정산 / 세전 ₩${formatWon(total)} → 5% 차감 → ₩${formatWon(netTotal)} / 분배: ${lines.join(', ')}`);
         model.state.settleItemSel = {};
         await saveDb(); await saveState(); renderApp();
         toast(`💰 팀 분배 완료 (세전 ${fmtS(total)} → 5% 차감 후 ${fmtS(netTotal)})\n${lines.join(' / ')}`);
@@ -12729,7 +12788,7 @@ async function saveMaterialTraitFromForm() {
           return true; // 나머지 유지
         });
         const removed = before - model.db.incomeLog.length;
-        pushActivityLog(getActiveLabel(), '소득세 납부', `${prevMonthStr} — ₩${formatWon(totalDue)} 납부`);
+        pushActivityLog(getActiveLabel(), '소득세 납부', `${prevMonthStr} 소득 ₩${formatWon(prevMonthTotal)} / 세액 ₩${formatWon(prevMonthTax)}${isOverdue ? ` + 연체이자 ₩${formatWon(overdueInterest)} (${overdueDays}일)` : ''} → 총 ₩${formatWon(totalDue)} 납부 / 잔액 ₩${formatWon(inv.gold)}`);
         await saveDb(); await saveState(); renderApp();
         toast(`✅ ${prevMonthStr} 소득세 납부 완료 — ₩${formatWon(totalDue)} 차감 (${removed}건 기록 삭제)`);
       } catch (e) { toast(e.message || String(e), true); }
@@ -12910,7 +12969,7 @@ async function saveMaterialTraitFromForm() {
         });
         grantActiveInventoryItem(newItem);
         await saveDb(); await saveState(); renderApp();
-        pushActivityLog(getActiveLabel(), '장비 구매', `${eq.name} [${eq.rank}] — ₩${price.toLocaleString('en-US')} 차감`);
+        pushActivityLog(getActiveLabel(), '장비 구매', `${eq.name} [${eq.rank}/${eq.part}] — ₩${price.toLocaleString('en-US')} 차감${isAssocFree && price === 0 ? ' (협회지급 무료)' : ''}`);
         toast(`⚔️ ${eq.name} 구매 완료 (-₩${price.toLocaleString('en-US')}) [${getActiveLabel()}]`);
       } catch (e) { toast(e.message || String(e), true); }
     });
@@ -13138,10 +13197,12 @@ async function saveMaterialTraitFromForm() {
           model.state.shopForgeStone = '';
           await saveDb(); await saveState(); renderApp();
           toast(`✨ 강화 성공! ${equip.name} +${equip.enhance} 달성! 경매장가 ₩${newMarketPrice.toLocaleString('en-US')} | 중고가 ₩${newUsedPrice.toLocaleString('en-US')} (-수수료 ₩${fee.toLocaleString('en-US')})`);
+          pushActivityLog(getActiveLabel(), '장비 강화 성공', `${equip.name} +${equip.enhance} 달성 [${equip.rank}] / 비용 ₩${fee.toLocaleString('en-US')}`);
         } else {
           model.state.shopForgeStone = '';
           await saveDb(); await saveState(); renderApp();
           toast(`💥 강화 실패. ${equip.name} 장비 유지, 마정석 소멸 (-수수료 ₩${fee.toLocaleString('en-US')})`, true);
+          pushActivityLog(getActiveLabel(), '장비 강화 실패', `${equip.name} 강화 실패 [${equip.rank || btnRank}] / 비용 ₩${fee.toLocaleString('en-US')} + 마정석 소멸`);
         }
       } catch(e) { toast(e.message || String(e), true); }
     });
@@ -13186,6 +13247,7 @@ async function saveMaterialTraitFromForm() {
         await saveDb(); await saveState(); renderApp();
         const traitLabel = EQUIP_TRAIT_LABELS[traitId] || traitId;
         toast(`💎 특성주입 성공! ${equip.name}에 [${traitLabel}] 주입 완료. (-₩${totalCost.toLocaleString('en-US')})`);
+        pushActivityLog(getActiveLabel(), '특성주입', `${equip.name} [${equip.rank}] — [${traitLabel}] 주입 / 비용 ₩${totalCost.toLocaleString('en-US')} / 재료: ${mat.name || '희귀재료'}`);
       } catch(e) { toast(e.message || String(e), true); }
     });
 
@@ -13826,7 +13888,7 @@ async function saveMaterialTraitFromForm() {
         model.state.gateRunTab = 'main';
         await saveState();
         renderApp();
-        pushActivityLog(getActiveLabel(), '게이트 진입', `${gs.run ? (gs.run.title || '게이트') : '게이트'} 진입`);
+        pushActivityLog(getActiveLabel(), '게이트 진입', `${gs.run ? (gs.run.title || '게이트') : '게이트'} [${gs.run ? gs.run.rank : '?'}/${gs.run ? (gs.run.sizeLabel || gs.run.size || '?') : '?'}] 진입 / 파티: ${gs.run && gs.run.partyState ? gs.run.partyState.map(u => u.name || '?').join(', ') : '?'}`);
         toast('게이트에 진입했다.');
       } catch (e) { toast(e.message || String(e), true); }
     });
@@ -14047,7 +14109,7 @@ async function saveMaterialTraitFromForm() {
         buildBattleFromSetup();
         await saveDb(); await saveState();
         renderApp();
-        pushActivityLog('파티', '전투 시작', '게이트 전투 개시');
+        { const _ps = (model.state.runtime && model.state.runtime.party) || []; const _es = (model.state.runtime && model.state.runtime.enemies) || []; pushActivityLog('파티', '전투 시작', `파티원: ${_ps.map(u => u.name || '?').join(', ') || '?'} vs 적: ${_es.map(u => u.name || '?').join(', ') || '?'}`); }
       } catch (e) { toast(e.message || String(e), true); }
     });
 
@@ -14581,6 +14643,7 @@ async function saveMaterialTraitFromForm() {
         else { inv.items.splice(itemIdx, 1); }
         await saveDb(); await saveState(); renderApp();
         toast(`📖 ${entry.name}이(가) "${skill.name}" 스킬을 배웠다!`);
+        pushActivityLog(entry.name, '스킬 습득', `"${skill.name}" [${skill.grade || '?'}급/${skill.category || '?'}] 스킬북 사용`);
       } catch (e) { toast(e.message || String(e), true); }
     });
 
