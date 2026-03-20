@@ -2430,7 +2430,7 @@ function buildDefaultState() {
       onHitStatus2: normStatus(meta.onHitStatus2 || ''),
       onHitChance2: Number(meta.onHitChance2 || 0),
       onHitTurns2: Number(meta.onHitTurns2 || 0),
-      inventory: isMonster ? null : deepClone((entry && entry.inventory) || null)
+      inventory: isMonster ? null : deepClone(entry.inventory || null)
     };
     applyPassiveInitialization(unit);
     // 장비 특성 전투 적용: 장착 장비 traits → 전투 보너스
