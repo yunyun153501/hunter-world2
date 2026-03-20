@@ -35,6 +35,16 @@ try {
   const SKILL_COEF_LOWER = { E:1.2, D:1.92, C:2.88, B:4.8, A:7.68, S:11.52 };
   // 버프 수치 0일 때 등급별 기본값
   const BUFF_DEFAULT_BY_GRADE = { E:2, D:4, C:6, B:8, A:11, S:14 };
+  // 포지션 6종 확정 목록 + 기본 위협값
+  const POSITION_LIST = [
+    { value:'탱커', label:'탱커', threat:5 },
+    { value:'근접', label:'근접', threat:2 },
+    { value:'원거리', label:'원거리', threat:1 },
+    { value:'서포터', label:'서포터', threat:1 },
+    { value:'힐러', label:'힐러', threat:1 },
+    { value:'비전투', label:'비전투', threat:1 }
+  ];
+  const POSITION_THREAT_MAP = Object.fromEntries(POSITION_LIST.map(p => [p.value, p.threat]));
   function getGrowthCoef(category, rank) {
     const catMap = SKILL_COEF_UPPER[category];
     if (!catMap) return null;
@@ -1216,9 +1226,12 @@ const RARE_FAMILY_PRESETS = {
     return 'mid';
   }
   function inferThreatBase(position, row) {
-    const t = String(position || '').toLowerCase();
-    if (t.includes('탱커')) return 5;
-    if (t.includes('근거리')) return 2;
+    const t = String(position || '').trim();
+    if (POSITION_THREAT_MAP[t] != null) return POSITION_THREAT_MAP[t];
+    // 레거시 호환: 옛 자유입력 포지션 문자열 지원
+    const lo = t.toLowerCase();
+    if (lo.includes('탱커')) return 5;
+    if (lo.includes('근접') || lo.includes('근거리')) return 2;
     if (row === 'front') return 2;
     return 1;
   }
@@ -1833,13 +1846,13 @@ const RARE_FAMILY_PRESETS = {
     return {
       inventory: buildDefaultInventory(),
       characters: [
-        { id:'char_guide', name:'⭐ 캐릭터 가이드', job:'무직업', position:'전열탱커', row:'front', rank:'E', level:1,
+        { id:'char_guide', name:'⭐ 캐릭터 가이드', job:'무직업', position:'탱커', row:'front', rank:'E', level:1,
           stats:{ str:10, con:10, int:10, agi:10, sense:10 },
           hp:100, mp:100, sp:100, atk:0, pdef:0, mdef:0,
           damageType:'physical', attackStat:'str', skills:[],
           note:'【캐릭터 만드는 법】\n1. "새 캐릭터" 클릭 → ID/이름/직업/포지션 입력\n2. 스탯 최소값=10. 모든 스탯 10일 때 HP=MP=SP=100\n3. HP=100+(CON-10)×10+(STR-10)×3\n4. MP=100+(INT-10)×10+(SEN-10)×3\n5. SP=100+(AGI-10)×10+(SEN-10)×3\n6. ATK/물방/마방은 기본 0 (장비·스킬로 증가)\n7. HP/MP/SP를 0으로 두면 스탯 기반 자동 계산\n8. 전열: front(탱커/근접) / mid(투척) / back(원거리/궁수/마법/힐러)\n9. 등급별 스탯합 기준: E:~70 / D:70~90 / C:90~120 / B:120~160 / A:160~200 / S:200~\n\n이 캐릭터는 삭제해도 됩니다.' },
         // ── NPC: 최유나 ──
-        { id:'char_yuna', name:'최유나', job:'무직', position:'전열탱커', row:'front', rank:'E', level:6,
+        { id:'char_yuna', name:'최유나', job:'무직', position:'탱커', row:'front', rank:'E', level:6,
           stats:{ str:12, con:22, int:10, agi:10, sense:14 },
           hp:0, mp:0, sp:0, atk:0, pdef:0, mdef:0,
           damageType:'physical', attackStat:'str',
@@ -2550,10 +2563,7 @@ function applyExpToCharacter(charEntry, expGained) {
     charEntry.exp -= needed;
     charEntry.level += 1;
     charEntry.freeStatPoints = (charEntry.freeStatPoints || 0) + 2;
-    // 레벨업 보상: HP+2, MP+2, SP+2
-    charEntry.hp = (Number(charEntry.hp) || 0) + 2;
-    charEntry.mp = (Number(charEntry.mp) || 0) + 2;
-    charEntry.sp = (Number(charEntry.sp) || 0) + 2;
+    // 레벨업: 최대치만 증가 (현재 HP/MP/SP는 회복하지 않음 — recalcCharDerivedStats가 레벨 기반 최대치를 재계산)
     messages.push(`${charEntry.name} Lv${charEntry.level - 1} → Lv${charEntry.level} (레벨업! 스탯포인트 +2)`);
   }
   if (charEntry.level >= maxLv) { charEntry.exp = 0; }
@@ -5470,6 +5480,8 @@ function getBuffedStat(unit, statKey) {
   function canUseSkill(unit, skill) {
     if (!skill || skill.category === 'passive') return false;
     if (Number(unit.cooldowns && unit.cooldowns[skill.id] || 0) > 0) return false;
+    // 전탄회수: 축적 0이면 사용 불가 (첫 턴 등)
+    if (skill.id === 'skill_haneul_reload' && Number(unit._reloadStacks || 0) === 0) return false;
     // 침묵: 스킬 사용 불가 (기본 공격만 가능)
     if (Number(unit.statuses && unit.statuses.silence || 0) > 0) return false;
     // 몬스터는 MP/SP 비용 무시 (쿨타임만 적용)
@@ -6262,12 +6274,33 @@ function getBuffedStat(unit, statKey) {
       pushHpShiftLog(runtime, target, hpBefore);
       // 몬스터 기본공격 쿨타임 1턴
       if (actor.isMonster) actor.cooldowns['basicAttack'] = 1;
+      // 전탄회수 축적: 기본공격 시 스택 +1 (최대 6)
+      if ((actor.skills || []).includes('skill_haneul_reload')) {
+        actor._reloadStacks = Math.min(6, (Number(actor._reloadStacks) || 0) + 1);
+      }
       return;
     }
 
     const skill = resolveSkillForUnit(actor, action.skillId);
     if (!skill || !canUseSkill(actor, skill)) return resolveSkillOrBasic(runtime, actor, { type:'basic', target:action.target || null }, summary);
     const cost = paySkillCost(actor, skill);
+
+    // ── 전탄회수 특수 처리: 축적된 스택으로 계수 계산 ──
+    if (skill.id === 'skill_haneul_reload') {
+      const stacks = Number(actor._reloadStacks || 0);
+      const rank = String(actor.rank || 'E').toUpperCase();
+      const baseAoeCoef = (SKILL_COEF_UPPER.aoeAttack || {})[rank] || 0.87;
+      // 스택당 광역 계수의 30%, 최대 6스택(180%)
+      skill.coef = baseAoeCoef * (stacks * 0.3);
+      actor._reloadStacks = 0; // 사용 후 리셋
+      pushBattleLog(runtime, `${actor.name} 전탄회수: ${stacks}스택 축적 → 계수 ${skill.coef.toFixed(2)}`);
+    }
+    // 전탄회수 외 공격/CC 스킬도 스택 축적 (화살 사용)
+    if (skill.id !== 'skill_haneul_reload' && (actor.skills || []).includes('skill_haneul_reload')
+        && (skill.category === 'singleAttack' || skill.category === 'aoeAttack' || skill.category === 'singleCC' || skill.category === 'aoeCC')) {
+      actor._reloadStacks = Math.min(6, (Number(actor._reloadStacks) || 0) + 1);
+    }
+
     actor.lastAction = skill.name;
     // 스킬 사용 시 무기/보조무기/악세서리 내구도 소모
     applyDurabilityOnAttack(runtime, actor, true);
@@ -9552,8 +9585,18 @@ function optionHtml(value, label, selected) {
   }
   function skillOptions(unit, selected) {
     const out = ['<option value="">(스킬 없음)</option>'];
+    const runtime = model.state.runtime || {};
     listKnownSkillDefs(unit).filter(sk => sk.category !== 'passive').forEach(sk => {
-      out.push(optionHtml(sk.id, `${sk.name} [${sk.category}]`, selected === sk.id));
+      const cdLeft = Number(unit.cooldowns && unit.cooldowns[sk.id] || 0);
+      // 전탄회수: 첫 턴(축적 0)에는 사용 불가
+      const isReloadFirstTurn = sk.id === 'skill_haneul_reload' && (Number(unit._reloadStacks || 0) === 0);
+      const disabled = cdLeft > 0 || isReloadFirstTurn || !canUseSkill(unit, sk);
+      if (disabled) {
+        const reason = cdLeft > 0 ? `쿨타임 ${cdLeft}턴` : isReloadFirstTurn ? '축적 없음' : 'MP/SP 부족';
+        out.push(`<option value="${escapeHtml(sk.id)}" disabled style="color:#ef4444;">${escapeHtml(sk.name)} [${reason}]</option>`);
+      } else {
+        out.push(optionHtml(sk.id, `${sk.name} [${sk.category}]`, selected === sk.id));
+      }
     });
     return out.join('');
   }
@@ -10341,7 +10384,7 @@ function renderCommandPanel(runtime) {
             <label>ID<input class="gb-input" id="gb-char-id" value="${escapeHtml(item.id)}" /></label>
             <label>이름<input class="gb-input" id="gb-char-name" value="${escapeHtml(item.name)}" /></label>
             <label>직업<input class="gb-input" id="gb-char-job" value="${escapeHtml(item.job)}" /></label>
-            <label>포지션<input class="gb-input" id="gb-char-position" value="${escapeHtml(item.position)}" /></label>
+            <label>포지션<select class="gb-input" id="gb-char-position">${POSITION_LIST.map(p=>optionHtml(p.value,p.label,(item.position||'')=== p.value)).join('')}</select></label>
             <label>행<select class="gb-input" id="gb-char-row">${optionHtml('front','전열',item.row==='front')}${optionHtml('mid','중열',item.row==='mid')}${optionHtml('back','후열',item.row==='back')}</select></label>
             <label>랭크<select class="gb-input" id="gb-char-rank">${GRADE_ORDER.map(g=>optionHtml(g,g,item.rank===g)).join('')}</select></label>
             <label>HP<input class="gb-input" id="gb-char-hp" type="number" value="${escapeHtml(item.hp)}" /></label>
@@ -10360,7 +10403,7 @@ function renderCommandPanel(runtime) {
             <label>기본 위협값<input class="gb-input" id="gb-char-threat" type="number" value="${escapeHtml(item.threatBase != null ? item.threatBase : inferThreatBase(item.position,item.row))}" /></label>
             <label>스킬 ID(쉼표구분)<input class="gb-input" id="gb-char-skills" value="${escapeHtml((item.skills||[]).join(', '))}" /></label>
           </div>
-          <div class="gb-sub" style="margin:6px 0;">💡 HP/MP/SP는 비워두면(0) 스탯 기준 자동 계산: HP=100+(CON-10)×10+(STR-10)×3, MP=100+(INT-10)×10+(SEN-10)×3, SP=100+(AGI-10)×10+(SEN-10)×3. ATK/물방/마방은 기본 0 (스킬·장비로만 증가). 위협값 0이면 행/포지션 기준 자동 적용(탱커:5, 근거리/전열:2, 기타:1).</div>
+          <div class="gb-sub" style="margin:6px 0;">💡 HP/MP/SP는 비워두면(0) 스탯 기준 자동 계산: HP=100+(CON-10)×10+(STR-10)×3, MP=100+(INT-10)×10+(SEN-10)×3, SP=100+(AGI-10)×10+(SEN-10)×3. ATK/물방/마방은 기본 0 (스킬·장비로만 증가). 위협값은 포지션 기준 자동 적용(탱커:5, 근접:2, 그 외:1).</div>
           <label>메모<textarea class="gb-textarea short" id="gb-char-note">${escapeHtml(item.note || '')}</textarea></label>
           <div style="margin-top:10px;border-top:1px solid rgba(148,163,184,0.2);padding-top:8px;">
             <div class="gb-section-title">📈 레벨 / 경험치 (DB 직접 수정)</div>
@@ -10715,7 +10758,7 @@ function renderCommandPanel(runtime) {
             <label>이름<input class="gb-input" id="gb-mon-name" value="${escapeHtml(item.name)}" /></label>
             <label>종류<input class="gb-input" id="gb-mon-kind" value="${escapeHtml(item.kind || '')}" /></label>
             <label>역할<input class="gb-input" id="gb-mon-role" value="${escapeHtml(item.role || '')}" /></label>
-            <label>포지션<input class="gb-input" id="gb-mon-position" value="${escapeHtml(item.position || '')}" /></label>
+            <label>포지션<select class="gb-input" id="gb-mon-position">${POSITION_LIST.map(p=>optionHtml(p.value,p.label,(item.position||'')=== p.value)).join('')}</select></label>
             <label>행<select class="gb-input" id="gb-mon-row">${optionHtml('front','전열',item.row==='front')}${optionHtml('mid','중열',item.row==='mid')}${optionHtml('back','후열',item.row==='back')}</select></label>
             <label>랭크<select class="gb-input" id="gb-mon-rank">${GRADE_ORDER.map(g=>optionHtml(g,g,item.rank===g)).join('')}</select></label>
             <label>HP(참조값)<input class="gb-input" id="gb-mon-hp" type="number" value="${escapeHtml(item.hp)}" /></label>
@@ -10754,7 +10797,7 @@ function renderCommandPanel(runtime) {
   function renderPersonaEditor() {
     ensureSelections();
     const blankPersona = {
-      id:'', name:'', job:'', rank:'E', row:'back',
+      id:'', name:'', job:'', position:'', rank:'E', row:'back',
       stats:{ str:0, con:0, int:0, agi:0, sense:0 },
       hp:0, mp:0, sp:0, atk:0, pdef:0, mdef:0,
       damageType:'physical', attackStat:'str', skills:[], level:1, exp:0, totalExp:0, note:''
@@ -10770,7 +10813,8 @@ function renderCommandPanel(runtime) {
           <div class="gb-grid two">
             <label>ID<input class="gb-input" id="gb-persona-id" value="${escapeHtml(item.id)}" /></label>
             <label>이름<input class="gb-input" id="gb-persona-name" value="${escapeHtml(item.name)}" /></label>
-            <label>직업/역할<input class="gb-input" id="gb-persona-job" value="${escapeHtml(item.job||'')}" /></label>
+            <label>직업<input class="gb-input" id="gb-persona-job" value="${escapeHtml(item.job||'')}" /></label>
+            <label>포지션<select class="gb-input" id="gb-persona-position">${POSITION_LIST.map(p=>optionHtml(p.value,p.label,(item.position||'')=== p.value)).join('')}</select></label>
             <label>행<select class="gb-input" id="gb-persona-row">${optionHtml('front','전열',item.row==='front')}${optionHtml('mid','중열',item.row==='mid')}${optionHtml('back','후열',item.row==='back')}</select></label>
             <label>랭크<select class="gb-input" id="gb-persona-rank">${GRADE_ORDER.map(g=>optionHtml(g,g,item.rank===g)).join('')}</select></label>
             <label>HP<input class="gb-input" id="gb-persona-hp" type="number" value="${escapeHtml(item.hp)}" /></label>
@@ -11891,6 +11935,7 @@ async function saveMaterialTraitFromForm() {
       id,
       name: fieldValue('#gb-persona-name'),
       job: fieldValue('#gb-persona-job') || '',
+      position: fieldValue('#gb-persona-position') || '',
       rank: fieldValue('#gb-persona-rank') || 'E',
       row: fieldValue('#gb-persona-row') || 'back',
       stats: {
