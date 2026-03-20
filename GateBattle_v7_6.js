@@ -22,6 +22,20 @@ try {
   const DAMAGE_ELEMENTS = ['none', 'water', 'fire', 'ice', 'earth', 'wind', 'electric', 'dark', 'light'];
   const STATUS_KEYS = ['stun', 'bind', 'sleep', 'poison', 'bleed', 'burn', 'curse', 'silence', 'slow', 'blind', 'freeze', 'paralyze'];
   const STATUS_DOT_KEYS = ['poison', 'burn'];
+  // 성장형 스킬 계수 상한값 (카테고리 × 등급)
+  const SKILL_COEF_UPPER = {
+    singleAttack: { E:1.5, D:2.4, C:3.6, B:6.0, A:9.6, S:14.4 },
+    aoeAttack:    { E:0.87, D:1.392, C:2.088, B:3.48, A:5.568, S:8.352 },
+    singleCC:     { E:0.96, D:1.54, C:2.30, B:3.84, A:6.14, S:9.22 },
+    aoeCC:        { E:0.557, D:0.893, C:1.334, B:2.227, A:3.561, S:5.348 },
+    singleHeal:   { E:1.3, D:1.5, C:1.7, B:2.0, A:2.3, S:2.6 },
+    aoeHeal:      { E:0.754, D:0.87, C:0.986, B:1.16, A:1.334, S:1.508 }
+  };
+  function getGrowthCoef(category, rank) {
+    const catMap = SKILL_COEF_UPPER[category];
+    if (!catMap) return null;
+    return catMap[String(rank).toUpperCase()] || null;
+  }
   const ELEMENT_CHAIN = ['dark', 'light', 'ice', 'fire', 'water', 'earth', 'wind', 'electric'];
   const ELEMENT_STATUS_MAP = { light:'blind', dark:'curse', fire:'burn', water:'slow', earth:'stun', wind:'bleed', ice:'freeze', electric:'paralyze' };
 
@@ -1970,6 +1984,12 @@ function buildDefaultState() {
           skill[key] = patch[key];
         }
       });
+    }
+    // 성장형 스킬: 사용자 등급에 맞춰 계수/등급 자동 조정
+    if (skill.growth) {
+      skill.grade = rank;
+      const upperCoef = getGrowthCoef(skill.category, rank);
+      if (upperCoef != null) skill.coef = upperCoef;
     }
     if (skill.category === 'aoeCC' && skill.baseSingleCoef != null) {
       skill.coef = round3(skill.baseSingleCoef * 0.5);
@@ -5451,7 +5471,7 @@ function getBuffedStat(unit, statKey) {
     const rowUnits = (buckets[pickedRow] || []);
     if (!rowUnits.length) return choosePriorityTarget(attacker, foes, skill);
     const unitChoices = rowUnits.map(u => {
-      const baseThreat = Math.max(1, Number(u.threatBase || 1) + Number(u.threatBonus || 0));
+      const baseThreat = Math.max(1, (Number(u.threatBase) || inferThreatBase(u.position, u.row)) + Number(u.threatBonus || 0));
       let threatMul = 1;
       if (u.traitBonuses && u.traitBonuses.threat_up) threatMul += Number(u.traitBonuses.threat_up) / 100;
       if (u.traitBonuses && u.traitBonuses.threat_down) threatMul -= Number(u.traitBonuses.threat_down) / 100;
@@ -10014,7 +10034,7 @@ function renderCommandPanel(runtime) {
             <label>기본 위협값<input class="gb-input" id="gb-char-threat" type="number" value="${escapeHtml(item.threatBase != null ? item.threatBase : inferThreatBase(item.position,item.row))}" /></label>
             <label>스킬 ID(쉼표구분)<input class="gb-input" id="gb-char-skills" value="${escapeHtml((item.skills||[]).join(', '))}" /></label>
           </div>
-          <div class="gb-sub" style="margin:6px 0;">💡 HP/MP/SP는 비워두면(0) 스탯 기준 자동 계산: HP=100+(CON-10)×10+(STR-10)×3, MP=100+(INT-10)×10+(SEN-10)×3, SP=100+(AGI-10)×10+(SEN-10)×3. ATK/물방/마방은 기본 0 (스킬·장비로만 증가).</div>
+          <div class="gb-sub" style="margin:6px 0;">💡 HP/MP/SP는 비워두면(0) 스탯 기준 자동 계산: HP=100+(CON-10)×10+(STR-10)×3, MP=100+(INT-10)×10+(SEN-10)×3, SP=100+(AGI-10)×10+(SEN-10)×3. ATK/물방/마방은 기본 0 (스킬·장비로만 증가). 위협값 0이면 행/포지션 기준 자동 적용(탱커:5, 근거리/전열:2, 기타:1).</div>
           <label>메모<textarea class="gb-textarea short" id="gb-char-note">${escapeHtml(item.note || '')}</textarea></label>
           <div style="margin-top:10px;border-top:1px solid rgba(148,163,184,0.2);padding-top:8px;">
             <div class="gb-section-title">📈 레벨 / 경험치 (DB 직접 수정)</div>
@@ -10471,6 +10491,7 @@ function renderCommandPanel(runtime) {
         category: sk.category || 'singleAttack',
         target: sk.target || 'singleEnemy',
         coef: sk.coef != null ? sk.coef : 0,
+        growth: !!sk.growth,
         mp: (sk.costs && sk.costs.mp) || 0,
         sp: (sk.costs && sk.costs.sp) || 0,
         damageType: sk.damageType || 'physical',
@@ -10491,7 +10512,7 @@ function renderCommandPanel(runtime) {
       };
     } else {
       item = {
-        id:'', name:'', grade:'E', rarity:'Normal', category:'singleAttack', target:'singleEnemy', coef:0, mp:0, sp:0,
+        id:'', name:'', grade:'E', rarity:'Normal', category:'singleAttack', target:'singleEnemy', coef:0, growth:false, mp:0, sp:0,
         damageType:'physical', element:'none', statTypes:'', duration:0, ccType:'', ccTurns:0, ccChance:'', buffStat:'', buffValue:0, stealth:false, statusType:'', statusTurns:0, statusChance:'', cooldown:0, desc:''
       };
     }
@@ -10547,9 +10568,10 @@ function renderCommandPanel(runtime) {
       const isCustom = sk._isCustom;
       const clickAttr = isCustom ? `data-select-type="skills" data-id="${escapeHtml(sk.id)}"` : `data-load-builtin-skill="${escapeHtml(sk.id)}"`;
       const customBadge = isCustom ? ' <span class="gb-badge" style="background:#22c55e;color:#fff;">커스텀</span>' : '';
+      const growthBadge = sk.growth ? ' <span class="gb-badge" style="background:#8b5cf6;color:#fff;">성장형</span>' : '';
       const isActive = isCustom && sk.id === model.state.selected.skills;
       return `<div class="gb-skill-row" ${clickAttr} style="padding:6px 0;border-bottom:1px solid rgba(148,163,184,0.1);cursor:pointer;${isActive?'background:#1e293b;border-radius:6px;padding-left:6px;':''}" title="클릭하면 편집기로 불러옵니다">
-        <div><strong>${escapeHtml(sk.name)}</strong> <span class="gb-badge">${escapeHtml(grade)}</span>${rarity} <span class="gb-badge">${escapeHtml(cat)}</span> <span class="gb-badge">${escapeHtml(sk.id)}</span>${overrideBadge}${customBadge}</div>
+        <div><strong>${escapeHtml(sk.name)}</strong> <span class="gb-badge">${escapeHtml(grade)}</span>${rarity} <span class="gb-badge">${escapeHtml(cat)}</span> <span class="gb-badge">${escapeHtml(sk.id)}</span>${overrideBadge}${customBadge}${growthBadge}</div>
         <div style="font-size:12px;margin-top:2px;">${coefStr ? `<span style="color:#3b82f6;font-weight:600;">${escapeHtml(coefStr)}</span>` : ''}${costStr ? ` <span style="color:#f59e0b;">[${escapeHtml(costStr)}]</span>` : ''}</div>
         ${byRankStr ? `<div class="gb-sub" style="font-size:11px;margin-top:2px;">📈 성장: ${escapeHtml(byRankStr)}</div>` : ''}
         ${extraStr ? `<div class="gb-sub" style="font-size:11px;margin-top:1px;">${escapeHtml(extraStr)}</div>` : ''}
@@ -10594,6 +10616,7 @@ function renderCommandPanel(runtime) {
             </select></label>
             <label>카테고리<select class="gb-input" id="gb-skill-category">${['singleAttack','aoeAttack','singleCC','aoeCC','singleHeal','aoeHeal','buff','passive','utility'].map(v=>optionHtml(v,v,item.category===v)).join('')}</select></label>
             <label>대상<select class="gb-input" id="gb-skill-target">${['singleEnemy','allEnemies','rowFront','rowMid','rowBack','rowFrontMid','rowMidBack','singleAlly','allAllies','self'].map(v=>optionHtml(v,v,item.target===v)).join('')}</select></label>
+            <label>스킬 타입<select class="gb-input" id="gb-skill-growth"><option value="normal" ${!item.growth?'selected':''}>일반 스킬</option><option value="growth" ${item.growth?'selected':''}>성장형 스킬</option></select></label>
             <label>계수<input class="gb-input" id="gb-skill-coef" type="number" step="0.001" value="${escapeHtml(item.coef)}" /></label>
             <label>MP 비용<input class="gb-input" id="gb-skill-mp" type="number" value="${escapeHtml(item.mp)}" /></label>
             <label>SP 비용<input class="gb-input" id="gb-skill-sp" type="number" value="${escapeHtml(item.sp)}" /></label>
@@ -10616,6 +10639,7 @@ function renderCommandPanel(runtime) {
           <label>설명<textarea class="gb-textarea short" id="gb-skill-desc">${escapeHtml(item.desc || '')}</textarea></label>
           <div class="gb-btn-row"><button class="gb-btn primary" id="gb-skill-save">저장</button>${isEditingBuiltin ? '<button class="gb-btn" id="gb-skill-restore" style="background:#ef4444;color:#fff;">원본 복원</button>' : '<button class="gb-btn" id="gb-skill-delete">삭제</button>'}</div>
           <div class="gb-sub">${isEditingBuiltin ? '내장 스킬을 수정하면 커스텀 오버라이드로 저장된다. "원본 복원"으로 되돌릴 수 있다.' : '광역 CC는 플러그인 공통 규칙으로 자동 보정된다. 즉 입력 계수는 단일CC 기준으로 넣고, 실제 적용은 1/2 계수 + 비용 2배다.'}</div>
+          <div class="gb-sub">📈 성장형 스킬: 전투 시 사용자 등급에 맞춰 계수가 자동 조정된다. CC/상태이상 확률을 0으로 두면 기본값이 적용된다(CC=100%, 상태이상=타입별 기본 확률).</div>
         </div>
       </div>
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(148,163,184,0.16);">
@@ -11138,7 +11162,7 @@ function readPartySlotsFromUI() {
       mdef: Number(fieldValue('#gb-char-mdef') || 0),
       damageType: fieldValue('#gb-char-dmgtype') || 'physical',
       attackStat: fieldValue('#gb-char-atkstat') || 'str',
-      threatBase: Number(fieldValue('#gb-char-threat') || 0),
+      threatBase: Number(fieldValue('#gb-char-threat') || 0) || inferThreatBase(fieldValue('#gb-char-position'), fieldValue('#gb-char-row')),
       skills: splitCsv(fieldValue('#gb-char-skills')),
       note: fieldValue('#gb-char-note'),
       level: Math.max(1, Math.min(EXP_MAX_LEVEL, Number(fieldValue('#gb-char-level') || 1))),
@@ -11533,6 +11557,7 @@ async function saveMaterialTraitFromForm() {
     const buffValue = Number(fieldValue('#gb-skill-buffvalue') || 0);
     const ccType = fieldValue('#gb-skill-cctype').trim();
     const statusType = fieldValue('#gb-skill-statustype').trim();
+    const isGrowth = fieldValue('#gb-skill-growth') === 'growth';
     const item = {
       id,
       name:fieldValue('#gb-skill-name'),
@@ -11548,6 +11573,7 @@ async function saveMaterialTraitFromForm() {
       duration:Number(fieldValue('#gb-skill-duration') || 0),
       desc:fieldValue('#gb-skill-desc')
     };
+    if (isGrowth) item.growth = true;
     const cooldownVal = Number(fieldValue('#gb-skill-cooldown') || 0);
     if (cooldownVal > 0) item.cooldown = cooldownVal;
     const stealthEl = document.getElementById('gb-skill-stealth');
@@ -11561,13 +11587,13 @@ async function saveMaterialTraitFromForm() {
     if (ccType) {
       const ccObj = { type:ccType, turns:Number(fieldValue('#gb-skill-ccturns') || 1) };
       const ccChanceVal = fieldValue('#gb-skill-ccchance').trim();
-      if (ccChanceVal !== '') ccObj.chance = Math.max(0, Math.min(1, Number(ccChanceVal)));
+      if (ccChanceVal !== '' && Number(ccChanceVal) > 0) ccObj.chance = Math.max(0, Math.min(1, Number(ccChanceVal)));
       item.cc = ccObj;
     }
     if (statusType) {
       const stObj = { type:statusType, turns:Number(fieldValue('#gb-skill-statusturns') || 2) };
       const stChanceVal = fieldValue('#gb-skill-statuschance').trim();
-      if (stChanceVal !== '') stObj.chance = Math.max(0, Math.min(1, Number(stChanceVal)));
+      if (stChanceVal !== '' && Number(stChanceVal) > 0) stObj.chance = Math.max(0, Math.min(1, Number(stChanceVal)));
       item.status = stObj;
     }
     if (!item.name) throw new Error('스킬 이름이 비어 있다.');
@@ -14266,7 +14292,7 @@ async function saveMaterialTraitFromForm() {
         if (!skill) throw new Error(`스킬 "${skillId}"을 찾을 수 없다.`);
         const charRank = (entry.rank || 'E').toUpperCase();
         const skillRank = (skill.grade || item.rank || 'E').toUpperCase();
-        if (charRank !== skillRank) throw new Error(`등급이 맞지 않음! 캐릭터: ${charRank}급 / 스킬: ${skillRank}급. 같은 등급만 배울 수 있다.`);
+        if (!skill.growth && charRank !== skillRank) throw new Error(`등급이 맞지 않음! 캐릭터: ${charRank}급 / 스킬: ${skillRank}급. 같은 등급만 배울 수 있다.`);
         const skillStats = skill.statTypes || [];
         const charMainStat = (entry.attackStat || (entry.damageType === 'magic' ? 'int' : 'str'));
         if (skillStats.length > 0 && !skillStats.includes(charMainStat)) {
@@ -14302,29 +14328,31 @@ async function saveMaterialTraitFromForm() {
       } catch (e) { toast('복사 실패', true); }
     });
 
+    // 계수 자동 채우기 공통 함수
+    function autoFillSkillCoef() {
+      const grade = fieldValue('#gb-skill-grade') || 'E';
+      const category = fieldValue('#gb-skill-category') || 'singleAttack';
+      const target = fieldValue('#gb-skill-target') || 'singleEnemy';
+      const isGrowth = fieldValue('#gb-skill-growth') === 'growth';
+      let coef;
+      if (isGrowth) {
+        coef = getGrowthCoef(category, grade);
+      }
+      if (coef == null) {
+        const singleCoefs = { E:1.2, D:1.92, C:2.88, B:4.8, A:7.68, S:11.52 };
+        const baseCoef = singleCoefs[grade] || 1.2;
+        coef = baseCoef;
+        if (target === 'allEnemies' || target === 'allAllies') coef = Math.round(baseCoef * 0.58 * 1000) / 1000;
+        else if (target.startsWith('row')) coef = Math.round(baseCoef * 0.58 * 1000) / 1000;
+      }
+      const el = model.root && model.root.querySelector('#gb-skill-coef');
+      if (el) el.value = coef;
+    }
     // 대상 선택 시 계수 자동 채우기 (수정 가능)
-    on('#gb-skill-target', 'change', () => {
-      const grade = fieldValue('#gb-skill-grade') || 'E';
-      const target = fieldValue('#gb-skill-target') || 'singleEnemy';
-      const singleCoefs = { E:1.2, D:1.92, C:2.88, B:4.8, A:7.68, S:11.52 };
-      const baseCoef = singleCoefs[grade] || 1.2;
-      let coef = baseCoef;
-      if (target === 'allEnemies' || target === 'allAllies') coef = Math.round(baseCoef * 0.58 * 1000) / 1000;
-      else if (target.startsWith('row')) coef = Math.round(baseCoef * 0.58 * 1000) / 1000;
-      const el = model.root && model.root.querySelector('#gb-skill-coef');
-      if (el) el.value = coef;
-    });
-    on('#gb-skill-grade', 'change', () => {
-      const grade = fieldValue('#gb-skill-grade') || 'E';
-      const target = fieldValue('#gb-skill-target') || 'singleEnemy';
-      const singleCoefs = { E:1.2, D:1.92, C:2.88, B:4.8, A:7.68, S:11.52 };
-      const baseCoef = singleCoefs[grade] || 1.2;
-      let coef = baseCoef;
-      if (target === 'allEnemies' || target === 'allAllies') coef = Math.round(baseCoef * 0.58 * 1000) / 1000;
-      else if (target.startsWith('row')) coef = Math.round(baseCoef * 0.58 * 1000) / 1000;
-      const el = model.root && model.root.querySelector('#gb-skill-coef');
-      if (el) el.value = coef;
-    });
+    on('#gb-skill-target', 'change', autoFillSkillCoef);
+    on('#gb-skill-grade', 'change', autoFillSkillCoef);
+    on('#gb-skill-category', 'change', autoFillSkillCoef);
+    on('#gb-skill-growth', 'change', autoFillSkillCoef);
 
     on('#gb-skill-new', 'click', async () => { model.state.selected.skills = ''; await saveState(); renderApp(); });
     on('#gb-skill-save', 'click', async () => { try { await saveSkillFromForm(); } catch (e) { toast(e.message || String(e), true); } });
