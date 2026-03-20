@@ -4565,14 +4565,14 @@ function createSkillBookDrop(rank, tier) {
       if (lowerMatching.length) {
         const pickedKey = lowerMatching[Math.floor(Math.random() * lowerMatching.length)];
         const skill = BUILTIN_SKILLS[pickedKey];
-        return { id: `drop_skillbook_${rank.toLowerCase()}_${Date.now().toString(36)}`, name: `📖 ${skill.name || pickedKey} 스킬북`, category: 'skillbook', rank, skillId: pickedKey, skillCategory: skill.category, skillTier: tier, price: calcSkillBookPrice(rank, tier), stackable: false, unitWeightG: 200, note: `${rank}급 T${tier} 스킬북 [${skill.category}]` };
+        return { id: `drop_skillbook_${rank.toLowerCase()}_${Date.now().toString(36)}`, name: `📖 ${skill.name || pickedKey} 스킬북`, category: 'skillbook', rank, skillId: pickedKey, skillCategory: skill.category, skillTier: tier, price: calcSkillBookPrice(rank, tier), stackable: false, unitWeightG: 200, note: `${rank}급 T${tier} 스킬북 [${skill.category}]`, effect: skill.desc || '' };
       }
     }
     return null;
   }
   const pickedKey = matching[Math.floor(Math.random() * matching.length)];
   const skill = BUILTIN_SKILLS[pickedKey];
-  return { id: `drop_skillbook_${rank.toLowerCase()}_${Date.now().toString(36)}`, name: `📖 ${skill.name || pickedKey} 스킬북`, category: 'skillbook', rank, skillId: pickedKey, skillCategory: skill.category, skillTier: tier, price: calcSkillBookPrice(rank, tier), stackable: false, unitWeightG: 200, note: `${rank}급 T${tier} 스킬북 [${skill.category}]` };
+  return { id: `drop_skillbook_${rank.toLowerCase()}_${Date.now().toString(36)}`, name: `📖 ${skill.name || pickedKey} 스킬북`, category: 'skillbook', rank, skillId: pickedKey, skillCategory: skill.category, skillTier: tier, price: calcSkillBookPrice(rank, tier), stackable: false, unitWeightG: 200, note: `${rank}급 T${tier} 스킬북 [${skill.category}]`, effect: skill.desc || '' };
 }
 function addNormalRollLoot(bucket, rank, roll, sourceRef) {
   if (!rank) return;
@@ -4756,6 +4756,7 @@ function resolvePuzzleRoom(run, room) {
   mergeRewardBucket(run.stash, bundle);
   const invLogs = depositRewardBucketToInventory(bundle);
   if (invLogs.length) bundle.notes = (bundle.notes || []).concat(invLogs);
+  room.rewardLines = rewardBucketLines(bundle);
   room.cleared = true;
   pushGateLog(run, `퍼즐 해결: ${room.rewardLines.join(' / ') || '보상 없음'}`);
   if (roomHasMineableVeins(room)) {
@@ -7268,7 +7269,8 @@ function seedNpcAuctionListings() {
         skillCategory: cat, skillTier: tier,
         price: bookPrice, stackable: false,
         unitWeightG: 200,
-        note: `${sbRank}급 T${tier} 스킬북 [${cat}]${isCustomSkill ? ' (커스텀)' : ''}`
+        note: `${sbRank}급 T${tier} 스킬북 [${cat}]${isCustomSkill ? ' (커스텀)' : ''}`,
+        effect: skill.desc || ''
       };
       model.db.auctionListings.push({ id: `auc_npc_${uid}`, item, askPrice, marketPrice: bookPrice, priceRatio: ratio, isNpc: true, isCustomSkill: isCustomSkill || undefined, sourceSkillId: isCustomSkill ? pickedKey : undefined, listedAt: Date.now() });
       continue;
@@ -7601,7 +7603,7 @@ function renderAuctionHouseHtml() {
                     ${isEquip && it.rarity && it.rarity !== 'Normal' ? `<span class="gb-badge" style="background:${rarityColor(it.rarity)};color:#000;">${escapeHtml(it.rarity)}</span>` : ''}
                     ${npcBadge} ${traitTxt}
                     ${isEquip ? `<div class="gb-sub">${it.part === 'armor' && it.armorSubtype && ARMOR_SUBTYPES[it.armorSubtype] ? '['+ARMOR_SUBTYPES[it.armorSubtype].label+(ARMOR_SUBTYPES[it.armorSubtype].atkMul ? ' ATK'+Math.round(ARMOR_SUBTYPES[it.armorSubtype].atkMul*100)+'%' : '')+(ARMOR_SUBTYPES[it.armorSubtype].statBonusMul ? ' 스탯+'+Math.round(ARMOR_SUBTYPES[it.armorSubtype].statBonusMul*100)+'%' : '')+'] ' : ''}${it.atk ? 'ATK+'+it.atk+' | ' : ''}${it.pdef ? 'PDEF+'+it.pdef+' | ' : ''}${it.mdef ? 'MDEF+'+it.mdef+' | ' : ''}주입 최대 ${it.maxInfuse||1}회 | 내구 ${fmtDur(it.durability)}/${fmtDur(it.maxDurability)}</div>` : ''}
-                    ${isSkillbook ? `<div class="gb-sub">${escapeHtml(it.note||'')}</div>` : ''}
+                    ${isSkillbook ? `<div class="gb-sub">${escapeHtml(it.effect || it.note || '')}</div>` : ''}
                     <div class="gb-sub">시장가: ${fmt(mktPrice)}</div>
                   </div>
                   <button class="gb-btn primary" data-auction-bid="${escapeHtml(l.id)}" data-auction-bid-mkt="${mktPrice}" style="white-space:nowrap;">🔨 경매 참여</button>
@@ -9808,12 +9810,50 @@ function renderInventoryView() {
       if (statStrs.length) lines.push('스탯: ' + statStrs.join(' / '));
     }
     if (Array.isArray(it.traits) && it.traits.length && it.category !== 'equipment') lines.push('특성: ' + it.traits.map(t => EQUIP_TRAIT_LABELS[t] || t).join(', '));
-    if (it.effect) lines.push('효과: ' + it.effect);
+    if (it.category === 'skillbook') {
+      lines.push(`📖 스킬북 T${it.skillTier || '?'}`);
+      const _sbSkill = it.skillId && BUILTIN_SKILLS ? BUILTIN_SKILLS[it.skillId] : null;
+      if (_sbSkill) {
+        if (_sbSkill.desc) lines.push('스킬 설명: ' + _sbSkill.desc);
+        const _sbParts = [];
+        if (_sbSkill.damageType) _sbParts.push(_sbSkill.damageType === 'physical' ? '물리' : '마법');
+        if (_sbSkill.element && _sbSkill.element !== 'none') _sbParts.push(_sbSkill.element);
+        if (_sbSkill.target) _sbParts.push(_sbSkill.target === 'singleEnemy' ? '단일대상' : _sbSkill.target === 'allEnemies' ? '광역' : _sbSkill.target === 'singleAlly' ? '아군단일' : _sbSkill.target === 'allAllies' ? '아군전체' : _sbSkill.target);
+        if (_sbSkill.coef) _sbParts.push('계수:' + _sbSkill.coef);
+        if (_sbSkill.costs) { if (_sbSkill.costs.mp) _sbParts.push('MP:' + _sbSkill.costs.mp); if (_sbSkill.costs.sp) _sbParts.push('SP:' + _sbSkill.costs.sp); }
+        if (_sbSkill.cc) _sbParts.push(_sbSkill.cc.type + ' ' + Math.round((_sbSkill.cc.chance||0)*100) + '%');
+        if (_sbParts.length) lines.push('스킬 정보: ' + _sbParts.join(' / '));
+      } else if (it.effect) {
+        lines.push('효과: ' + it.effect);
+      }
+    } else if (it.effect) {
+      lines.push('효과: ' + it.effect);
+    }
     if (it.note) lines.push('메모: ' + it.note);
     if (it.suggestedPrice) lines.push(`기준가: ₩${Number(it.suggestedPrice).toLocaleString('en-US')}`);
     return lines.join('\n');
   }
   const isConvFood = it => it && it.category === 'convFood';
+  function buildItemBrief(it) {
+    if (!it) return '';
+    if (it.category === 'skillbook') {
+      const _sk = it.skillId && BUILTIN_SKILLS ? BUILTIN_SKILLS[it.skillId] : null;
+      return _sk ? (_sk.desc || it.effect || it.note || '') : (it.effect || it.note || '');
+    }
+    if (it.category === 'equipment') {
+      const parts = [];
+      if (it.part === 'weapon') parts.push(`ATK+${it.atk||0}`);
+      if (it.part === 'armor') { parts.push(`물방+${it.pdef||0}`); parts.push(`마방+${it.mdef||0}`); }
+      if (it.part === 'subweapon') parts.push(`물방+${it.pdef||0}`);
+      if (it.part === 'accessory' && it.traits && it.traits.length) parts.push(it.traits.map(t=>equipTraitDisplay(t, it.rank)).join(', '));
+      if (it.mainStat) parts.push(it.mainStat.toUpperCase());
+      if (it.enhance > 0) parts.push(`+${it.enhance}`);
+      return parts.join(' / ');
+    }
+    if (it.effect) return it.effect;
+    if (it.note) return it.note;
+    return '';
+  }
   const INV_COLLAPSE_THRESHOLD = 40;
   const invCollapsed = model.state.invGridCollapsed !== false; // default collapsed when > threshold
   for (let i = 0; i < totalSlots; i++) {
@@ -9822,10 +9862,13 @@ function renderInventoryView() {
       const key = inventoryItemKey(it);
       const bg = slotColor(it);
       const canUse = isConvFood(it) || it.category === 'campSupply';
+      const brief = buildItemBrief(it);
+      const catLabel = it.category === 'skillbook' ? '📖스킬북' : it.category === 'equipment' ? (EQUIP_PART_LABELS[it.part]||it.part||'장비') : (it.category||'기타');
       slotTiles.push(`
         <div class="gb-inv-slot filled gb-inv-tooltip-wrap" style="background:${bg}22;border-color:${bg}66;">
           <div class="gb-inv-slot-name">${escapeHtml(it.name)}</div>
-          <div class="gb-inv-slot-meta">${escapeHtml(it.rank || '')} · ×${Number(it.count||1)}</div>
+          <div class="gb-inv-slot-meta">${escapeHtml(it.rank || '')} · ${escapeHtml(catLabel)} · ×${Number(it.count||1)}</div>
+          ${brief ? `<div class="gb-inv-slot-brief">${escapeHtml(brief)}</div>` : ''}
           <div class="gb-inv-slot-tooltip">${escapeHtml(buildItemTooltip(it))}</div>
           <div class="gb-inv-slot-btns">
             ${canUse ? `<button class="gb-btn tiny" data-inv-use="${escapeHtml(key)}" title="사용하기">사용</button>` : `<button class="gb-btn tiny" data-inv-drop-one="${escapeHtml(key)}" title="1개 버리기">−1</button>`}
@@ -9852,7 +9895,7 @@ function renderInventoryView() {
   const stackRows = stackItems.length ? stackItems.map(it => {
     const key = inventoryItemKey(it);
     const effWeight = Math.round(inventoryBaseWeightG(it) * cap.weightMul);
-    return `<div class="gb-unit"><div class="gb-unit-top"><div><strong>${escapeHtml(it.name)}</strong> <span class="gb-badge">${escapeHtml(it.rank || '')}</span> <span class="gb-badge">${escapeHtml(it.category || '')}</span></div><div><button class="gb-btn tiny" data-inv-drop-one="${escapeHtml(key)}">1개 버리기</button> <button class="gb-btn tiny danger" data-inv-drop-all="${escapeHtml(key)}">전체 버리기</button></div></div><div class="gb-sub">수량 ${Number(it.count||1)} / 무게 ${formatWeightG(effWeight)}${it.note ? ` / ${escapeHtml(it.note)}` : ''}${it.suggestedPrice ? ` / 기준가 ₩${Number(it.suggestedPrice).toLocaleString('en-US')}` : ''}</div></div>`;
+    return `<div class="gb-unit"><div class="gb-unit-top"><div><strong>${escapeHtml(it.name)}</strong> <span class="gb-badge">${escapeHtml(it.rank || '')}</span> <span class="gb-badge">${escapeHtml(it.category || '')}</span></div><div><button class="gb-btn tiny" data-inv-drop-one="${escapeHtml(key)}">1개 버리기</button> <button class="gb-btn tiny danger" data-inv-drop-all="${escapeHtml(key)}">전체 버리기</button></div></div><div class="gb-sub">수량 ${Number(it.count||1)} / 무게 ${formatWeightG(effWeight)}${it.effect ? ` / 효과: ${escapeHtml(it.effect)}` : ''}${it.note ? ` / ${escapeHtml(it.note)}` : ''}${it.suggestedPrice ? ` / 기준가 ₩${Number(it.suggestedPrice).toLocaleString('en-US')}` : ''}</div></div>`;
   }).join('') : '';
 
   return `
@@ -10784,17 +10827,34 @@ function renderCommandPanel(runtime) {
           const ikey = inventoryItemKey(it);
           const isEq = it.category === 'equipment';
           const isBag = it.category === 'bag';
+          const isSB = it.category === 'skillbook';
           const traitTxt = isEq && (it.traits||[]).length ? ` [${(it.traits||[]).map(t=>equipTraitDisplay(t, it.rank)).join(',')}]` : '';
+          let descLine = '';
+          if (isSB) {
+            const _sk = it.skillId && BUILTIN_SKILLS ? BUILTIN_SKILLS[it.skillId] : null;
+            descLine = _sk ? (_sk.desc || it.effect || '') : (it.effect || '');
+          } else if (isEq) {
+            const _parts = [];
+            if (it.part === 'weapon') _parts.push(`ATK+${it.atk||0}`);
+            if (it.part === 'armor') { _parts.push(`물방+${it.pdef||0}`); _parts.push(`마방+${it.mdef||0}`); }
+            if (it.part === 'subweapon') _parts.push(`물방+${it.pdef||0}`);
+            if (it.mainStat) _parts.push(it.mainStat.toUpperCase());
+            descLine = _parts.join(' / ');
+          } else if (it.effect) {
+            descLine = it.effect;
+          }
           return `<div class="gb-unit"><div class="gb-unit-top">
             <div>
               <strong>${escapeHtml(it.name||it.id)}</strong>
               ${it.rank ? `<span class="gb-badge">${escapeHtml(it.rank||'')}</span>` : ''}
               ${isEq ? `<span class="gb-badge">${escapeHtml(EQUIP_PART_LABELS[it.part]||it.part||'')}</span>` : ''}
+              ${isSB ? `<span class="gb-badge" style="background:#d97706;">📖 T${it.skillTier||'?'}</span>` : ''}
               ${isBag ? `<span class="gb-badge">가방</span>` : ''}
               ${traitTxt ? `<span class="gb-sub">${escapeHtml(traitTxt)}</span>` : ''}
               ${isEq ? `<div class="gb-sub">내구도 ${fmtDur(it.durability)}/${fmtDur(it.maxDurability)}</div>` : ''}
+              ${descLine ? `<div class="gb-sub">${escapeHtml(descLine)}</div>` : ''}
               ${isBag && it.note ? `<div class="gb-sub">${escapeHtml(it.note)}</div>` : ''}
-              ${!isEq && !isBag && it.count > 1 ? `<span class="gb-sub"> ×${it.count}</span>` : ''}
+              ${!isEq && !isBag && !isSB && it.count > 1 ? `<span class="gb-sub"> ×${it.count}</span>` : ''}
             </div>
             <div>
               <button class="gb-btn tiny" data-personal-to-shared="${type}:${entityId}:${escapeHtml(ikey)}">공용으로 이동</button>
@@ -10811,12 +10871,19 @@ function renderCommandPanel(runtime) {
           const ikey = inventoryItemKey(it);
           const isEq = it.category === 'equipment';
           const isBag = it.category === 'bag';
+          const isSB = it.category === 'skillbook';
+          let briefDesc = '';
+          if (isSB) { const _sk = it.skillId && BUILTIN_SKILLS ? BUILTIN_SKILLS[it.skillId] : null; briefDesc = _sk ? (_sk.desc||it.effect||'') : (it.effect||''); }
+          else if (isEq) { const _p=[]; if(it.part==='weapon')_p.push(`ATK+${it.atk||0}`); if(it.part==='armor'){_p.push(`물방+${it.pdef||0}`);_p.push(`마방+${it.mdef||0}`);} if(it.mainStat)_p.push(it.mainStat.toUpperCase()); briefDesc=_p.join(' / '); }
+          else if (it.effect) { briefDesc = it.effect; }
           return `<div class="gb-unit"><div class="gb-unit-top">
             <div>
               <strong>${escapeHtml(it.name||it.id)}</strong>
               ${it.rank ? `<span class="gb-badge">${escapeHtml(it.rank||'')}</span>` : ''}
               ${isEq ? `<span class="gb-badge">${escapeHtml(EQUIP_PART_LABELS[it.part]||it.part||'')}</span>` : ''}
+              ${isSB ? `<span class="gb-badge" style="background:#d97706;">📖 T${it.skillTier||'?'}</span>` : ''}
               ${isBag ? `<span class="gb-badge">가방</span>` : ''}
+              ${briefDesc ? `<div class="gb-sub">${escapeHtml(briefDesc)}</div>` : ''}
               ${it.count > 1 ? `<span class="gb-sub"> ×${it.count}</span>` : ''}
             </div>
             <button class="gb-btn tiny primary" data-shared-to-personal="${type}:${entityId}:${escapeHtml(ikey)}">개인으로 이동</button>
@@ -15245,6 +15312,7 @@ async function saveMaterialTraitFromForm() {
       #${UI_ID} .gb-inv-slot.empty { background:#0b0d12; opacity:0.45; }
       #${UI_ID} .gb-inv-slot-name { font-size:11px; font-weight:700; line-height:1.3; word-break:break-word; }
       #${UI_ID} .gb-inv-slot-meta { font-size:10px; color:#94a3b8; margin-top:2px; }
+      #${UI_ID} .gb-inv-slot-brief { font-size:10px; color:#cbd5e1; margin-top:3px; line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; word-break:break-word; }
       #${UI_ID} .gb-inv-slot-btns { display:flex; gap:3px; margin-top:4px; }
       #${UI_ID} .gb-inv-slot-empty-label { font-size:10px; color:rgba(148,163,184,0.4); text-align:center; padding-top:30px; }
       /* 아이템 슬롯 툴팁 */
