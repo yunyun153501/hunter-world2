@@ -2225,6 +2225,7 @@ function buildDefaultState() {
       skill.grade = rank;
       const upperCoef = getGrowthCoef(skill.category, rank);
       if (upperCoef != null) skill.coef = upperCoef;
+      else skill.coef = SKILL_COEF_LOWER[rank] || 1.2; // 카테고리 미등록 시 하한값 폴백
     }
     // ── 계수 0 자동처리: 일반스킬→하한, 성장형→상한 ──
     if (Number(skill.coef || 0) === 0) {
@@ -2393,9 +2394,9 @@ function buildDefaultState() {
       kind: entry.kind || (side === 'party' ? 'Hunter' : 'Normal'),
       rank,
       stats,
-      hp: Number(entry.currentHp != null ? entry.currentHp : baseHp), maxHp: baseHp,
-      mp: Number(entry.currentMp != null ? entry.currentMp : baseMp), maxMp: baseMp,
-      sp: Number(entry.currentSp != null ? entry.currentSp : baseSp), maxSp: baseSp,
+      hp: Math.min(baseHp, Number(entry.currentHp != null ? entry.currentHp : baseHp)), maxHp: baseHp,
+      mp: Math.min(baseMp, Number(entry.currentMp != null ? entry.currentMp : baseMp)), maxMp: baseMp,
+      sp: Math.min(baseSp, Number(entry.currentSp != null ? entry.currentSp : baseSp)), maxSp: baseSp,
       // 몬스터: ATK = 프로필 damage, pdef/mdef = 0 (개별 스탯 없음)
       // 파티: 장비+스탯에서 ATK/PDEF/MDEF 실시간 계산 (DB 값이 0일 수 있으므로)
       atk: Number(isMonster ? monsterProfile.damage : calcUnitAtk(entry, stats)),
@@ -5585,6 +5586,13 @@ function getBuffedStat(unit, statKey) {
     }
     return cost;
   }
+  // 힐 타겟 없음 등으로 스킬 비용 환불
+  function refundSkillCost(unit, cost) {
+    if (!unit.isMonster && cost) {
+      unit.mp = Math.min(unit.maxMp, unit.mp + (cost.mp || 0));
+      unit.sp = Math.min(unit.maxSp, unit.sp + (cost.sp || 0) + SKILL_ADDITIONAL_SP_COST);
+    }
+  }
   function critChance(unit) {
     let bonus = 0;
     (unit.buffs || []).forEach(b => { if (b.critChanceBonus) bonus += Number(b.critChanceBonus); });
@@ -5658,7 +5666,7 @@ function getBuffedStat(unit, statKey) {
     return { hit, crit };
   }
   function computeDamage(attacker, target, skill, crit) {
-    const coef = Number(skill && skill.coef != null ? skill.coef : 1.0);
+    const coef = Math.max(0.1, Number(skill && skill.coef != null ? skill.coef : 1.0) || 1.0);
     const damageType = (skill && skill.damageType) || attacker.damageType || 'physical';
     const def = getEffectiveDefense(target, damageType === 'magic' ? 'magic' : 'physical');
     // 장비 특성: 치명타 피해 증가
@@ -5722,7 +5730,7 @@ function getBuffedStat(unit, statKey) {
   function computeHeal(caster, skill) {
     const mainStat = getStatPower(caster, skill);
     const ss = mainStat * 0.5;
-    const coef = Number(skill && skill.coef != null ? skill.coef : 1.0);
+    const coef = Math.max(0.1, Number(skill && skill.coef != null ? skill.coef : 1.0) || 1.0);
     // 장비 특성: 치유량 증가
     const healDoneBonus = 1 + Number((caster.traitBonuses && caster.traitBonuses.healing_done) || 0) / 100;
     return Math.max(1, Math.round(ss * coef * healDoneBonus));
@@ -6403,7 +6411,7 @@ function getBuffedStat(unit, statKey) {
     if (skill.category === 'singleHeal') {
       const targets = getTargetListForAction(runtime, actor, action, skill);
       const target = targets[0];
-      if (!target) return;
+      if (!target) { refundSkillCost(actor, cost); return; }
       const heal = computeHeal(actor, skill);
       const hpBefore = Number(target.hp || 0);
       const actual = applyHeal(target, heal);
@@ -6416,7 +6424,7 @@ function getBuffedStat(unit, statKey) {
 
     if (skill.category === 'aoeHeal') {
       const targets = getTargetListForAction(runtime, actor, action, skill).filter(u => u.hp < u.maxHp);
-      if (!targets.length) return;
+      if (!targets.length) { refundSkillCost(actor, cost); return; }
       const healPerTarget = computeHeal(actor, skill);
       let actualSum = 0;
       targets.forEach(t => { const before = Number(t.hp || 0); const actual = applyHeal(t, healPerTarget); actualSum += actual; pushHealEventLog(runtime, actor, t, skill.name, actual, before); });
@@ -6580,7 +6588,7 @@ function getBuffedStat(unit, statKey) {
       removeExpiredBuffEffects(unit, expired);
 
       // 독: 방어무시 절대데미지, 스택당 poisonPower 피해
-      if (Number(unit.statuses.poison || 0) > 0) {
+      if (!unit.dead && Number(unit.statuses.poison || 0) > 0) {
         const stacks = Math.min(3, Number(unit.statuses.poisonStacks || 1));
         const perStack = Math.max(1, Math.round(Number(unit.statuses.poisonPower || 0)));
         const dmg = perStack * stacks;
@@ -14822,6 +14830,7 @@ async function saveMaterialTraitFromForm() {
         const isBag = it.category === 'bag';
         const slot = isBag ? 'bag' : (it.part || 'weapon');
         // 기존 장착 해제 → 개인 인벤으로 반환
+        if (!Array.isArray(inv.items)) inv.items = [];
         if (inv.equipped[slot]) inv.items.push(inv.equipped[slot]);
         if (!isBag) {
           // 첫 장착 시 내구도 maxDurability 감소 (100→99)
