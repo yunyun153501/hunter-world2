@@ -10969,14 +10969,30 @@ function renderCommandPanel(runtime) {
     if (!entity || !entity.stats) return;
     const s = entity.stats;
     const lvBonus = Math.max(0, (Number(entity.level) || 1) - 1) * 2;
+    // 패시브 스킬 보너스 계산 (강철모루 물방 등)
+    let passivePdef = 0, passiveMdef = 0;
+    const passiveStats = { str:0, con:0, int:0, agi:0, sense:0 };
+    if (Array.isArray(entity.skills)) {
+      entity.skills.forEach(skillId => {
+        const skill = resolveSkillForUnit(entity, skillId);
+        if (!skill || skill.category !== 'passive') return;
+        if (skill.passiveBonuses) {
+          if (skill.passiveBonuses.pdef) passivePdef += Number(skill.passiveBonuses.pdef);
+          if (skill.passiveBonuses.mdef) passiveMdef += Number(skill.passiveBonuses.mdef);
+          ['str','con','int','agi','sense'].forEach(k => {
+            if (skill.passiveBonuses[k]) passiveStats[k] += Number(skill.passiveBonuses[k]);
+          });
+        }
+      });
+    }
     // 장착 장비 주스탯 보너스 반영
     const charMainStat = entity.attackStat || inferAttackStat(entity.position, entity.job);
     const eqBonus = (entity.inventory && entity.inventory.equipped) ? calcEquippedStatBonus(entity.inventory.equipped, charMainStat) : { atk:0, pdef:0, mdef:0, str:0, con:0, int:0, agi:0, sense:0 };
-    const effStr = (Number(s.str)||0) + eqBonus.str;
-    const effCon = (Number(s.con)||0) + eqBonus.con;
-    const effInt = (Number(s.int)||0) + eqBonus.int;
-    const effAgi = (Number(s.agi)||0) + eqBonus.agi;
-    const effSense = (Number(s.sense)||0) + eqBonus.sense;
+    const effStr = (Number(s.str)||0) + eqBonus.str + passiveStats.str;
+    const effCon = (Number(s.con)||0) + eqBonus.con + passiveStats.con;
+    const effInt = (Number(s.int)||0) + eqBonus.int + passiveStats.int;
+    const effAgi = (Number(s.agi)||0) + eqBonus.agi + passiveStats.agi;
+    const effSense = (Number(s.sense)||0) + eqBonus.sense + passiveStats.sense;
     entity.hp = 100 + (effCon - 10) * 10 + (effStr - 10) * 3 + lvBonus;
     entity.mp = 100 + (effInt - 10) * 10 + (effSense - 10) * 3 + lvBonus;
     entity.sp = 100 + (effAgi - 10) * 10 + (effSense - 10) * 3 + lvBonus;
@@ -10995,8 +11011,8 @@ function renderCommandPanel(runtime) {
       });
     }
     entity.atk = Math.round(weaponAtk + (effStr - 10) * 0.2 + (effAgi - 10) * 0.2 + (effInt - 10) * 0.3);
-    entity.pdef = equipPdef;
-    entity.mdef = equipMdef;
+    entity.pdef = equipPdef + passivePdef;
+    entity.mdef = equipMdef + passiveMdef;
   }
 
   // 장착 장비 스탯 합산 반환 { atk, pdef, mdef, str, con, int, agi, sense }
