@@ -2102,6 +2102,30 @@ const RARE_FAMILY_PRESETS = {
         model.db.assocEquipClaimed[charId] = claimed;
       }
     }
+
+    // 8) 장비 아이템 category 보정 — 예전 저장 데이터에서 category 누락된 장비 복원
+    //    part 필드(weapon/armor/subweapon/accessory)가 있으면 category:'equipment' 자동 부여
+    function _migrateEquipCategory(item) {
+      if (item && typeof item === 'object' && item.part && EQUIP_PARTS.includes(item.part) && item.category !== 'equipment') {
+        item.category = 'equipment';
+      }
+    }
+    // 캐릭터 + 페르소나 인벤토리
+    const allEntities = [...(model.db.characters || []), ...(model.db.personas || [])];
+    for (const entity of allEntities) {
+      if (!entity.inventory) continue;
+      (entity.inventory.items || []).forEach(_migrateEquipCategory);
+      if (entity.inventory.equipped) {
+        for (const slot of EQUIP_PARTS) {
+          _migrateEquipCategory(entity.inventory.equipped[slot]);
+        }
+      }
+    }
+    // 공용 인벤토리
+    if (model.db.inventory) {
+      (model.db.inventory.items || []).forEach(_migrateEquipCategory);
+      (model.db.inventory.overflow || []).forEach(_migrateEquipCategory);
+    }
   }
 
 function buildDefaultRuntime() {
