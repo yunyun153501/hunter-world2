@@ -1845,6 +1845,12 @@ const RARE_FAMILY_PRESETS = {
           damageType:'physical', attackStat:'str',
           skills:['skill_yuna_anvil','skill_yuna_shield','skill_yuna_dagger'],
           threatBase:5,
+          inventory:{ gold:0, items:[], equipped:{
+            weapon:{ id:'eq_npc_yuna_weapon', name:'협회지급 단검', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 단검.' },
+            subweapon:{ id:'eq_npc_yuna_sub', name:'E급 조악한 방패', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['방어자세'], durability:100, maxDurability:100, atk:0, pdef:1, mdef:0, mainStat:'con', resistType:'', resistPct:0, price:300000, note:'E급 표준 방패.' },
+            armor:{ id:'eq_npc_yuna_armor', name:'E급 조악한 판금갑옷', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'heavy', armorStatBonusMul:0, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:3, mdef:0, mainStat:'con', resistType:'', resistPct:0, price:400000, note:'E급 표준 중갑.' },
+            accessory:null, bag:null
+          }},
           note:'고유 NPC. E급 탱커. 강철모루(성장형 포지션스킬) 보유 — A급 달성 시 백금모루(유니크)로 승급.\n장비: 협회지급 단검, E급 조악한 방패, E급 조악한 판금갑옷.' },
         // ── NPC: 송하늘 ──
         { id:'char_haneul', name:'송하늘', job:'궁수', position:'원거리', row:'back', rank:'E', level:7,
@@ -1853,6 +1859,12 @@ const RARE_FAMILY_PRESETS = {
           damageType:'physical', attackStat:'agi',
           skills:['skill_haneul_reload','skill_haneul_powershot','skill_haneul_quickshot','skill_haneul_tripleshot'],
           threatBase:1,
+          inventory:{ gold:0, items:[], equipped:{
+            weapon:{ id:'eq_npc_haneul_weapon', name:'협회지급 활', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 활.' },
+            subweapon:{ id:'eq_npc_haneul_sub', name:'E급 조악한 장갑', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['반격'], durability:100, maxDurability:100, atk:0, pdef:0, mdef:0, mainStat:'', resistType:'', resistPct:0, price:300000, note:'E급 표준 장갑.' },
+            armor:{ id:'eq_npc_haneul_armor', name:'E급 투박한 기동조끼', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'leather', armorStatBonusMul:0.10, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:1, mdef:1, mainStat:'agi', resistType:'', resistPct:0, price:400000, note:'E급 표준 가죽갑.' },
+            accessory:null, bag:null
+          }},
           note:'고유 NPC. E급 궁수. 전탄회수/파워샷/퀵샷/트리플샷(성장형 직업스킬) 보유.\n장비: 협회지급 활, E급 조악한 장갑, E급 투박한 기동조끼.' }
       ],
       monsters: buildSampleMonsters(),
@@ -1934,8 +1946,8 @@ const RARE_FAMILY_PRESETS = {
       incomeLog: [],
       activityLog: [],    // [{ ts, actor, action, detail }] LLM 전달용 활동 로그
       guildTaxLog: [],
-      assocEquipClaimed: {},  // { [activeCharId]: true } — 협회지급 장비 무료 구매 기록
-      gateClearHistory: {},  // { [characterId/personaId]: { "E_small":count, "E_medium":count, ... } }
+      assocEquipClaimed: { 'char_yuna': true, 'char_haneul': true },  // { [activeCharId]: true } — 협회지급 장비 무료 구매 기록
+      gateClearHistory: { 'char_yuna': { 'E_small': 3 }, 'char_haneul': { 'E_small': 4 } },  // { [characterId/personaId]: { "E_small":count, "E_medium":count, ... } }
       rankUpHistory: {},     // { [characterId/personaId]: { lastAttempt: timestamp, result: 'success'|'fail', targetRank } }
       homeRegions: [],   // [{id, name, homes:[{id, name, area, houseType, deposit, monthlyRent, maintenanceFee, purchasePrice, brokerFee, desc, features:[], storages:[{id,name,type,maxSlots,maxWeightKg,items:[]}]}]}]
       ownedHomes: {},    // { [activeCharId]: [ { regionId, homeId, moveInDate:'2026-01-01', lastRentPaidMonth:'2026-01', rentLog:[{month,amount,paidDate}] }, ... ] }
@@ -2009,6 +2021,36 @@ const RARE_FAMILY_PRESETS = {
     if (!model.db.gameDate || typeof model.db.gameDate !== 'object') model.db.gameDate = { year:2026, month:1, day:1 };
     if (!model.db.battleSetup || typeof model.db.battleSetup !== 'object') {
       model.db.battleSetup = { partySlots: Array(MAX_PARTY).fill(''), enemySlots: Array(10).fill('') };
+    }
+
+    // 5) NPC 초기장비 보충 — inventory가 없는 기존 NPC에게 기본장비 자동 장착
+    const defaultNpcEquip = {};
+    for (const defChar of defaultChars) {
+      if (defChar.inventory && defChar.inventory.equipped) {
+        defaultNpcEquip[defChar.id] = defChar.inventory;
+      }
+    }
+    for (const [npcId, defInv] of Object.entries(defaultNpcEquip)) {
+      const npc = model.db.characters.find(c => c.id === npcId);
+      if (npc && (!npc.inventory || !npc.inventory.equipped || (!npc.inventory.equipped.weapon && !npc.inventory.equipped.armor && !npc.inventory.equipped.subweapon))) {
+        npc.inventory = deepClone(defInv);
+      }
+    }
+
+    // 6) NPC 게이트 클리어 기록 보충 — 초기 기록이 없으면 기본값 자동 삽입
+    const npcGateDefaults = defaults.gateClearHistory || {};
+    for (const [charId, gates] of Object.entries(npcGateDefaults)) {
+      if (!model.db.gateClearHistory[charId]) {
+        model.db.gateClearHistory[charId] = deepClone(gates);
+      }
+    }
+
+    // 7) NPC 협회장비 수령 기록 보충 — 초기장비에 협회지급 포함된 NPC 자동 등록
+    const npcAssocDefaults = defaults.assocEquipClaimed || {};
+    for (const [charId, claimed] of Object.entries(npcAssocDefaults)) {
+      if (!model.db.assocEquipClaimed[charId]) {
+        model.db.assocEquipClaimed[charId] = claimed;
+      }
     }
   }
 
@@ -5201,7 +5243,7 @@ function renderGateRunPanel(run) {
               const sk = skillMap[sId];
               if (!sk) return `<div class="gb-sub" style="padding:1px 0;font-size:11px;">• ${escapeHtml(sId)}</div>`;
               const costStr = sk.costs ? [sk.costs.mp ? 'MP:'+sk.costs.mp : '', sk.costs.sp ? 'SP:'+sk.costs.sp : ''].filter(Boolean).join('/') : '';
-              const coefStr = sk.coef != null ? '계수:' + sk.coef : '';
+              const coefStr = sk.coef != null ? (sk.growth && Number(sk.coef) === 0 ? '계수:자동(성장형)' : '계수:' + sk.coef) : '';
               const cat = catLabel[sk.category] || sk.category;
               return `<div class="gb-sub" style="padding:1px 0;font-size:11px;">• <strong>${escapeHtml(sk.name)}</strong> <span class="gb-badge" style="font-size:9px;">${cat}</span>${coefStr ? ' <span class="gb-badge" style="font-size:9px;">'+coefStr+'</span>' : ''}${costStr ? ' <span style="font-size:10px;color:#94a3b8;">['+costStr+']</span>' : ''}${sk.desc ? ' — '+escapeHtml(sk.desc) : ''}</div>`;
             }).join('') || '<div class="gb-sub" style="font-size:11px;">스킬 없음</div>';
@@ -5221,8 +5263,7 @@ function renderGateRunPanel(run) {
                 const sk = skillMap[sId];
                 if (!sk) return '<div class="gb-sub" style="padding:1px 0;font-size:11px;">• ' + escapeHtml(sId) + '</div>';
                 const costStr = sk.costs ? [sk.costs.mp ? 'MP:'+sk.costs.mp : '', sk.costs.sp ? 'SP:'+sk.costs.sp : ''].filter(Boolean).join('/') : '';
-                const coefStr = sk.coef != null ? '계수:' + sk.coef : '';
-                const cat = catLabel[sk.category] || sk.category;
+                const coefStr = sk.coef != null ? (sk.growth && Number(sk.coef) === 0 ? '계수:자동(성장형)' : '계수:' + sk.coef) : '';                const cat = catLabel[sk.category] || sk.category;
                 return '<div class="gb-sub" style="padding:1px 0;font-size:11px;">• <strong>' + escapeHtml(sk.name) + '</strong> <span class="gb-badge" style="font-size:9px;">' + cat + '</span>' + (coefStr ? ' <span class="gb-badge" style="font-size:9px;">'+coefStr+'</span>' : '') + (costStr ? ' <span style="font-size:10px;color:#94a3b8;">['+costStr+']</span>' : '') + (sk.desc ? ' — '+escapeHtml(sk.desc) : '') + '</div>';
               }).join('') || '<div class="gb-sub" style="font-size:11px;">스킬 없음</div>'}
               ${equipHtml}
@@ -9817,7 +9858,7 @@ function renderPartyView() {
         const sk = getAllSkillMap()[s];
         if (!sk) return escapeHtml(s);
         const costStr = sk.costs ? [sk.costs.mp ? `MP:${sk.costs.mp}` : '', sk.costs.sp ? `SP:${sk.costs.sp}` : ''].filter(Boolean).join('/') : '';
-        const coefStr = sk.coef ? `계수:${sk.coef}` : '';
+        const coefStr = (sk.growth && Number(sk.coef || 0) === 0) ? `계수:자동(성장형)` : (sk.coef ? `계수:${sk.coef}` : '');
         const catLabel = { singleAttack:'단일공격', aoeAttack:'광역공격', singleCC:'단일CC', aoeCC:'광역CC', buff:'버프', singleHeal:'힐', aoeHeal:'광역힐', passive:'패시브', utility:'유틸' }[sk.category] || sk.category;
         const tooltip = [catLabel, coefStr, costStr, sk.desc || ''].filter(Boolean).join(' | ');
         return `<span class="gb-skill-tag" title="${escapeHtml(tooltip)}" style="cursor:help;border-bottom:1px dashed rgba(148,163,184,0.4);">${escapeHtml(sk.name)}</span>`;
@@ -9941,7 +9982,7 @@ function renderCharacterView() {
       const sk = skillMap[sId];
       if (!sk) return `<div class="gb-sub" style="padding:2px 0;">• ${escapeHtml(sId)}</div>`;
       const costStr = sk.costs ? [sk.costs.mp ? `MP:${sk.costs.mp}` : '', sk.costs.sp ? `SP:${sk.costs.sp}` : ''].filter(Boolean).join(' / ') : '비용 없음';
-      const coefStr = sk.coef != null ? `계수: ${sk.coef}` : '';
+      const coefStr = sk.coef != null ? (sk.growth && Number(sk.coef) === 0 ? `계수: 자동(성장형)` : `계수: ${sk.coef}`) : '';
       const catLabel = { singleAttack:'단일공격', aoeAttack:'광역공격', singleCC:'단일CC', aoeCC:'광역CC', buff:'버프', singleHeal:'힐', aoeHeal:'광역힐', passive:'패시브', utility:'유틸' }[sk.category] || sk.category;
       const elemStr = sk.element && sk.element !== 'none' ? `속성:${sk.element}` : '';
       const dmgTypeStr = sk.damageType ? `타입:${sk.damageType}` : '';
@@ -10830,7 +10871,7 @@ function renderCommandPanel(runtime) {
       if (costs.mp) costParts.push('MP:' + costs.mp);
       if (costs.sp) costParts.push('SP:' + costs.sp);
       const costStr = costParts.length ? costParts.join(' / ') : '';
-      const coefStr = sk.coef != null ? '계수:' + sk.coef : (sk.baseSingleCoef != null ? '기본계수:' + sk.baseSingleCoef + ' (광역CC→½)' : '');
+      const coefStr = sk.coef != null ? (sk.growth && Number(sk.coef) === 0 ? '계수:자동(성장형)' : '계수:' + sk.coef) : (sk.baseSingleCoef != null ? '기본계수:' + sk.baseSingleCoef + ' (광역CC→½)' : '');
       const byRankStr = sk.byRank ? Object.entries(sk.byRank).map(([g, v]) => {
         const parts = [];
         if (v.coef != null) parts.push('계수:' + v.coef);
