@@ -2692,6 +2692,9 @@ function flushExpToDb(runtime) {
     if (!charEntry) return;
     const r = applyExpToCharacter(charEntry, totalExp);
     results.push({ name: charEntry.name, exp: totalExp, ...r });
+    if (r.levelsGained > 0) {
+      pushActivityLog(charEntry.name, '레벨업', `Lv${r.oldLevel} → Lv${r.newLevel} (+${r.levelsGained}레벨) / EXP +${totalExp}`);
+    }
   });
   return results;
 }
@@ -4281,6 +4284,11 @@ function advanceGateRunAfterMainRoom(run, stageIndex, room) {
     // 게이트 완료 시에도 현재 HP 상태를 캐릭터 DB에 저장
     syncPartyHpToDb(run);
     pushGateLog(run, '게이트의 마지막 방을 넘었다.');
+    // 활동 로그에 게이트 클리어 기록
+    {
+      const _partyNames = (run.partyState || []).map(u => u.name || '?').join(', ');
+      pushActivityLog(_partyNames || '파티', '게이트 클리어', `${run.title || '게이트'} [${run.rank}/${run.sizeLabel || run.size}] 클리어 / 파티: ${_partyNames}`);
+    }
     // 게이트 클리어 횟수 기록 (캐릭터/페르소나별)
     const gateKey = `${run.rank}_${run.size}`;
     if (!model.db.gateClearHistory) model.db.gateClearHistory = {};
@@ -4870,6 +4878,10 @@ function resolveGateBattleAftermath(victory) {
     run.postBattle = null;
     run.pendingBattleRoomId = '';
     pushGateLog(run, `게이트 실패: ${roomDisplayLabel(room, true)} 방에서 패퇴. 생존자 HP/MP/SP → 1`);
+    {
+      const _partyNames = (run.partyState || []).map(u => u.name || '?').join(', ');
+      pushActivityLog(_partyNames || '파티', '게이트 실패', `${run.title || '게이트'} [${run.rank}/${run.sizeLabel || run.size}] — ${roomDisplayLabel(room, true)} 방에서 전멸 / 파티: ${_partyNames}`);
+    }
     model.state.view = 'gate';
     model.state.runtime = buildDefaultRuntime();
     return;
@@ -4894,6 +4906,12 @@ function resolveGateBattleAftermath(victory) {
   });
   // 승리 라인은 보상 텍스트 없이 단독으로 출력한다 (중복/이중집계 방지).
   pushGateLog(run, `${roomDisplayLabel(room, true)} 방 승리`);
+  {
+    const _aliveNames = getAlive(rt.party).map(u => u.name || '?');
+    const _deadNames = (rt.party || []).filter(u => u.dead).map(u => u.name || '?');
+    const _rewardSummary = (room.rewardLines || []).slice(0, 3).join(', ');
+    pushActivityLog(_aliveNames[0] || '파티', '전투 승리', `${run.title || '게이트'} ${roomDisplayLabel(room, true)} 방 클리어 / 생존: ${_aliveNames.join(', ')}${_deadNames.length ? ' / 사망: ' + _deadNames.join(', ') : ''}${_rewardSummary ? ' / 보상: ' + _rewardSummary : ''}`);
+  }
   run.pendingBattleRoomId = '';
   run.postBattle = {
     roomId: room.id,
@@ -5045,6 +5063,11 @@ function retreatFromGateRun(run) {
   run.postBattle = null;
   run.pendingBattleRoomId = '';
   pushGateLog(run, '게이트에서 후퇴했다.');
+  {
+    const _partyNames = (run.partyState || []).map(u => u.name || '?').join(', ');
+    const _stage = `${run.currentStage + 1}/${run.stages ? run.stages.length : '?'}`;
+    pushActivityLog(_partyNames || '파티', '게이트 후퇴', `${run.title || '게이트'} [${run.rank}/${run.sizeLabel || run.size}] ${_stage}단계에서 후퇴 / 파티: ${_partyNames}`);
+  }
   // 게이트 진행 상태를 완전히 해제하여 후퇴 후 즉시 게이트에서 나올 수 있게 함
   const gs = gateStateSafe();
   gs.run = null;
@@ -12534,7 +12557,12 @@ async function saveMaterialTraitFromForm() {
     });
     // ── 캐릭터 선택 핸들러 ────────────────────────────────────────────────────
     on('#gb-active-char', 'change', async (ev) => {
+      const prevLabel = getActiveLabel();
       model.state.activeCharId = ev.currentTarget.value || '';
+      const newLabel = getActiveLabel();
+      if (prevLabel !== newLabel) {
+        pushActivityLog(newLabel, '캐릭터 전환', `${prevLabel} → ${newLabel}`);
+      }
       await saveState(); renderApp();
     });
     // ── 팀 핸들러 ────────────────────────────────────────────────────────────────
@@ -12791,6 +12819,7 @@ async function saveMaterialTraitFromForm() {
         model.state.auctionBid = null;
         await saveDb(); await saveState(); renderApp();
         const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`; };
+        pushActivityLog(getActiveLabel(), '경매 낙찰', `${buyItem.name} [${buyItem.rank || '?'}/${buyItem.part || buyItem.category || '?'}] — ₩${fmt(bidState.finalPrice)} 지불`);
         toast(`🏷️ ${buyItem.name} 낙찰! (-${fmt(bidState.finalPrice)})`);
       } catch(e) { toast(e.message || String(e), true); }
     });
@@ -12842,6 +12871,7 @@ async function saveMaterialTraitFromForm() {
         model.state.auctionSell = null;
         await saveDb(); await saveState(); renderApp();
         const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`; };
+        pushActivityLog(getActiveLabel(), '경매 판매', `${sellState.itemName || '아이템'} — ₩${fmt(sellState.finalPrice)} 수익`);
         toast(`💰 ${escapeHtml(sellState.itemName)} 판매 완료! +${fmt(sellState.finalPrice)}`);
       } catch(e) { toast(e.message || String(e), true); }
     });
@@ -14419,7 +14449,15 @@ async function saveMaterialTraitFromForm() {
         model.state.gateRunTab = 'main';
         await saveState();
         renderApp();
-        pushActivityLog(getActiveLabel(), '게이트 진입', `${gs.run ? (gs.run.title || '게이트') : '게이트'} [${gs.run ? gs.run.rank : '?'}/${gs.run ? (gs.run.sizeLabel || gs.run.size || '?') : '?'}] 진입 / 파티: ${gs.run && gs.run.partyState ? gs.run.partyState.map(u => u.name || '?').join(', ') : '?'}`);
+        {
+          const _run = gs.run;
+          const _title = _run ? (_run.title || '게이트') : '게이트';
+          const _rank = _run ? _run.rank : '?';
+          const _size = _run ? (_run.sizeLabel || _run.size || '?') : '?';
+          const _party = _run && _run.partyState ? _run.partyState.map(u => `${u.name||'?'}(Lv${u.level||'?'})`).join(', ') : '?';
+          const _teamInfo = Array.isArray(model.db.team) && model.db.team.length ? ` / 팀: ${model.db.team.map(m => { const n = getLabelForCharKey(m.charId); return `${n}(${m.ratio}%)`; }).join(', ')}` : '';
+          pushActivityLog(getActiveLabel(), '게이트 진입', `${_title} [${_rank}/${_size}] 진입 / 파티: ${_party}${_teamInfo}`);
+        }
         toast('게이트에 진입했다.');
       } catch (e) { toast(e.message || String(e), true); }
     });
@@ -14640,7 +14678,7 @@ async function saveMaterialTraitFromForm() {
         buildBattleFromSetup();
         await saveDb(); await saveState();
         renderApp();
-        { const _ps = (model.state.runtime && model.state.runtime.party) || []; const _es = (model.state.runtime && model.state.runtime.enemies) || []; pushActivityLog('파티', '전투 시작', `파티원: ${_ps.map(u => u.name || '?').join(', ') || '?'} vs 적: ${_es.map(u => u.name || '?').join(', ') || '?'}`); }
+        { const _ps = (model.state.runtime && model.state.runtime.party) || []; const _es = (model.state.runtime && model.state.runtime.enemies) || []; pushActivityLog(_ps.map(u=>u.name||'?').join(', ') || '파티', '전투 시작', `파티원: ${_ps.map(u => `${u.name||'?'}(Lv${u.level||'?'})`).join(', ') || '?'} vs 적: ${_es.map(u => `${u.name||'?'}(Lv${u.level||'?'})`).join(', ') || '?'}`); }
       } catch (e) { toast(e.message || String(e), true); }
     });
 
