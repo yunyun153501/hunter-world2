@@ -1794,6 +1794,7 @@ const RARE_FAMILY_PRESETS = {
         items.push({
           id: `eq_${rank.toLowerCase()}_weapon_${String(++idx).padStart(2,'0')}`,
           name: `${prefix} ${suff}`,
+          category: 'equipment',
           part: 'weapon', rank, rarity: 'Normal',
           enhance: 0, infuse: 0, maxInfuse: 2, traits: [],
           durability: 100, maxDurability: 100,
@@ -1815,6 +1816,7 @@ const RARE_FAMILY_PRESETS = {
         items.push({
           id: `eq_${rank.toLowerCase()}_subweapon_${String(++idx).padStart(2,'0')}`,
           name: `${prefix} ${suff}`,
+          category: 'equipment',
           part: 'subweapon', rank, rarity: 'Normal',
           enhance: 0, infuse: 0, maxInfuse: 2, traits: [subTrait],
           durability: 100, maxDurability: 100,
@@ -1839,6 +1841,7 @@ const RARE_FAMILY_PRESETS = {
           items.push({
             id: `eq_${rank.toLowerCase()}_armor_${subKey}_${String(++idx).padStart(2,'0')}`,
             name: `${prefix} ${suff}`,
+            category: 'equipment',
             part: 'armor', rank, rarity: 'Normal',
             armorSubtype: subKey, armorStatBonusMul: sub.statBonusMul,
             enhance: 0, infuse: 0, maxInfuse: 2, traits: [],
@@ -1861,6 +1864,7 @@ const RARE_FAMILY_PRESETS = {
         items.push({
           id: `eq_${rank.toLowerCase()}_acc_${String(++idx).padStart(2,'0')}`,
           name: `${prefix} ${suff}`,
+          category: 'equipment',
           part: 'accessory', rank, rarity: 'Normal',
           enhance: 0, infuse: 0, maxInfuse: 1, traits: [accTrait],
           durability: 100, maxDurability: 100,
@@ -2462,6 +2466,18 @@ function buildDefaultState() {
       ['str','con','int','agi','sense'].forEach(k => {
         if (eqBonus[k]) unit.stats[k] = (unit.stats[k] || 0) + eqBonus[k];
       });
+    }
+    // 스탯 보너스(특성+장비) 적용 후 HP/MP/SP 재계산
+    if (!isMonster) {
+      const st = unit.stats;
+      const lv = lvlBonus;
+      const newMaxHp = 100 + (st.con - 10) * 10 + (st.str - 10) * 3 + lv;
+      const newMaxMp = 100 + (st.int - 10) * 10 + (st.sense - 10) * 3 + lv;
+      const newMaxSp = 100 + (st.agi - 10) * 10 + (st.sense - 10) * 3 + lv;
+      if (newMaxHp !== unit.maxHp) { unit.hp = Math.min(newMaxHp, unit.hp + (newMaxHp - unit.maxHp)); unit.maxHp = newMaxHp; }
+      if (newMaxMp !== unit.maxMp) { unit.mp = Math.min(newMaxMp, unit.mp + (newMaxMp - unit.maxMp)); unit.maxMp = newMaxMp; }
+      if (newMaxSp !== unit.maxSp) { unit.sp = Math.min(newMaxSp, unit.sp + (newMaxSp - unit.maxSp)); unit.maxSp = newMaxSp; }
+      unit.atk = Number(calcUnitAtk(entry, st));
     }
     return unit;
   }
