@@ -1859,6 +1859,7 @@ const RARE_FAMILY_PRESETS = {
       customGuildName: '',
       customGuildDesc: '',
       incomeLog: [],
+      activityLog: [],    // [{ ts, actor, action, detail }] LLM 전달용 활동 로그
       guildTaxLog: [],
       assocEquipClaimed: {},  // { [activeCharId]: true } — 협회지급 장비 무료 구매 기록
       gateClearHistory: {},  // { [characterId/personaId]: { "E_small":count, "E_medium":count, ... } }
@@ -1937,9 +1938,21 @@ function buildDefaultState() {
     gatePartyDetailId: '',  // 게이트 파티탭 상세보기 선택 유닛 uid
     teamView: 'members',   // 'members' | 'settle'
     settleItemSel: {},     // { key: true/false } 판매할 아이템 선택
-    settleDistMode: 'equal' // 'equal' | 'ratio'
+    settleDistMode: 'equal', // 'equal' | 'ratio'
+    logFilter: '',        // activity log search filter
+    logEntityFilter: '',  // activity log entity filter
   };
 }
+
+  // ── 활동 로그 ──────────────────────────────────────────────────────────────
+  function pushActivityLog(actor, action, detail) {
+    if (!Array.isArray(model.db.activityLog)) model.db.activityLog = [];
+    const gd = model.db.gameDate || { year:2026, month:1, day:1 };
+    const ts = `${gd.year}-${String(gd.month).padStart(2,'0')}-${String(gd.day).padStart(2,'0')}`;
+    model.db.activityLog.push({ ts, actor: actor || '시스템', action: action || '', detail: detail || '' });
+    // 최대 500건 유지
+    if (model.db.activityLog.length > 500) model.db.activityLog = model.db.activityLog.slice(-500);
+  }
 
   const model = {
     db: buildDefaultDb(),
@@ -7692,23 +7705,44 @@ function renderAssociationView() {
         </div>` : ''}
       </div>`;
 
-    // ── 소득 기록 로그 ─────────────────────────────────────────────────────────
+    // ── 소득 기록 로그 (엔티티별 접기/펼치기) ─────────────────────────────────
     const incomeLog = Array.isArray(model.db.incomeLog) ? model.db.incomeLog : [];
-    const incomeLogHtml = incomeLog.length
-      ? incomeLog.slice().reverse().map((r, idx) => {
-          const isGuildEntry = r.type === 'guild';
-          return `<div class="gb-unit" style="border-bottom:1px solid rgba(148,163,184,0.1);padding-bottom:6px;margin-bottom:6px;">
-            <div class="gb-unit-top">
-              <div>
-                <strong>${escapeHtml(r.date || '날짜 미입력')}</strong>
-                <span class="gb-badge">${isGuildEntry ? '길드' : '협회'}</span>
-                <span class="gb-sub"> — ${escapeHtml(r.runTitle || '?')}</span>
-                ${r.participant ? `<span class="gb-sub"> / <strong>${escapeHtml(r.participant)}</strong>${r.ratio ? ` ${r.ratio}%` : ''}</span>` : ''}
+    // 엔티티별 그룹핑
+    const incomeByEntity = {};
+    incomeLog.forEach((r, idx) => {
+      const key = r.charKey || '__unknown__';
+      if (!incomeByEntity[key]) incomeByEntity[key] = [];
+      incomeByEntity[key].push({ ...r, _idx: idx });
+    });
+    const entityKeys = Object.keys(incomeByEntity);
+    if (!model.state._incomeEntityOpen) model.state._incomeEntityOpen = {};
+    const incomeLogHtml = entityKeys.length
+      ? entityKeys.map(key => {
+          const recs = incomeByEntity[key];
+          const label = getLabelForCharKey(key) || key;
+          const isOpen = !!model.state._incomeEntityOpen[key];
+          const entityTotal = recs.reduce((s, r) => s + Number(r.final || 0), 0);
+          const rows = recs.slice().reverse().map((r) => {
+            const isGuildEntry = r.type === 'guild';
+            return `<div class="gb-unit" style="border-bottom:1px solid rgba(148,163,184,0.1);padding-bottom:6px;margin-bottom:6px;">
+              <div class="gb-unit-top">
+                <div>
+                  <strong>${escapeHtml(r.date || '날짜 미입력')}</strong>
+                  <span class="gb-badge">${isGuildEntry ? '길드' : '협회'}</span>
+                  <span class="gb-sub"> — ${escapeHtml(r.runTitle || '?')}</span>
+                  ${r.participant ? `<span class="gb-sub"> / <strong>${escapeHtml(r.participant)}</strong>${r.ratio ? ` ${r.ratio}%` : ''}</span>` : ''}
+                </div>
+                <button class="gb-btn tiny danger" data-income-log-del="${r._idx}">삭제</button>
               </div>
-              <button class="gb-btn tiny danger" data-income-log-del="${incomeLog.length - 1 - idx}">삭제</button>
+              <div class="gb-sub">총합 ₩${formatWon(r.gross)} / ${isGuildEntry ? `법인세 ₩${formatWon(r.corpTax||0)}` : `수수료 ₩${formatWon(r.fee||0)}`} / 지급액 <strong style="color:#fbbf24;">₩${formatWon(r.final||0)}</strong></div>
+              ${isGuildEntry && r.guildShare ? `<div class="gb-sub">길드 공금 적립 ₩${formatWon(r.guildShare)}</div>` : ''}
+            </div>`;
+          }).join('');
+          return `<div style="margin-bottom:4px;">
+            <div class="gb-section-title" style="cursor:pointer;font-size:13px;padding:4px 0;" data-income-entity-toggle="${escapeHtml(key)}">
+              ${isOpen ? '▲' : '▼'} <strong>${escapeHtml(label)}</strong> — ${recs.length}건 / 합계 ₩${formatWon(entityTotal)}
             </div>
-            <div class="gb-sub">총합 ₩${formatWon(r.gross)} / ${isGuildEntry ? `법인세 ₩${formatWon(r.corpTax||0)}` : `수수료 ₩${formatWon(r.fee||0)}`} / 지급액 <strong style="color:#fbbf24;">₩${formatWon(r.final||0)}</strong></div>
-            ${isGuildEntry && r.guildShare ? `<div class="gb-sub">길드 공금 적립 ₩${formatWon(r.guildShare)}</div>` : ''}
+            ${isOpen ? rows : ''}
           </div>`;
         }).join('')
       : '<div class="gb-sub">— 기록된 정산 내역이 없다. 정산 시 날짜를 입력하면 자동 기록됨. —</div>';
@@ -7718,7 +7752,7 @@ function renderAssociationView() {
         <div class="gb-section-title" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" id="gb-income-log-toggle">
           📜 소득 기록 (세금 신고용) <span style="font-size:12px;">${st.incomeLogOpen ? '▲ 접기' : '▼ 펼치기'} (${incomeLog.length}건)</span>
         </div>
-        <div class="gb-sub" style="margin-bottom:6px;">협회 및 길드 정산 이력 (페르소나 전용). 개인 소득세 신고 참고용. 블랙마켓 거래는 기록되지 않는다.</div>
+        <div class="gb-sub" style="margin-bottom:6px;">협회 및 길드 정산 이력. 엔티티별 접기/펼치기 가능. 소득세 신고 참고용.</div>
         ${st.incomeLogOpen ? incomeLogHtml : ''}
       </div>`;
 
@@ -7749,8 +7783,9 @@ function renderAssociationView() {
     const totalDue = prevMonthTax + overdueInterest;
 
     // 납부 상태 표시
-    const isPersonaActive = (model.state.activeCharId || '').startsWith('persona:');
-    const personaGold = isPersonaActive ? Number(getActiveInventory().gold || 0) : 0;
+    const activeCharId = model.state.activeCharId || '';
+    const isEntityActive = activeCharId.startsWith('persona:') || activeCharId.startsWith('char:');
+    const entityGold = isEntityActive ? Number(getActiveInventory().gold || 0) : 0;
     let payStatusHtml = '';
     if (prevMonthRecords.length === 0) {
       payStatusHtml = `<div class="gb-sub" style="color:#22c55e;margin-top:6px;">✅ ${prevMonthStr} 소득 기록 없음 — 납부 불필요</div>`;
@@ -7759,10 +7794,10 @@ function renderAssociationView() {
         <div class="gb-sub" style="color:#fbbf24;font-weight:700;margin-top:6px;">⏳ 납부 기한 내 (${curMonthStr} 1~10일)</div>
         <div class="gb-sub">${prevMonthStr} 소득 ${prevMonthRecords.length}건 / 총 지급액 ₩${formatWon(prevMonthTotal)}</div>
         <div class="gb-sub" style="font-weight:700;">납부할 소득세: ₩${formatWon(prevMonthTax)}</div>
-        ${isPersonaActive
-          ? `<div class="gb-sub">💰 ${getActiveLabel()} 소지금: ₩${formatWon(personaGold)}${personaGold < prevMonthTax ? ' <span style="color:#ef4444;">(부족!)</span>' : ''}</div>
+        ${isEntityActive
+          ? `<div class="gb-sub">💰 ${getActiveLabel()} 소지금: ₩${formatWon(entityGold)}${entityGold < prevMonthTax ? ' <span style="color:#ef4444;">(부족!)</span>' : ''}</div>
              <button class="gb-btn primary" id="gb-tax-pay-confirm" style="margin-top:6px;">✅ ${prevMonthStr} 소득세 납부 (₩${formatWon(prevMonthTax)} 차감)</button>`
-          : `<div class="gb-sub" style="color:#ef4444;">⚠️ 세금은 페르소나만 납부 가능 — 페르소나를 선택하세요</div>`}`;
+          : `<div class="gb-sub" style="color:#ef4444;">⚠️ 캐릭터 또는 페르소나를 선택하세요</div>`}`;
     } else if (isOverdue && prevMonthRecords.length > 0) {
       payStatusHtml = `
         <div class="gb-sub" style="color:#ef4444;font-weight:700;margin-top:6px;">🚨 연체! 납부 기한 초과 (${overdueDays}일 경과)</div>
@@ -7770,10 +7805,10 @@ function renderAssociationView() {
         <div class="gb-sub" style="font-weight:700;">원래 소득세: ₩${formatWon(prevMonthTax)}</div>
         <div class="gb-sub" style="color:#ef4444;font-weight:700;">연체 이자 (연 9.9%, ${overdueDays}일): ₩${formatWon(overdueInterest)}</div>
         <div class="gb-sub" style="color:#ef4444;font-weight:900;font-size:15px;">총 납부액: ₩${formatWon(totalDue)}</div>
-        ${isPersonaActive
-          ? `<div class="gb-sub">💰 ${getActiveLabel()} 소지금: ₩${formatWon(personaGold)}${personaGold < totalDue ? ' <span style="color:#ef4444;">(부족!)</span>' : ''}</div>
+        ${isEntityActive
+          ? `<div class="gb-sub">💰 ${getActiveLabel()} 소지금: ₩${formatWon(entityGold)}${entityGold < totalDue ? ' <span style="color:#ef4444;">(부족!)</span>' : ''}</div>
              <button class="gb-btn danger" id="gb-tax-pay-confirm" style="margin-top:6px;">💸 ${prevMonthStr} 연체 소득세 납부 (₩${formatWon(totalDue)} 차감)</button>`
-          : `<div class="gb-sub" style="color:#ef4444;">⚠️ 세금은 페르소나만 납부 가능 — 페르소나를 선택하세요</div>`}`;
+          : `<div class="gb-sub" style="color:#ef4444;">⚠️ 캐릭터 또는 페르소나를 선택하세요</div>`}`;
     }
     // 현재달 기록은 납부 불가 안내
     const curMonthRecords = incomeLogAll.filter(r => (r.date || '').startsWith(curMonthStr));
@@ -11164,6 +11199,49 @@ function renderDateCharBar() {
     </div>`;
 }
 
+// ── 활동 로그 뷰 ──────────────────────────────────────────────────────────
+function renderLogView() {
+  const st = model.state;
+  const logs = Array.isArray(model.db.activityLog) ? model.db.activityLog : [];
+  const filter = (st.logFilter || '').toLowerCase();
+  const entityFilter = st.logEntityFilter || '';
+  // 엔티티 목록 생성
+  const entitySet = new Set();
+  logs.forEach(l => { if (l.actor) entitySet.add(l.actor); });
+  const entities = [...entitySet].sort();
+  // 필터 적용
+  const filtered = logs.filter(l => {
+    if (entityFilter && l.actor !== entityFilter) return false;
+    if (filter && !`${l.ts} ${l.actor} ${l.action} ${l.detail}`.toLowerCase().includes(filter)) return false;
+    return true;
+  });
+  const reversed = filtered.slice().reverse();
+  const logRows = reversed.length
+    ? reversed.map(l => `<div style="padding:4px 0;border-bottom:1px solid rgba(148,163,184,0.08);font-size:12px;"><span style="color:#64748b;">[${escapeHtml(l.ts)}]</span> <strong>${escapeHtml(l.actor)}</strong> — <span style="color:#fbbf24;">${escapeHtml(l.action)}</span>${l.detail ? ` — ${escapeHtml(l.detail)}` : ''}</div>`).join('')
+    : '<div class="gb-sub">— 아직 기록된 활동 로그가 없다. —</div>';
+  // 복사용 텍스트 생성
+  const copyText = reversed.map(l => `[${l.ts}] ${l.actor} — ${l.action}${l.detail ? ' — ' + l.detail : ''}`).join('\n');
+  return `
+    <div class="gb-panel">
+      <div class="gb-section-title">📋 활동 로그 (LLM 전달용)</div>
+      <div class="gb-sub" style="margin-bottom:8px;">페르소나/캐릭터의 행동 기록. 복사하여 LLM에 전달하면 이야기를 이어갈 수 있다.</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+        <input class="gb-input" id="gb-log-filter" type="text" placeholder="검색..." value="${escapeHtml(filter)}" style="flex:1;min-width:120px;">
+        <select class="gb-input" id="gb-log-entity-filter" style="max-width:180px;">
+          <option value="">전체 엔티티</option>
+          ${entities.map(e => `<option value="${escapeHtml(e)}" ${entityFilter===e?'selected':''}>${escapeHtml(e)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="gb-btn-row" style="margin-bottom:8px;">
+        <button class="gb-btn primary" id="gb-log-copy">📋 전체 복사 (${filtered.length}건)</button>
+        <button class="gb-btn danger" id="gb-log-clear">🗑️ 로그 전체 삭제</button>
+      </div>
+      <div class="gb-sub" style="margin-bottom:4px;">총 ${filtered.length}건${filter || entityFilter ? ` (전체 ${logs.length}건 중 필터)` : ''}</div>
+      <div class="gb-log" style="max-height:500px;overflow-y:auto;">${logRows}</div>
+    </div>
+    <textarea id="gb-log-copy-area" style="position:absolute;left:-9999px;">${escapeHtml(copyText)}</textarea>`;
+}
+
 function renderApp() {
   ensureSelections();
   const root = model.root || document.getElementById(UI_ID);
@@ -11188,6 +11266,7 @@ function renderApp() {
   else if (view === 'shop')        body = renderShopView();
   else if (view === 'home')        body = renderHomeView();
   else if (view === 'guild')       body = renderGuildView();
+  else if (view === 'log')         body = renderLogView();
   else                             body = renderDbView();
   if (gateImmersive) {
     root.innerHTML = `
@@ -11201,9 +11280,10 @@ function renderApp() {
         <div class="gb-header">
           <div>
             <div class="gb-title">⚔️ Gate Battle Prototype v7.4</div>
-            <div class="gb-sub">허브 · 게이트 · 전투 · 파티 · 캐릭터 · 공용인벤 · DB</div>
+            <div class="gb-sub">로그 · 허브 · 게이트 · 전투 · 파티 · 캐릭터 · 공용인벤 · DB</div>
           </div>
           <div style="display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap;">
+            <button class="gb-btn ${view==='log'?'primary':''}" data-go="log">📋 로그</button>
             <button class="gb-btn ${view==='hub'?'primary':''}" data-go="hub">허브</button>
             <button class="gb-btn ${view==='gate'?'primary':''}" data-go="gate">게이트</button>
             <button class="gb-btn ${view==='battle'?'primary':''}" data-go="battle">전투</button>
@@ -11841,7 +11921,7 @@ async function saveMaterialTraitFromForm() {
       const target = ev.currentTarget.getAttribute('data-go');
       // 게이트 진행 중에는 gate/battle/party/hub 외 다른 화면 이동 차단
       if (activeGateRun()) {
-        const allowed = ['gate', 'battle', 'party', 'hub'];
+        const allowed = ['gate', 'battle', 'party', 'hub', 'log'];
         if (!allowed.includes(target)) {
           alert('⚠️ 게이트 진행 중에는 다른 화면으로 이동할 수 없습니다. 후퇴하거나 클리어 후 이용해 주세요.');
           return;
@@ -12335,7 +12415,7 @@ async function saveMaterialTraitFromForm() {
           const inv = getInventory();
           inv.gold = (Number(inv.gold || 0)) + goldGain;
         }
-        // Write income log entry (페르소나 전용 — 페르소나 선택 시에만 소득 기록)
+        // Write income log entry (페르소나/캐릭터 모두 기록)
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
         const isGuildSettle = (st.settleType || 'association') === 'guild';
         const guildName = isGuildSettle
@@ -12344,23 +12424,24 @@ async function saveMaterialTraitFromForm() {
               : ((PRESET_GUILDS.find(g => g.id === model.db.guildId) || {}).name || '길드'))
           : '';
         const _settleActiveId = model.state.activeCharId || '';
-        if (_settleActiveId.startsWith('persona:')) {
-          const _settlePersona = (model.db.personas || []).find(p => p.id === _settleActiveId.substring(8));
-          model.db.incomeLog.push({
-            date:       dateVal || '날짜 미입력',
-            runTitle:   runTitle,
-            gross:      result ? result.subtotal : 0,
-            fee:        result ? result.fee : 0,
-            corpTax:    isGuildSettle ? (result ? result.fee : 0) : 0,
-            net:        result ? result.net : 0,
-            perPerson:  result ? result.perPerson : 0,
-            guildShare: result ? (result.guildShare || 0) : 0,
-            final:      goldGain,
-            type:       isGuildSettle ? 'guild' : 'association',
-            guildName:  guildName,
-            participant: _settlePersona ? (_settlePersona.name || _settlePersona.id) : '페르소나',
-          });
-        }
+        const _settleChar = getActiveCharacter();
+        const _settleCharName = _settleChar ? (_settleChar.name || _settleActiveId) : '공용';
+        model.db.incomeLog.push({
+          date:       dateVal || '날짜 미입력',
+          charKey:    _settleActiveId,
+          runTitle:   runTitle,
+          gross:      result ? result.subtotal : 0,
+          fee:        result ? result.fee : 0,
+          corpTax:    isGuildSettle ? (result ? result.fee : 0) : 0,
+          net:        result ? result.net : 0,
+          perPerson:  result ? result.perPerson : 0,
+          guildShare: result ? (result.guildShare || 0) : 0,
+          final:      goldGain,
+          type:       isGuildSettle ? 'guild' : 'association',
+          guildName:  guildName,
+          participant: _settleCharName,
+        });
+        pushActivityLog(_settleCharName, '게이트 정산', `${runTitle} — ₩${formatWon(goldGain)} 획득`);
         // Write guild tax log for guild settlements
         if (isGuildSettle) {
           if (!Array.isArray(model.db.guildTaxLog)) model.db.guildTaxLog = [];
@@ -12480,14 +12561,13 @@ async function saveMaterialTraitFromForm() {
         const net = total - fee;
         inv.gold = Number(inv.gold||0) + net;
         model.state.settleItemSel = {};
-        // 소득 기록 — 페르소나 전용 (페르소나 선택 시에만 기록)
+        // 소득 기록 (페르소나/캐릭터 모두 기록)
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
         const _directSellActiveId = model.state.activeCharId || '';
-        if (_directSellActiveId.startsWith('persona:')) {
-          const _dsPersona = (model.db.personas || []).find(p => p.id === _directSellActiveId.substring(8));
-          const _participantName = _dsPersona ? (_dsPersona.name || _dsPersona.id) : '페르소나';
-          model.db.incomeLog.push({ date: dateVal||'날짜 미입력', runTitle: '직접 판매', gross: total, fee, net, perPerson: net, final: net, type: isGuild ? 'guild' : 'association', participant: _participantName });
-        }
+        const _dsChar = getActiveCharacter();
+        const _participantName = _dsChar ? (_dsChar.name || _directSellActiveId) : '공용';
+        model.db.incomeLog.push({ date: dateVal||'날짜 미입력', charKey: _directSellActiveId, runTitle: '직접 판매', gross: total, fee, net, perPerson: net, final: net, type: isGuild ? 'guild' : 'association', participant: _participantName });
+        pushActivityLog(_participantName, '직접 판매', `₩${formatWon(net)} 획득 (수수료 5% 적용)`);
         await saveDb(); await saveState(); renderApp();
         toast(`💰 ${toRemove.length}개 아이템 판매 완료 (세전 ${fmtS(total)} → 수수료 5% 차감 후 ${fmtS(net)})`);
       } catch(e) { toast(e.message || String(e), true); }
@@ -12558,14 +12638,13 @@ async function saveMaterialTraitFromForm() {
           }
           lines.push(`${charName}: +${fmtS(share)}`);
         }
-        // 소득 기록 — 페르소나 전용 (페르소나 선택 시에만 기록)
+        // 소득 기록 (페르소나/캐릭터 모두 기록)
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
         const _teamSellActiveId = model.state.activeCharId || '';
-        if (_teamSellActiveId.startsWith('persona:')) {
-          const _tsPersona = (model.db.personas || []).find(p => p.id === _teamSellActiveId.substring(8));
-          const _firstPersonaName = _tsPersona ? (_tsPersona.name || _tsPersona.id) : '페르소나';
-          model.db.incomeLog.push({ date: dateVal||'날짜 미입력', runTitle: '직접 판매 (팀 분배)', gross: total, fee, net: netTotal, perPerson: netTotal, final: netTotal, type: isGuild?'guild':'association', participant: _firstPersonaName });
-        }
+        const _tsChar = getActiveCharacter();
+        const _firstPersonaName = _tsChar ? (_tsChar.name || _teamSellActiveId) : '공용';
+        model.db.incomeLog.push({ date: dateVal||'날짜 미입력', charKey: _teamSellActiveId, runTitle: '직접 판매 (팀 분배)', gross: total, fee, net: netTotal, perPerson: netTotal, final: netTotal, type: isGuild?'guild':'association', participant: _firstPersonaName });
+        pushActivityLog(_firstPersonaName, '직접 판매 (팀 분배)', `₩${formatWon(netTotal)} 획득`);
         model.state.settleItemSel = {};
         await saveDb(); await saveState(); renderApp();
         toast(`💰 팀 분배 완료 (세전 ${fmtS(total)} → 5% 차감 후 ${fmtS(netTotal)})\n${lines.join(' / ')}`);
@@ -12578,18 +12657,44 @@ async function saveMaterialTraitFromForm() {
         await saveState(); renderApp();
       } catch (e) { toast(e.message || String(e), true); }
     });
+    // ── Activity Log handlers ─────────────────────────────────────────────────
+    on('#gb-log-copy', 'click', () => {
+      const area = document.getElementById('gb-log-copy-area');
+      if (area) { area.select(); document.execCommand('copy'); toast('📋 활동 로그가 클립보드에 복사되었다.'); }
+    });
+    on('#gb-log-clear', 'click', async () => {
+      if (!confirm('활동 로그를 전부 삭제하시겠습니까?')) return;
+      model.db.activityLog = [];
+      await saveDb(); renderApp();
+      toast('🗑️ 활동 로그 전체 삭제 완료');
+    });
+    on('#gb-log-filter', 'input', (ev) => {
+      model.state.logFilter = ev.currentTarget.value || '';
+      renderApp();
+    });
+    on('#gb-log-entity-filter', 'change', (ev) => {
+      model.state.logEntityFilter = ev.currentTarget.value || '';
+      renderApp();
+    });
     // 소득기록 접기/펼치기 토글
     on('#gb-income-log-toggle', 'click', async () => {
       model.state.incomeLogOpen = !model.state.incomeLogOpen;
       await saveState(); renderApp();
     });
+    on('[data-income-entity-toggle]', 'click', (ev) => {
+      const key = ev.currentTarget.getAttribute('data-income-entity-toggle') || '';
+      if (!key) return;
+      if (!model.state._incomeEntityOpen) model.state._incomeEntityOpen = {};
+      model.state._incomeEntityOpen[key] = !model.state._incomeEntityOpen[key];
+      renderApp();
+    });
     // 자동 납부 완료 처리 (전월 소득 기록 삭제 + 골드 차감)
     on('#gb-tax-pay-confirm', 'click', async () => {
       try {
-        // 세금은 페르소나만 납부 가능
+        // 세금은 페르소나 또는 캐릭터가 납부 가능
         const activeId = model.state.activeCharId || '';
-        if (!activeId.startsWith('persona:')) {
-          toast('세금은 페르소나만 납부할 수 있다. 페르소나를 선택하라.', true); return;
+        if (!activeId.startsWith('persona:') && !activeId.startsWith('char:')) {
+          toast('캐릭터 또는 페르소나를 선택하라.', true); return;
         }
         const gd = model.db.gameDate || { year:2026, month:1, day:1 };
         const prevYear = gd.month === 1 ? gd.year - 1 : gd.year;
@@ -12624,6 +12729,7 @@ async function saveMaterialTraitFromForm() {
           return true; // 나머지 유지
         });
         const removed = before - model.db.incomeLog.length;
+        pushActivityLog(getActiveLabel(), '소득세 납부', `${prevMonthStr} — ₩${formatWon(totalDue)} 납부`);
         await saveDb(); await saveState(); renderApp();
         toast(`✅ ${prevMonthStr} 소득세 납부 완료 — ₩${formatWon(totalDue)} 차감 (${removed}건 기록 삭제)`);
       } catch (e) { toast(e.message || String(e), true); }
@@ -12804,6 +12910,7 @@ async function saveMaterialTraitFromForm() {
         });
         grantActiveInventoryItem(newItem);
         await saveDb(); await saveState(); renderApp();
+        pushActivityLog(getActiveLabel(), '장비 구매', `${eq.name} [${eq.rank}] — ₩${price.toLocaleString('en-US')} 차감`);
         toast(`⚔️ ${eq.name} 구매 완료 (-₩${price.toLocaleString('en-US')}) [${getActiveLabel()}]`);
       } catch (e) { toast(e.message || String(e), true); }
     });
@@ -13715,9 +13822,11 @@ async function saveMaterialTraitFromForm() {
       try {
         if (activeGateRun()) { toast('이미 진행 중인 게이트가 있다.'); return; }
         beginGateRunFromSelectedGate();
+        const gs = model.state.gateState || {};
         model.state.gateRunTab = 'main';
         await saveState();
         renderApp();
+        pushActivityLog(getActiveLabel(), '게이트 진입', `${gs.run ? (gs.run.title || '게이트') : '게이트'} 진입`);
         toast('게이트에 진입했다.');
       } catch (e) { toast(e.message || String(e), true); }
     });
@@ -13938,6 +14047,7 @@ async function saveMaterialTraitFromForm() {
         buildBattleFromSetup();
         await saveDb(); await saveState();
         renderApp();
+        pushActivityLog('파티', '전투 시작', '게이트 전투 개시');
       } catch (e) { toast(e.message || String(e), true); }
     });
 
