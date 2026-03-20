@@ -1847,7 +1847,7 @@ const RARE_FAMILY_PRESETS = {
           threatBase:5,
           inventory:{ gold:0, items:[], equipped:{
             weapon:{ id:'eq_npc_yuna_weapon', name:'협회지급 단검', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 단검.' },
-            subweapon:{ id:'eq_npc_yuna_sub', name:'E급 조악한 방패', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['방어자세'], durability:100, maxDurability:100, atk:0, pdef:1, mdef:0, mainStat:'con', resistType:'', resistPct:0, price:300000, note:'E급 표준 방패.' },
+            subweapon:{ id:'eq_npc_yuna_sub', name:'E급 조악한 방패', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['physical_defense'], durability:100, maxDurability:100, atk:0, pdef:1, mdef:0, mainStat:'con', resistType:'', resistPct:0, price:300000, note:'E급 표준 방패.' },
             armor:{ id:'eq_npc_yuna_armor', name:'E급 조악한 판금갑옷', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'heavy', armorStatBonusMul:0, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:3, mdef:0, mainStat:'con', resistType:'', resistPct:0, price:400000, note:'E급 표준 중갑.' },
             accessory:null, bag:null
           }},
@@ -1861,7 +1861,7 @@ const RARE_FAMILY_PRESETS = {
           threatBase:1,
           inventory:{ gold:0, items:[], equipped:{
             weapon:{ id:'eq_npc_haneul_weapon', name:'협회지급 활', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 활.' },
-            subweapon:{ id:'eq_npc_haneul_sub', name:'E급 조악한 장갑', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['반격'], durability:100, maxDurability:100, atk:0, pdef:0, mdef:0, mainStat:'', resistType:'', resistPct:0, price:300000, note:'E급 표준 장갑.' },
+            subweapon:{ id:'eq_npc_haneul_sub', name:'E급 조악한 장갑', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['physical_damage'], durability:100, maxDurability:100, atk:0, pdef:0, mdef:0, mainStat:'', resistType:'', resistPct:0, price:300000, note:'E급 표준 장갑.' },
             armor:{ id:'eq_npc_haneul_armor', name:'E급 투박한 기동조끼', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'leather', armorStatBonusMul:0.10, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:1, mdef:1, mainStat:'agi', resistType:'', resistPct:0, price:400000, note:'E급 표준 가죽갑.' },
             accessory:null, bag:null
           }},
@@ -1889,15 +1889,15 @@ const RARE_FAMILY_PRESETS = {
             S:{ name:'백금모루', rarity:'Unique', buff:{ stats:{}, pdefFlat:84 }, desc:'[S] 유니크! 물리방어력 +84 (+20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' }
           },
           desc:'[성장형/포지션] 등급별로 물리방어력 상승 (defenseFlat 스케일). 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.\n★ A급 달성 시 백금모루(유니크)로 승급: 물방 +20% 추가 / 최대 70% / HP 40% 이하 시 회복.' },
-        { id:'skill_yuna_shield', name:'방패숙련', grade:'E', rarity:'Normal', category:'buff', target:'self',
+        { id:'skill_yuna_shield', name:'방패숙련', grade:'E', rarity:'Normal', category:'passive', target:'self',
           skillUsage: 'general',
           costs:{ mp:0, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:0,
-          buff:{ stats:{} },
+          passiveMods:{ shieldSpMul:0.9 },
           desc:'[범용/패시브] 방패 착용 시 SP 소모량 -10%.' },
-        { id:'skill_yuna_dagger', name:'단검숙련', grade:'E', rarity:'Normal', category:'buff', target:'self',
+        { id:'skill_yuna_dagger', name:'단검숙련', grade:'E', rarity:'Normal', category:'passive', target:'self',
           skillUsage: 'general',
           costs:{ mp:0, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['str'], duration:0,
-          buff:{ stats:{} },
+          passiveMods:{ daggerSpMul:0.9 },
           desc:'[범용/패시브] 단검 착용 시 SP 소모량 -10%.' },
         // ── 송하늘 전용 스킬 ──
         { id:'skill_haneul_reload', name:'전탄회수', grade:'E', rarity:'Rare', category:'aoeAttack', target:'allEnemies',
