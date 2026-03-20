@@ -6656,7 +6656,7 @@ function renderTeamPanel() {
   const allChars = model.db.characters || [];
   const allPersonas = model.db.personas || [];
   const teamView = model.state.teamView || 'members';
-  const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
+  const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US'); };
 
   // 팀에 없는 캐릭터 목록 (추가 가능)
   const inTeamIds = new Set(team.map(m => m.charId));
@@ -7125,7 +7125,7 @@ function renderAuctionHouseHtml() {
   const inv = getActiveInventory();
   const gold = Number(inv.gold || 0);
   const tab = model.state.auctionTab || 'browse';
-  const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`;
+  const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`; };
 
   const tabBar = `<div class="gb-btn-row">
     <button class="gb-btn${tab==='browse'?' primary':''}" data-auction-tab="browse">🔍 구매</button>
@@ -8031,7 +8031,7 @@ function renderEquipShopHtml() {
         const canAfford = price === 0 || gold >= price;
         const traitTags = (e.traits||[]).map(t => `<span class="gb-badge">${escapeHtml(equipTraitDisplay(t, e.rank))}</span>`).join(' ');
         const atkLine = e.part==='weapon' ? `ATK+${e.atk||WEAPON_BASE_ATK[e.rank]||0}` : e.part==='subweapon' ? (Number(e.pdef||0)>0 ? `물리방어+${e.pdef} / ATK${-Math.ceil(e.pdef/2)}` : '특수효과 전용') : e.part==='armor' ? `${e.armorSubtype && ARMOR_SUBTYPES[e.armorSubtype] ? '['+ARMOR_SUBTYPES[e.armorSubtype].label+(ARMOR_SUBTYPES[e.armorSubtype].atkMul ? ' ATK'+Math.round(ARMOR_SUBTYPES[e.armorSubtype].atkMul*100)+'%' : '')+(ARMOR_SUBTYPES[e.armorSubtype].statBonusMul ? ' 스탯+'+Math.round(ARMOR_SUBTYPES[e.armorSubtype].statBonusMul*100)+'%' : '')+'] ' : ''}물리방어+${e.pdef||0} / 마법방어+${e.mdef||0}${e.resistType?` / ${escapeHtml(EQUIP_TRAIT_LABELS[''+e.resistType]||e.resistType)} 저항 ${e.resistPct||0}%`:''}` : e.part==='accessory' ? (e.traits&&e.traits.length ? `특성: ${(e.traits||[]).map(t=>equipTraitDisplay(t,e.rank)).join(', ')}` : '특성 없음') : '';
-        const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
+        const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US'); };
         return `<div class="gb-unit">
           <div class="gb-unit-top">
             <div>
@@ -8229,7 +8229,7 @@ function renderHunterMarketHtml() {
       const enhancedBase = it.enhance > 0 ? calcEquipEnhancedPrice(basePrice, it.enhance, it.rank||'E') : basePrice;
       const conditionMul = calcUsedEquipConditionMul(dur, maxDur);
       const sellPrice = Math.round(enhancedBase * conditionMul);
-      const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
+      const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US'); };
       const durColor = dur < 30 ? '#ef4444' : dur < 60 ? '#f97316' : '#22c55e';
       const statParts = [];
       if (Number(it.atk||0) > 0)  statParts.push(`⚔️ ATK +${it.atk}`);
@@ -8276,7 +8276,7 @@ function renderHunterMarketHtml() {
     const rarityOk = !it.rarity || (it.rarity !== 'Unique' && it.rarity !== 'Legendary');
     return maxDur >= 80 && maxDur < 100 && (!selRank || (it.rank||'E') === selRank) && (!selPart || it.part === selPart) && rarityOk;
   });
-  const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
+  const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US'); };
   // 장비 상세 툴팁 헬퍼
   function hmItemTooltip(e) {
     const lines = [`${e.name}${e.rank ? ` [${e.rank}급]` : ''}`, `부위: ${EQUIP_PART_LABELS[e.part||'weapon']||e.part||''}  |  내구도: ${fmtDur(e.durability)}/${fmtDur(e.maxDurability)}`];
@@ -8421,7 +8421,7 @@ function renderBlackMarketHtml() {
     const enhPrice = it.enhance > 0 ? calcEquipEnhancedPrice(mktPrice, it.enhance, it.rank||'E') : mktPrice;
     const pDetect = (1 - Math.pow(1 - BM_DETECT_RATE, 1)) * 100;
     const fine = Math.floor(enhPrice * BM_FINE_RATE);
-    const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
+    const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US'); };
     return `<div class="gb-unit">
       <div class="gb-unit-top">
         <div>
@@ -8476,7 +8476,7 @@ function renderRepairShopHtml() {
       const part = it.part || 'weapon';
       const lostToMax = maxDur - dur;
       const feeToFull = calcRepairFee(rank, part, lostToMax);
-      const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`;
+      const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`; };
       const canAfford = gold >= feeToFull;
       const maxDurAfter = Math.max(EQUIP_MAX_DURABILITY_FLOOR, maxDur - 1);
       detailHtml = `
@@ -8529,7 +8529,7 @@ function renderForgeShopHtml() {
   const ownedEquip = (inv.items||[]).filter(it => it.category === 'equipment');
   const selKey = model.state.shopForgeSel || '';
   const forgeTab = model.state.shopForgeTab || 'enhance';
-  const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`;
+  const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`; };
 
   const tabBar = `<div class="gb-btn-row">
     <button class="gb-btn${forgeTab==='enhance'?' primary':''}" data-forge-tab="enhance">⚒️ 강화</button>
@@ -10323,7 +10323,7 @@ function renderCommandPanel(runtime) {
       <button class="gb-btn${activeTab==='equip'?' primary':''}" data-personal-inv-tab="${type}:equip">🛡️ 장비창</button>
       <button class="gb-btn${activeTab==='items'?' primary':''}" data-personal-inv-tab="${type}:items">🎒 인벤토리</button>
     </div>`;
-    const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US');
+    const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억` : n >= 10000 ? `${(n/10000).toFixed(1)}만` : n.toLocaleString('en-US'); };
     if (activeTab === 'equip') {
       // Equipment slots (weapon/subweapon/armor/accessory) 
       const slotHtml = EQUIP_PARTS.map(part => {
@@ -10864,7 +10864,7 @@ function renderCommandPanel(runtime) {
     const rangeText = (() => {
       const r = EQUIP_PRICE_RANGE[rank];
       if (!r) return '';
-      const fmt = n => n >= 1e8 ? (n/1e8).toFixed(1)+'억' : n >= 10000 ? (n/10000).toFixed(1)+'만' : n+'원';
+      const fmt = n => { n = Number(n)||0; return n >= 1e8 ? (n/1e8).toFixed(1)+'억' : n >= 10000 ? (n/10000).toFixed(1)+'만' : n+'원'; };
       return `${fmt(r[0])} ~ ${fmt(r[1])}`;
     })();
 
@@ -12217,7 +12217,7 @@ async function saveMaterialTraitFromForm() {
         listArr.splice(idx, 1);
         model.state.auctionBid = null;
         await saveDb(); await saveState(); renderApp();
-        const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`;
+        const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`; };
         toast(`🏷️ ${buyItem.name} 낙찰! (-${fmt(bidState.finalPrice)})`);
       } catch(e) { toast(e.message || String(e), true); }
     });
@@ -12268,7 +12268,7 @@ async function saveMaterialTraitFromForm() {
         inv.gold = Number(inv.gold||0) + sellState.finalPrice;
         model.state.auctionSell = null;
         await saveDb(); await saveState(); renderApp();
-        const fmt = n => n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`;
+        const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`; };
         toast(`💰 ${escapeHtml(sellState.itemName)} 판매 완료! +${fmt(sellState.finalPrice)}`);
       } catch(e) { toast(e.message || String(e), true); }
     });
@@ -12384,6 +12384,7 @@ async function saveMaterialTraitFromForm() {
         const idx = parseInt(ev.currentTarget.getAttribute('data-income-log-del') || '-1', 10);
         if (idx < 0) return;
         if (!Array.isArray(model.db.incomeLog)) return;
+        if (idx >= model.db.incomeLog.length) return;
         model.db.incomeLog.splice(idx, 1);
         await saveDb(); renderApp();
         toast('소득 기록 삭제 완료');
