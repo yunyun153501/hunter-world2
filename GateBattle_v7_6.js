@@ -539,12 +539,8 @@ const EQUIP_NAME_SUFFIXES = {
 };
 function generateEquipName(rank, part, armorSubtypeKey, traitLabel, forcedSuffix) {
   const prefixes = EQUIP_RANK_PREFIX[rank] || EQUIP_RANK_PREFIX.E;
-  let prefix;
-  if (false) {
-    prefix = '협회지급'; // 협회지급 장비는 상점에서만 판매, 드랍 장비는 정상 이름 사용
-  } else {
-    prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-  }
+  // 협회지급 장비는 상점에서만 판매, 드랍 장비는 항상 랜덤 prefix 사용
+  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
   let suff;
   if (forcedSuffix) {
     suff = forcedSuffix;
@@ -2261,8 +2257,12 @@ function buildDefaultState() {
   function applyPassiveInitialization(unit) {
     unit.passiveBonuses = { str:0, con:0, int:0, agi:0, sense:0, pdef:0, mdef:0 };
     unit.passiveMods = { shieldSpMul:1, daggerSpMul:1 };
-    unit._anvilPdef = 0; unit._anvilMaxPct = 0; unit._anvilPctPerHit = 0; unit._anvilCurrentPct = 0;
-    unit._anvilHpThreshold = 0; unit._anvilRegenPct = 0;
+    unit._anvilPdef = 0;
+    unit._anvilMaxPct = 0;
+    unit._anvilPctPerHit = 0;
+    unit._anvilCurrentPct = 0;
+    unit._anvilHpThreshold = 0;
+    unit._anvilRegenPct = 0;
     (unit.skills || []).forEach(skillId => {
       const skill = resolveSkillForUnit(unit, skillId);
       if (!skill || skill.category !== 'passive') return;
