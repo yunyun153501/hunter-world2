@@ -1911,6 +1911,7 @@ function buildDefaultState() {
     settleGearItems: [],
     taxIncome: '',
     taxPayMonth: '',
+    incomeLogOpen: false,
     equipPartFilter: '',
     shopEquipRank: '',
     shopEquipPart: '',
@@ -1990,6 +1991,42 @@ function buildDefaultState() {
       skill.grade = rank;
       const upperCoef = getGrowthCoef(skill.category, rank);
       if (upperCoef != null) skill.coef = upperCoef;
+    }
+    // ── 계수 0 자동처리: 일반스킬→하한, 성장형→상한 ──
+    if (!skill.coef || Number(skill.coef) === 0) {
+      if (skill.growth) {
+        const upperCoef = getGrowthCoef(skill.category, rank);
+        if (upperCoef != null) skill.coef = upperCoef;
+      } else {
+        const SKILL_COEF_LOWER = { E:1.2, D:1.92, C:2.88, B:4.8, A:7.68, S:11.52 };
+        const grade = String(skill.grade || rank || 'E').toUpperCase();
+        const baseCoef = SKILL_COEF_LOWER[grade] || 1.2;
+        const target = skill.target || '';
+        if (target === 'allEnemies' || target === 'allAllies' || target.startsWith('row')) {
+          skill.coef = Math.round(baseCoef * 0.58 * 1000) / 1000;
+        } else {
+          skill.coef = baseCoef;
+        }
+      }
+    }
+    // ── CC턴 0 자동처리: 기본 CC턴값 ──
+    if (skill.cc && skill.cc.type && (!skill.cc.turns || Number(skill.cc.turns) === 0)) {
+      const ccProfile = getStatusDefaultProfile(skill.cc.type);
+      skill.cc.turns = ccProfile.turns;
+    }
+    // ── 상태이상턴 0 자동처리: 기본 상태이상턴값 ──
+    if (skill.status && skill.status.type && (!skill.status.turns || Number(skill.status.turns) === 0)) {
+      const stProfile = getStatusDefaultProfile(skill.status.type);
+      skill.status.turns = stProfile.turns;
+    }
+    // ── 버프수치 0 자동처리: 등급기본값 (E:2, D:4, C:6, B:8, A:11, S:14) ──
+    if (skill.buff && skill.buff.stats) {
+      const BUFF_DEFAULT_BY_GRADE = { E:2, D:4, C:6, B:8, A:11, S:14 };
+      const grade = String(skill.grade || rank || 'E').toUpperCase();
+      const defaultVal = BUFF_DEFAULT_BY_GRADE[grade] || 2;
+      Object.keys(skill.buff.stats).forEach(k => {
+        if (Number(skill.buff.stats[k]) === 0) skill.buff.stats[k] = defaultVal;
+      });
     }
     if (skill.category === 'aoeCC' && skill.baseSingleCoef != null) {
       skill.coef = round3(skill.baseSingleCoef * 0.5);
@@ -7673,18 +7710,64 @@ function renderAssociationView() {
 
     const logPanel = `
       <div class="gb-panel">
-        <div class="gb-section-title">📜 소득 기록 (세금 신고용)</div>
+        <div class="gb-section-title" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" id="gb-income-log-toggle">
+          📜 소득 기록 (세금 신고용) <span style="font-size:12px;">${st.incomeLogOpen ? '▲ 접기' : '▼ 펼치기'} (${incomeLog.length}건)</span>
+        </div>
         <div class="gb-sub" style="margin-bottom:6px;">협회 및 길드 정산 이력. 개인 소득세 신고 참고용. 블랙마켓 거래는 기록되지 않는다.</div>
-        ${incomeLogHtml}
+        ${st.incomeLogOpen ? incomeLogHtml : ''}
       </div>`;
 
-    // Monthly income tax calculator + pay button
+    // Monthly income tax calculator + auto payment
     const taxIncome  = st.taxIncome || '';
-    const taxMonth   = st.taxPayMonth || '';
     const taxResult  = taxIncome ? calcMonthlyIncomeTax(Number(taxIncome)) : null;
-    // Count records matching taxPayMonth
+    // 게임 날짜 기반 자동 납부 계산
+    const gd = model.db.gameDate || { year:2026, month:1, day:1 };
+    const curYear = gd.year;
+    const curMonth = gd.month;
+    const curDay = gd.day;
+    const curMonthStr = `${curYear}-${String(curMonth).padStart(2,'0')}`;
+    // 납부 대상: 전월 (1월이면 전년도 12월)
+    const prevYear = curMonth === 1 ? curYear - 1 : curYear;
+    const prevMonth = curMonth === 1 ? 12 : curMonth - 1;
+    const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2,'0')}`;
+    // 납부 기한: 다음달 1~10일 → 현재달 1~10일이 전월 납부 기한
+    const isPaymentPeriod = curDay >= 1 && curDay <= 10;
+    const isOverdue = curDay > 10;
+    // 전월 소득 기록
     const incomeLogAll = Array.isArray(model.db.incomeLog) ? model.db.incomeLog : [];
-    const matchCount   = taxMonth ? incomeLogAll.filter(r => (r.date || '').startsWith(taxMonth)).length : 0;
+    const prevMonthRecords = incomeLogAll.filter(r => (r.date || '').startsWith(prevMonthStr));
+    const prevMonthTotal = prevMonthRecords.reduce((s, r) => s + Number(r.final || 0), 0);
+    const prevMonthTax = prevMonthTotal > 0 ? calcMonthlyIncomeTax(prevMonthTotal) : 0;
+    // 연체 이자 계산 (연 9.9%, 일할 계산: 10일 이후부터)
+    const overdueDays = isOverdue ? curDay - 10 : 0;
+    const overdueInterest = isOverdue && prevMonthTax > 0 ? Math.floor(prevMonthTax * 0.099 * overdueDays / 365) : 0;
+    const totalDue = prevMonthTax + overdueInterest;
+
+    // 납부 상태 표시
+    let payStatusHtml = '';
+    if (prevMonthRecords.length === 0) {
+      payStatusHtml = `<div class="gb-sub" style="color:#22c55e;margin-top:6px;">✅ ${prevMonthStr} 소득 기록 없음 — 납부 불필요</div>`;
+    } else if (isPaymentPeriod) {
+      payStatusHtml = `
+        <div class="gb-sub" style="color:#fbbf24;font-weight:700;margin-top:6px;">⏳ 납부 기한 내 (${curMonthStr} 1~10일)</div>
+        <div class="gb-sub">${prevMonthStr} 소득 ${prevMonthRecords.length}건 / 총 지급액 ₩${formatWon(prevMonthTotal)}</div>
+        <div class="gb-sub" style="font-weight:700;">납부할 소득세: ₩${formatWon(prevMonthTax)}</div>
+        <button class="gb-btn primary" id="gb-tax-pay-confirm" style="margin-top:6px;">✅ ${prevMonthStr} 소득세 납부 완료</button>`;
+    } else if (isOverdue && prevMonthRecords.length > 0) {
+      payStatusHtml = `
+        <div class="gb-sub" style="color:#ef4444;font-weight:700;margin-top:6px;">🚨 연체! 납부 기한 초과 (${overdueDays}일 경과)</div>
+        <div class="gb-sub">${prevMonthStr} 소득 ${prevMonthRecords.length}건 / 총 지급액 ₩${formatWon(prevMonthTotal)}</div>
+        <div class="gb-sub" style="font-weight:700;">원래 소득세: ₩${formatWon(prevMonthTax)}</div>
+        <div class="gb-sub" style="color:#ef4444;font-weight:700;">연체 이자 (연 9.9%, ${overdueDays}일): ₩${formatWon(overdueInterest)}</div>
+        <div class="gb-sub" style="color:#ef4444;font-weight:900;font-size:15px;">총 납부액: ₩${formatWon(totalDue)}</div>
+        <button class="gb-btn danger" id="gb-tax-pay-confirm" style="margin-top:6px;">💸 ${prevMonthStr} 연체 소득세 납부</button>`;
+    }
+    // 현재달 기록은 납부 불가 안내
+    const curMonthRecords = incomeLogAll.filter(r => (r.date || '').startsWith(curMonthStr));
+    const curMonthNote = curMonthRecords.length > 0
+      ? `<div class="gb-sub" style="margin-top:6px;color:#94a3b8;">${curMonthStr} 소득 기록 ${curMonthRecords.length}건 — 이번 달 소득은 다음 달(${curMonth === 12 ? curYear+1 : curYear}-${String(curMonth === 12 ? 1 : curMonth+1).padStart(2,'0')}) 1~10일에 납부</div>`
+      : '';
+
     const taxPanel = `
       <div class="gb-panel">
         <div class="gb-section-title">🧾 월 소득세 계산기 (개인)</div>
@@ -7696,13 +7779,11 @@ function renderAssociationView() {
         ${taxResult !== null ? `<div class="gb-sub" style="color:#fbbf24;font-weight:700;margin-top:8px;">▶ 예상 소득세 = ₩${formatWon(taxResult)}</div><div class="gb-sub">▶ 세후 실수령 = ₩${formatWon(Number(taxIncome) - taxResult)}</div>` : ''}
         <div class="gb-sub" style="margin-top:8px;">세율 구간: 1백만 이하 6% / ~4백만 15% / ~750만 24% / ~1250만 35% / ~2500만 38% / ~4200만 40% / ~8500만 42% / 초과 45%</div>
         <div style="margin-top:10px;border-top:1px solid rgba(148,163,184,0.2);padding-top:8px;">
-          <div class="gb-sub" style="font-weight:600;margin-bottom:4px;">💸 납부 완료 처리 — 해당 월 기록 삭제</div>
-          <div class="gb-sub">납부한 달을 입력하면 그 달의 소득 기록이 삭제된다 (날짜 앞 7자리 기준, 예: 2026-03).</div>
-          <div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap;">
-            <input class="gb-input" id="gb-tax-pay-month" type="text" placeholder="예: 2026-03" value="${escapeHtml(taxMonth)}" style="width:110px;">
-            <button class="gb-btn" id="gb-tax-pay-preview">미리보기 (${matchCount}건)</button>
-            <button class="gb-btn danger" id="gb-tax-pay-confirm" ${!taxMonth ? 'disabled' : ''}>✅ 납부 완료 — 기록 삭제</button>
-          </div>
+          <div class="gb-sub" style="font-weight:600;margin-bottom:4px;">💸 납부 완료 처리 (자동)</div>
+          <div class="gb-sub">게임 날짜 기준 전월 소득세를 자동 계산합니다. 납부 기한: 매월 1~10일. 10일 초과 시 연 9.9% 연체이자 적용.</div>
+          <div class="gb-sub" style="margin-top:4px;">현재 게임 날짜: <strong>${curYear}년 ${curMonth}월 ${curDay}일</strong></div>
+          ${payStatusHtml}
+          ${curMonthNote}
         </div>
       </div>`;
 
@@ -7924,7 +8005,16 @@ function renderEquipShopHtml() {
   const itemsHtml = filtered.length === 0
     ? '<div class="gb-sub">조건에 맞는 장비가 없다.</div>'
     : filtered.map(e => {
-        const price = (e.price != null && e.price !== '' && Number(e.price) >= 0) ? Number(e.price) : calcEquipEnhancedPrice(calcEquipBasePrice(e.rank, e.part), e.enhance||0, e.rank);
+        let price = (e.price != null && e.price !== '' && Number(e.price) >= 0) ? Number(e.price) : calcEquipEnhancedPrice(calcEquipBasePrice(e.rank, e.part), e.enhance||0, e.rank);
+        // 협회지급 장비: 무료는 캐릭터/페르소나당 1회만, 이후 75만원
+        const isAssocFree = (price === 0 && (e.name || '').includes('협회지급'));
+        let assocClaimed = false;
+        if (isAssocFree) {
+          const activeId = model.state.activeCharId || '';
+          if (!model.db.assocEquipClaimed) model.db.assocEquipClaimed = {};
+          assocClaimed = !!model.db.assocEquipClaimed[activeId];
+          if (assocClaimed) price = 750000;
+        }
         const canAfford = price === 0 || gold >= price;
         const traitTags = (e.traits||[]).map(t => `<span class="gb-badge">${escapeHtml(equipTraitDisplay(t, e.rank))}</span>`).join(' ');
         const atkLine = e.part==='weapon' ? `ATK+${e.atk||WEAPON_BASE_ATK[e.rank]||0}` : e.part==='subweapon' ? (Number(e.pdef||0)>0 ? `물리방어+${e.pdef} / ATK${-Math.ceil(e.pdef/2)}` : '특수효과 전용') : e.part==='armor' ? `${e.armorSubtype && ARMOR_SUBTYPES[e.armorSubtype] ? '['+ARMOR_SUBTYPES[e.armorSubtype].label+(ARMOR_SUBTYPES[e.armorSubtype].atkMul ? ' ATK'+Math.round(ARMOR_SUBTYPES[e.armorSubtype].atkMul*100)+'%' : '')+(ARMOR_SUBTYPES[e.armorSubtype].statBonusMul ? ' 스탯+'+Math.round(ARMOR_SUBTYPES[e.armorSubtype].statBonusMul*100)+'%' : '')+'] ' : ''}물리방어+${e.pdef||0} / 마법방어+${e.mdef||0}${e.resistType?` / ${escapeHtml(EQUIP_TRAIT_LABELS[''+e.resistType]||e.resistType)} 저항 ${e.resistPct||0}%`:''}` : e.part==='accessory' ? (e.traits&&e.traits.length ? `특성: ${(e.traits||[]).map(t=>equipTraitDisplay(t,e.rank)).join(', ')}` : '특성 없음') : '';
@@ -7943,7 +8033,7 @@ function renderEquipShopHtml() {
             </div>
             <div>
               <button class="gb-btn tiny${canAfford?'':' danger'}" data-equip-shop-buy="${escapeHtml(e.id)}" ${canAfford?'':'disabled'}>
-                ${price === 0 ? '🆓 무료' : `₩${fmt(price)}`}
+                ${price === 0 ? '🆓 무료 (1회)' : (isAssocFree && assocClaimed ? `₩${fmt(price)} (재구매)` : `₩${fmt(price)}`)}
               </button>
             </div>
           </div>
@@ -7953,7 +8043,7 @@ function renderEquipShopHtml() {
   return `
     <div class="gb-panel">
       <div class="gb-section-title">⚔️ 장비상점</div>
-      <div class="gb-sub">E~C급 노말 장비 판매 (협회지급 E급 무기는 무료)</div>
+      <div class="gb-sub">E~C급 노말 장비 판매 (협회지급 E급 무기는 인당 1회 무료, 이후 75만원)</div>
       <div class="gb-sub">소지금: ₩${gold.toLocaleString('en-US')}</div>
       <div class="gb-btn-row" style="margin-top:6px;flex-wrap:wrap;">
         <span class="gb-sub" style="align-self:center;">등급:</span> ${rankBtns}
@@ -10622,7 +10712,7 @@ function renderCommandPanel(runtime) {
             <label>대상<select class="gb-input" id="gb-skill-target">${['singleEnemy','allEnemies','rowFront','rowMid','rowBack','rowFrontMid','rowMidBack','singleAlly','allAllies','self'].map(v=>optionHtml(v,v,item.target===v)).join('')}</select></label>
             <label>스킬 타입<select class="gb-input" id="gb-skill-growth"><option value="normal" ${!item.growth?'selected':''}>일반 스킬</option><option value="growth" ${item.growth?'selected':''}>성장형 스킬</option></select></label>
             <label>용도<select class="gb-input" id="gb-skill-usage"><option value="general" ${item.skillUsage==='general'?'selected':''}>범용스킬</option><option value="position" ${item.skillUsage==='position'?'selected':''}>포지션스킬</option><option value="job" ${item.skillUsage==='job'?'selected':''}>직업스킬</option></select></label>
-            <label>계수<input class="gb-input" id="gb-skill-coef" type="number" step="0.001" value="${escapeHtml(item.coef)}" /></label>
+            <label>계수<input class="gb-input" id="gb-skill-coef" type="number" step="0.001" value="${escapeHtml(item.coef)}" placeholder="0=자동(일반:하한,성장:상한)" /></label>
             <label>MP 비용<input class="gb-input" id="gb-skill-mp" type="number" value="${escapeHtml(item.mp)}" /></label>
             <label>SP 비용<input class="gb-input" id="gb-skill-sp" type="number" value="${escapeHtml(item.sp)}" /></label>
             <label>피해 타입<select class="gb-input" id="gb-skill-dmgtype">${optionHtml('physical','physical',item.damageType==='physical')}${optionHtml('magic','magic',item.damageType==='magic')}</select></label>
@@ -10630,13 +10720,13 @@ function renderCommandPanel(runtime) {
             <label>스탯 타입(쉼표구분)<input class="gb-input" id="gb-skill-stattypes" value="${escapeHtml(item.statTypes)}" /></label>
             <label>지속 턴<input class="gb-input" id="gb-skill-duration" type="number" value="${escapeHtml(item.duration)}" /></label>
             <label>CC 종류<select class="gb-input" id="gb-skill-cctype">${['','stun','bind','sleep','silence','slow'].map(v=>optionHtml(v,v||'(없음)',(item.ccType||'')===v)).join('')}</select></label>
-            <label>CC 턴<input class="gb-input" id="gb-skill-ccturns" type="number" value="${escapeHtml(item.ccTurns)}" /></label>
+            <label>CC 턴<input class="gb-input" id="gb-skill-ccturns" type="number" value="${escapeHtml(item.ccTurns)}" placeholder="0=기본턴" /></label>
             <label>CC 확률(0~1)<input class="gb-input" id="gb-skill-ccchance" type="number" step="0.01" min="0" max="1" value="${escapeHtml(item.ccChance)}" placeholder="비우면 기본확률" /></label>
             <label>버프 스탯<select class="gb-input" id="gb-skill-buffstat">${['','str','con','int','agi','sense'].map(v=>optionHtml(v,v||'(없음)',(item.buffStat||'')===v)).join('')}</select></label>
-            <label>버프 수치<input class="gb-input" id="gb-skill-buffvalue" type="number" value="${escapeHtml(item.buffValue)}" /></label>
+            <label>버프 수치<input class="gb-input" id="gb-skill-buffvalue" type="number" value="${escapeHtml(item.buffValue)}" placeholder="0=등급기본값" /></label>
             <label style="display:flex;align-items:center;gap:6px;">🥷 은신 (공격 대상에서 제외, 공격 시 해제)<input type="checkbox" id="gb-skill-stealth" ${item.stealth?'checked':''} /></label>
             <label>상태이상<select class="gb-input" id="gb-skill-statustype">${['','poison','bleed','burn','curse','silence','slow'].map(v=>optionHtml(v,v||'(없음)',(item.statusType||'')===v)).join('')}</select></label>
-            <label>상태이상 턴<input class="gb-input" id="gb-skill-statusturns" type="number" value="${escapeHtml(item.statusTurns)}" /></label>
+            <label>상태이상 턴<input class="gb-input" id="gb-skill-statusturns" type="number" value="${escapeHtml(item.statusTurns)}" placeholder="0=기본턴" /></label>
             <label>상태이상 확률(0~1)<input class="gb-input" id="gb-skill-statuschance" type="number" step="0.01" min="0" max="1" value="${escapeHtml(item.statusChance)}" placeholder="비우면 기본값" /></label>
             <label>쿨타임(턴)<input class="gb-input" id="gb-skill-cooldown" type="number" value="${escapeHtml(item.cooldown)}" placeholder="0=없음" /></label>
           </div>
@@ -11588,17 +11678,21 @@ async function saveMaterialTraitFromForm() {
     if (buffStat && buffValue) {
       item.buff = { stats:{ [buffStat]: buffValue } };
       if (stealthChecked) item.buff.stealth = true;
+    } else if (buffStat && buffValue === 0) {
+      // 버프수치 0 = 등급기본값 자동적용 (resolveSkillForUnit에서 처리)
+      item.buff = { stats:{ [buffStat]: 0 } };
+      if (stealthChecked) item.buff.stealth = true;
     } else if (stealthChecked) {
       item.buff = { stats:{}, stealth: true };
     }
     if (ccType) {
-      const ccObj = { type:ccType, turns:Number(fieldValue('#gb-skill-ccturns') || 1) };
+      const ccObj = { type:ccType, turns:Number(fieldValue('#gb-skill-ccturns') || 0) };
       const ccChanceVal = fieldValue('#gb-skill-ccchance').trim();
       if (ccChanceVal !== '' && Number(ccChanceVal) > 0) ccObj.chance = Math.max(0, Math.min(1, Number(ccChanceVal)));
       item.cc = ccObj;
     }
     if (statusType) {
-      const stObj = { type:statusType, turns:Number(fieldValue('#gb-skill-statusturns') || 2) };
+      const stObj = { type:statusType, turns:Number(fieldValue('#gb-skill-statusturns') || 0) };
       const stChanceVal = fieldValue('#gb-skill-statuschance').trim();
       if (stChanceVal !== '' && Number(stChanceVal) > 0) stObj.chance = Math.max(0, Math.min(1, Number(stChanceVal)));
       item.status = stObj;
@@ -12459,29 +12553,32 @@ async function saveMaterialTraitFromForm() {
         await saveState(); renderApp();
       } catch (e) { toast(e.message || String(e), true); }
     });
-    on('#gb-tax-pay-preview', 'click', async () => {
-      try {
-        const month = (fieldValue('#gb-tax-pay-month') || '').trim();
-        model.state.taxPayMonth = month;
-        await saveState(); renderApp();
-        if (!month) { toast('납부 월을 입력하라. (예: 2026-03)', true); return; }
-        const log = Array.isArray(model.db.incomeLog) ? model.db.incomeLog : [];
-        const cnt = log.filter(r => (r.date || '').startsWith(month)).length;
-        toast(`${month} 기준 소득 기록 ${cnt}건이 있다. "납부 완료" 버튼으로 삭제할 수 있다.`);
-      } catch (e) { toast(e.message || String(e), true); }
+    // 소득기록 접기/펼치기 토글
+    on('#gb-income-log-toggle', 'click', async () => {
+      model.state.incomeLogOpen = !model.state.incomeLogOpen;
+      await saveState(); renderApp();
     });
+    // 자동 납부 완료 처리 (전월 소득 기록 삭제)
     on('#gb-tax-pay-confirm', 'click', async () => {
       try {
-        const month = (fieldValue('#gb-tax-pay-month') || model.state.taxPayMonth || '').trim();
-        if (!month) throw new Error('납부 월을 입력하라. (예: 2026-03)');
+        const gd = model.db.gameDate || { year:2026, month:1, day:1 };
+        const prevYear = gd.month === 1 ? gd.year - 1 : gd.year;
+        const prevMonth = gd.month === 1 ? 12 : gd.month - 1;
+        const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2,'0')}`;
+        const curMonthStr = `${gd.year}-${String(gd.month).padStart(2,'0')}`;
+        // 현재달 기록은 납부 불가
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
         const before = model.db.incomeLog.length;
-        model.db.incomeLog = model.db.incomeLog.filter(r => !(r.date || '').startsWith(month));
+        // 전월 기록만 삭제 (현재달 기록은 유지)
+        model.db.incomeLog = model.db.incomeLog.filter(r => {
+          const d = (r.date || '');
+          if (d.startsWith(prevMonthStr)) return false; // 전월 삭제
+          return true; // 나머지 유지
+        });
         const removed = before - model.db.incomeLog.length;
-        if (!removed) { toast(`${month}에 해당하는 소득 기록이 없다.`, true); return; }
-        model.state.taxPayMonth = '';
+        if (!removed) { toast(`${prevMonthStr}에 해당하는 소득 기록이 없다.`, true); return; }
         await saveDb(); await saveState(); renderApp();
-        toast(`✅ ${month} 소득세 납부 완료 처리 — ${removed}건 기록 삭제됨`);
+        toast(`✅ ${prevMonthStr} 소득세 납부 완료 — ${removed}건 기록 삭제됨`);
       } catch (e) { toast(e.message || String(e), true); }
     });
     // ── Shop handlers ─────────────────────────────────────────────────────────
@@ -12629,10 +12726,24 @@ async function saveMaterialTraitFromForm() {
         const id = ev.currentTarget.getAttribute('data-equip-shop-buy') || '';
         const eq = (model.db.equipments || []).find(e => e.id === id);
         if (!eq) throw new Error('장비를 찾을 수 없다.');
-        const price = (eq.price != null && eq.price !== '' && Number(eq.price) >= 0) ? Number(eq.price) : calcEquipEnhancedPrice(calcEquipBasePrice(eq.rank, eq.part), eq.enhance||0, eq.rank);
+        let price = (eq.price != null && eq.price !== '' && Number(eq.price) >= 0) ? Number(eq.price) : calcEquipEnhancedPrice(calcEquipBasePrice(eq.rank, eq.part), eq.enhance||0, eq.rank);
+        // 협회지급 장비: 무료는 캐릭터/페르소나당 1회만, 이후 75만원
+        const isAssocFree = (price === 0 && (eq.name || '').includes('협회지급'));
+        const activeId = model.state.activeCharId || '';
+        if (isAssocFree) {
+          if (!model.db.assocEquipClaimed) model.db.assocEquipClaimed = {};
+          if (model.db.assocEquipClaimed[activeId]) {
+            price = 750000; // 재구매 시 75만원
+          }
+        }
         const inv = getActiveInventory();
         if (Number(inv.gold || 0) < price) throw new Error(`소지금 부족 (${getActiveLabel()}: ${Number(inv.gold||0).toLocaleString('en-US')}원 / 필요 ${price.toLocaleString('en-US')}원)`);
         inv.gold = Number(inv.gold || 0) - price;
+        // 협회지급 무료 구매 기록
+        if (isAssocFree && price === 0) {
+          if (!model.db.assocEquipClaimed) model.db.assocEquipClaimed = {};
+          model.db.assocEquipClaimed[activeId] = true;
+        }
         // Add to inventory as owned equipment (new = maxDurability 100, isUsed false)
         const newItem = Object.assign({}, deepClone(eq), {
           category: 'equipment',
