@@ -1928,7 +1928,21 @@ const RARE_FAMILY_PRESETS = {
             armor:{ id:'eq_npc_ohana_armor', name:'E급 투박한 기동조끼', category:'equipment', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'leather', armorStatBonusMul:0.10, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:1, mdef:1, mainStat:'', resistType:'', resistPct:0, price:400000, note:'E급 표준 가죽갑.' },
             accessory:{ id:'eq_npc_ohana_acc', name:'E급 투박한 보호대', category:'equipment', part:'accessory', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:1, traits:['physical_damage'], durability:100, maxDurability:100, atk:0, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:300000, note:'E급 표준 보호대.' }, bag:null
           }},
-          note:'고유 NPC. E급 투척가. 퀵스로/정밀조준(성장형)/나이프회수(성장형) 보유.\n투척단검 10개 1세트 — 기본공격/퀵스로 시 1개 소모, 나이프회수로 회수 가능, 전투 종료 시 자동 회수.\n장비: 협회지급 투척단검, E급 조악한 예비단검(물피+1%), E급 투박한 기동조끼, E급 투박한 보호대(물피+1%).' }
+          note:'고유 NPC. E급 투척가. 퀵스로/정밀조준(성장형)/나이프회수(성장형) 보유.\n투척단검 10개 1세트 — 기본공격/퀵스로 시 1개 소모, 나이프회수로 회수 가능, 전투 종료 시 자동 회수.\n장비: 협회지급 투척단검, E급 조악한 예비단검(물피+1%), E급 투박한 기동조끼, E급 투박한 보호대(물피+1%).' },
+        // ── NPC: 안도현 ──
+        { id:'char_dohyun', name:'안도현', job:'리페어/짐꾼', position:'비전투', row:'back', rank:'E', level:8,
+          stats:{ str:14, con:12, int:12, agi:10, sense:16 },
+          hp:0, mp:0, sp:0, atk:0, pdef:0, mdef:0,
+          damageType:'physical', attackStat:'str',
+          skills:[],
+          threatBase:0,
+          inventory:{ gold:0, items:[
+            { id:'tool_dohyun_pickaxe', name:'E급 곡괭이', category:'tool', rank:'E', count:1, unitWeightG:1500, note:'채광 도구.' }
+          ], equipped:{
+            weapon:null, subweapon:null, armor:null, accessory:null,
+            bag:{ id:'eq_npc_dohyun_bag', name:'E급 기본가방', category:'equipment', part:'bag', rank:'E', bagId:'bag_E', slotBonus:8, maxWeightBonusG:7000, weightMul:1.00, durability:100, maxDurability:100, note:'짐꾼 전용 가방.' }
+          }},
+          note:'고유 NPC. 비전투/리페어/짐꾼. 레벨8.\n패시브: 탁월한 손재주 — 수리속도·통찰력 상승 (메모)\n현장정비&응급처치 — 휴식효과 +1% 고정값 상승 (파티 참가 시 자동)\n빠른수리 — 전투 중 내구도 감소 50% (파티 참가 시 자동)\n장비: E급 가방, E급 곡괭이\n※ 승급 불가. 게이트클리어기록: E급소형6회, E급중형2회, E급대형1회(비전투)' }
       ],
       monsters: buildSampleMonsters(),
       personas: [
@@ -2043,7 +2057,7 @@ const RARE_FAMILY_PRESETS = {
       activityLog: [],    // [{ ts, actor, action, detail }] LLM 전달용 활동 로그
       guildTaxLog: [],
       assocEquipClaimed: { 'char_yuna': true, 'char_haneul': true, 'char_ohana': true },  // { [activeCharId]: true } — 협회지급 장비 무료 구매 기록
-      gateClearHistory: { 'char_yuna': { 'E_small': 3 }, 'char_haneul': { 'E_small': 4 }, 'char_ohana': { 'E_small': 2 } },  // { [characterId/personaId]: { "E_small":count, "E_medium":count, ... } }
+      gateClearHistory: { 'char_yuna': { 'E_small': 3 }, 'char_haneul': { 'E_small': 4 }, 'char_ohana': { 'E_small': 2 }, 'char_dohyun': { 'E_small': 6, 'E_medium': 2, 'E_large': 1 } },  // { [characterId/personaId]: { "E_small":count, "E_medium":count, ... } }
       rankUpHistory: {},     // { [characterId/personaId]: { lastAttempt: timestamp, result: 'success'|'fail', targetRank } }
       homeRegions: [],   // [{id, name, homes:[{id, name, area, houseType, deposit, monthlyRent, maintenanceFee, purchasePrice, brokerFee, desc, features:[], storages:[{id,name,type,maxSlots,maxWeightKg,items:[]}]}]}]
       ownedHomes: {},    // { [activeCharId]: [ { regionId, homeId, moveInDate:'2026-01-01', lastRentPaidMonth:'2026-01', rentLog:[{month,amount,paidDate}] }, ... ] }
@@ -2064,7 +2078,7 @@ const RARE_FAMILY_PRESETS = {
   //   3) run() 안에서 model.db 를 직접 수정 (예: 새 필드 추가, 값 보정 등)
   // 저장 데이터의 dbVersion 이 현재보다 낮으면 해당 마이그레이션만 순차 실행됨.
   // 20시간 세이브든 100시간 세이브든 초기화 없이 자동 패치.
-  const DB_SCHEMA_VERSION = 2;
+  const DB_SCHEMA_VERSION = 3;
 
   function migrateDb() {
     const defaults = buildDefaultDb();
@@ -2263,6 +2277,16 @@ const RARE_FAMILY_PRESETS = {
           if (!model.db.assocEquipClaimed) model.db.assocEquipClaimed = {};
           if (!model.db.assocEquipClaimed['char_ohana']) {
             model.db.assocEquipClaimed['char_ohana'] = true;
+          }
+        }
+      },
+      {
+        version: 3,
+        name: '안도현 NPC 추가 + 게이트클리어 기록',
+        run() {
+          if (!model.db.gateClearHistory) model.db.gateClearHistory = {};
+          if (!model.db.gateClearHistory['char_dohyun']) {
+            model.db.gateClearHistory['char_dohyun'] = { 'E_small': 6, 'E_medium': 2, 'E_large': 1 };
           }
         }
       },
@@ -3687,30 +3711,47 @@ function syncTeamToPartySlots() {
   }
 }
 function getPartyCharBags() {
-  // Returns array of PARTY_BAGS entries for each character in the party (battleSetup.partySlots)
+  // Returns array of { bag, isPorter } entries for each character in the party (battleSetup.partySlots)
   // Priority: equipped.bag (장비창 가방 슬롯) → bagId (DB 직접 설정)
   const partySlots = (model.db.battleSetup && Array.isArray(model.db.battleSetup.partySlots)) ? model.db.battleSetup.partySlots : [];
   const chars = model.db.characters || [];
-  const bags = [];
+  const result = [];
   partySlots.forEach(cid => {
     if (!cid) return;
     const c = chars.find(x => x.id === cid);
     if (!c) return;
-    // Check equipped bag slot first
     const equippedBagId = (c.inventory && c.inventory.equipped && c.inventory.equipped.bag && c.inventory.equipped.bag.bagId) || null;
     const bagId = equippedBagId || c.bagId || 'none';
     const bag = PARTY_BAGS[bagId] || PARTY_BAGS.none;
-    bags.push(bag);
+    const isPorter = (c.job || '').includes('짐꾼');
+    result.push({ bag, isPorter });
   });
-  return bags;
+  return result;
 }
+const PORTER_BAG_RATIO = 0.80;
 function inventoryCapacity() {
-  const bags = getPartyCharBags();
-  // 공용인벤은 가방 보너스의 20%만 적용 (나머지 80%는 개인 짐)
-  const totalSlotBonus = Math.floor(bags.reduce((s, b) => s + Number(b.slotBonus || 0), 0) * SHARED_INV_BAG_RATIO);
-  const totalWeightBonus = Math.floor(bags.reduce((s, b) => s + Number(b.maxWeightBonusG || 0), 0) * SHARED_INV_BAG_RATIO);
+  const entries = getPartyCharBags();
+  // 공용인벤은 가방 보너스의 20%만 적용, 짐꾼은 80% 적용
+  const totalSlotBonus = Math.floor(entries.reduce((s, e) => {
+    const ratio = e.isPorter ? PORTER_BAG_RATIO : SHARED_INV_BAG_RATIO;
+    return s + Number(e.bag.slotBonus || 0) * ratio;
+  }, 0));
+  const totalWeightBonus = Math.floor(entries.reduce((s, e) => {
+    const ratio = e.isPorter ? PORTER_BAG_RATIO : SHARED_INV_BAG_RATIO;
+    return s + Number(e.bag.maxWeightBonusG || 0) * ratio;
+  }, 0));
+  const bags = entries.map(e => e.bag);
   const bestWeightMul = bags.length > 0 ? Math.min(...bags.map(b => Number(b.weightMul || 1))) : 1.0;
   return { slots: INVENTORY_BASE_SLOTS + totalSlotBonus, maxWeightG: INVENTORY_BASE_MAX_WEIGHT_G + totalWeightBonus, weightMul: bestWeightMul, bags };
+}
+function hasPorterInParty() {
+  const partySlots = (model.db.battleSetup && Array.isArray(model.db.battleSetup.partySlots)) ? model.db.battleSetup.partySlots : [];
+  const chars = model.db.characters || [];
+  return partySlots.some(cid => {
+    if (!cid) return false;
+    const c = chars.find(x => x.id === cid);
+    return c && (c.job || '').includes('짐꾼');
+  });
 }
 function inventoryItemKey(item) {
   if (!item) return '';
@@ -4165,7 +4206,7 @@ function stageTemplateForSize(size) {
   return tpl;
 }
 function buildPartyEntriesFromSetup() {
-  return (model.db.battleSetup.partySlots || []).map(id => getCharById(id) || getPersonaById(id)).filter(Boolean).map(base => {
+  return (model.db.battleSetup.partySlots || []).map(id => getCharById(id) || getPersonaById(id)).filter(Boolean).filter(e => e.position !== '비전투').map(base => {
     const e = deepClone(base);
     // 장비 보너스를 반영하여 ATK 등 재계산
     recalcCharDerivedStats(e);
@@ -5159,14 +5200,15 @@ function continueAfterClearedRoom(run) {
 function restGateParty(run) {
   if (!run || !run.postBattle) throw new Error('휴식 가능한 시점이 아니다.');
   if (run.postBattle.restUsed) throw new Error('이 방에서는 이미 휴식했다.');
+  const healRate = hasPorterInParty() ? 0.03 : 0.02;
   let lines = [];
   (run.partyState || []).forEach(unit => {
     const maxHp = Number(unit.hp || unit.maxHp || 0);
     const maxMp = Number(unit.mp || unit.maxMp || 0);
     const maxSp = Number(unit.sp || unit.maxSp || 0);
-    const hpGain = Math.max(1, Math.floor(maxHp * 0.02));
-    const mpGain = Math.max(0, Math.floor(maxMp * 0.02));
-    const spGain = Math.max(0, Math.floor(maxSp * 0.02));
+    const hpGain = Math.max(1, Math.floor(maxHp * healRate));
+    const mpGain = Math.max(0, Math.floor(maxMp * healRate));
+    const spGain = Math.max(0, Math.floor(maxSp * healRate));
     unit.currentHp = clamp(Number(unit.currentHp || 0) + hpGain, 0, maxHp);
     unit.currentMp = clamp(Number(unit.currentMp || 0) + mpGain, 0, maxMp);
     unit.currentSp = clamp(Number(unit.currentSp || 0) + spGain, 0, maxSp);
@@ -6136,27 +6178,29 @@ function getBuffedStat(unit, statKey) {
     const baseId = actor.baseId || actor.id;
     const dbChar = (model.db.characters || []).find(c => c.id === baseId) || (model.db.personas || []).find(p => p.id === baseId);
     if (!dbChar) return;
+    const porterMul = hasPorterInParty() ? 0.5 : 1;
     // 무기 내구도
-    applyDurabilityLoss(dbChar, 'weapon', isSkill ? DURABILITY_COST.weaponSkillAttack : DURABILITY_COST.weaponBasicAttack);
+    applyDurabilityLoss(dbChar, 'weapon', (isSkill ? DURABILITY_COST.weaponSkillAttack : DURABILITY_COST.weaponBasicAttack) * porterMul);
     // 보조무기 (방패가 아닌 경우)
     const sub = dbChar.inventory && dbChar.inventory.equipped && dbChar.inventory.equipped.subweapon;
     if (sub && sub.subtype !== 'shield' && !(sub.name && sub.name.includes('방패'))) {
-      applyDurabilityLoss(dbChar, 'subweapon', isSkill ? DURABILITY_COST.subweaponSkill : DURABILITY_COST.subweaponAttack);
+      applyDurabilityLoss(dbChar, 'subweapon', (isSkill ? DURABILITY_COST.subweaponSkill : DURABILITY_COST.subweaponAttack) * porterMul);
     }
     // 악세서리 내구도
-    applyDurabilityLoss(dbChar, 'accessory', DURABILITY_COST.accessoryAction);
+    applyDurabilityLoss(dbChar, 'accessory', DURABILITY_COST.accessoryAction * porterMul);
   }
   function applyDurabilityOnHit(runtime, target) {
     if (!target || target.isMonster) return;
     const baseId = target.baseId || target.id;
     const dbChar = (model.db.characters || []).find(c => c.id === baseId) || (model.db.personas || []).find(p => p.id === baseId);
     if (!dbChar) return;
+    const porterMul = hasPorterInParty() ? 0.5 : 1;
     // 방어구 내구도
-    applyDurabilityLoss(dbChar, 'armor', DURABILITY_COST.armorHit);
+    applyDurabilityLoss(dbChar, 'armor', DURABILITY_COST.armorHit * porterMul);
     // 방패 (보조무기 중 shield) 내구도
     const sub = dbChar.inventory && dbChar.inventory.equipped && dbChar.inventory.equipped.subweapon;
     if (sub && (sub.subtype === 'shield' || (sub.name && sub.name.includes('방패')))) {
-      applyDurabilityLoss(dbChar, 'subweapon', DURABILITY_COST.shieldHit);
+      applyDurabilityLoss(dbChar, 'subweapon', DURABILITY_COST.shieldHit * porterMul);
     }
   }
 
@@ -10748,18 +10792,19 @@ function renderCommandPanel(runtime) {
       const spPct = u.maxSp > 0 ? Math.round(u.sp / u.maxSp * 100) : 0;
       const hpColor = hpPct > 50 ? '#22c55e' : hpPct > 25 ? '#f59e0b' : '#ef4444';
       const statusIcons = getStatusIcons(u.statuses, true);
-      return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:4px 8px;border-left:3px solid ${hpColor};margin-bottom:2px;">
+      const daggerLine = (u._throwingDaggers != null) ? `<div style="font-size:10px;margin-top:1px;">🗡️ 단검 ${u._throwingDaggers}/${u._throwingDaggersMax || 10}</div>` : '';
+      return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:3px 6px;border-left:3px solid ${hpColor};margin-bottom:1px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div><strong style="font-size:14px;">${escapeHtml(u.name)}</strong> <span class="gb-badge">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="font-size:9px;">${escapeHtml(rowLabel(u.row))}</span>${statusIcons.length ? ` ${statusIcons.join('')}` : ''}</div>
-          <div style="font-size:10px;color:#94a3b8;">${escapeHtml(u.job||'')} / ${escapeHtml(u.position||'')}</div>
+          <div><strong style="font-size:12px;">${escapeHtml(u.name)}</strong> <span class="gb-badge" style="font-size:9px;padding:1px 4px;">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="font-size:8px;padding:1px 3px;">${escapeHtml(rowLabel(u.row))}</span>${statusIcons.length ? ` ${statusIcons.join('')}` : ''}</div>
+          <div style="font-size:9px;color:#94a3b8;">${escapeHtml(u.job||'')} / ${escapeHtml(u.position||'')}</div>
         </div>
-        ${statusIcons.length ? `<div style="margin:3px 0;font-size:10px;">${statusIcons.join(' ')}</div>` : ''}
-        <div class="gb-bar-wrap" style="margin-top:4px;"><span style="font-size:11px;color:${hpColor};">❤️ ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
-        <div style="display:flex;gap:8px;">
-          <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:10px;color:#60a5fa;">💧 ${Math.floor(u.mp)}/${Math.floor(u.maxMp)}</span><div class="gb-bar"><div class="gb-bar-fill mp" style="width:${mpPct}%"></div></div></div>
-          <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:10px;color:#fbbf24;">⚡ ${Math.floor(u.sp)}/${Math.floor(u.maxSp)}</span><div class="gb-bar"><div class="gb-bar-fill sp" style="width:${spPct}%"></div></div></div>
+        <div class="gb-bar-wrap" style="margin-top:2px;"><span style="font-size:10px;color:${hpColor};">❤️ ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
+        <div style="display:flex;gap:6px;">
+          <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:9px;color:#60a5fa;">💧 ${Math.floor(u.mp)}/${Math.floor(u.maxMp)}</span><div class="gb-bar"><div class="gb-bar-fill mp" style="width:${mpPct}%"></div></div></div>
+          <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:9px;color:#fbbf24;">⚡ ${Math.floor(u.sp)}/${Math.floor(u.maxSp)}</span><div class="gb-bar"><div class="gb-bar-fill sp" style="width:${spPct}%"></div></div></div>
         </div>
-        ${u.lastAction ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
+        ${daggerLine}
+        ${u.lastAction ? `<div style="font-size:9px;color:#94a3b8;margin-top:1px;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
       </div>`;
     }
 
@@ -10768,13 +10813,13 @@ function renderCommandPanel(runtime) {
       const hpPct = u.maxHp > 0 ? Math.round(u.hp / u.maxHp * 100) : 0;
       const kindColor = u.kind === 'Boss' ? '#dc2626' : u.kind === 'Elite' ? '#d97706' : '#64748b';
       const statusIcons = getStatusIcons(u.statuses, false);
-      return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:4px 8px;border-left:3px solid ${kindColor};margin-bottom:2px;">
+      return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:3px 6px;border-left:3px solid ${kindColor};margin-bottom:1px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div><strong style="font-size:13px;">${escapeHtml(u.name)}</strong> <span class="gb-badge">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="background:rgba(239,68,68,0.18);color:#fca5a5;font-size:9px;">${escapeHtml(u.kind||'')}</span>${statusIcons.length ? ` ${statusIcons.join('')}` : ''}</div>
-          <span style="font-size:10px;color:#94a3b8;">${escapeHtml(rowLabel(u.row))}</span>
+          <div><strong style="font-size:12px;">${escapeHtml(u.name)}</strong> <span class="gb-badge" style="font-size:9px;padding:1px 4px;">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="background:rgba(239,68,68,0.18);color:#fca5a5;font-size:8px;padding:1px 3px;">${escapeHtml(u.kind||'')}</span>${statusIcons.length ? ` ${statusIcons.join('')}` : ''}</div>
+          <span style="font-size:9px;color:#94a3b8;">${escapeHtml(rowLabel(u.row))}</span>
         </div>
-        <div class="gb-bar-wrap" style="margin-top:4px;"><span style="font-size:11px;">HP ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
-        ${u.lastAction ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
+        <div class="gb-bar-wrap" style="margin-top:2px;"><span style="font-size:10px;">HP ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
+        ${u.lastAction ? `<div style="font-size:9px;color:#94a3b8;margin-top:1px;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
       </div>`;
     }
 
@@ -10864,13 +10909,13 @@ function renderCommandPanel(runtime) {
 
         <!-- 유닛 패널: 아군 vs 적 -->
         <div class="gb-grid two" style="align-items:start;margin-bottom:10px;">
-          <div class="gb-panel" style="max-height:320px;overflow:auto;">
+          <div class="gb-panel" style="max-height:420px;overflow:auto;">
             <div class="gb-section-title" style="color:#60a5fa;">👥 아군 (${aliveParty.length}/${rt.party.length})</div>
-            ${rt.party.map(u => immersivePartyCard(u)).join('')}
+            <div class="gb-unit-grid">${rt.party.map(u => immersivePartyCard(u)).join('')}</div>
           </div>
-          <div class="gb-panel" style="max-height:320px;overflow:auto;">
+          <div class="gb-panel" style="max-height:420px;overflow:auto;">
             <div class="gb-section-title" style="color:#fca5a5;">👹 적 (${aliveEnemies.length}/${rt.enemies.length})</div>
-            ${rt.enemies.map(u => immersiveEnemyCard(u)).join('')}
+            <div class="gb-unit-grid">${rt.enemies.map(u => immersiveEnemyCard(u)).join('')}</div>
           </div>
         </div>
 
@@ -15792,6 +15837,8 @@ async function saveMaterialTraitFromForm() {
       #${UI_ID} .gb-list-item.is-active { border-color:#2563eb; background:#12203f; }
       #${UI_ID} .gb-badge { display:inline-block; font-size:10px; padding:2px 6px; border-radius:999px; background:rgba(59,130,246,0.18); color:#bfdbfe; border:1px solid rgba(59,130,246,0.22); margin-left:4px; }
       #${UI_ID} .gb-unit { border:1px solid rgba(148,163,184,0.15); border-radius:10px; padding:10px; margin-bottom:8px; background:#0b0d12; }
+      #${UI_ID} .gb-unit-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:4px; }
+      #${UI_ID} .gb-unit-grid .gb-unit { margin-bottom:0; padding:4px 6px; border-radius:6px; }
       #${UI_ID} .gb-unit.is-dead { opacity:0.55; }
       #${UI_ID} .gb-unit-top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
       #${UI_ID} .gb-bar-wrap { display:grid; grid-template-columns:96px 1fr; align-items:center; gap:8px; font-size:11px; margin-top:6px; }
