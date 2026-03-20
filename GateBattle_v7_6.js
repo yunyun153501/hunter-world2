@@ -1840,7 +1840,7 @@ const RARE_FAMILY_PRESETS = {
       customSkills: [
         { id:'skill_guide', name:'⭐ 스킬가이드', grade:'E', category:'singleAttack', target:'singleEnemy',
           costs:{ mp:0, sp:0 }, coef:1.0, damageType:'physical', element:'none', statTypes:['str'], duration:0,
-          desc:'【스킬 만드는 법】\n1. "새 스킬" 클릭 → ID/이름 입력\n2. 각 항목을 설정 후 저장\n\n【카테고리 설명】\nsingleAttack = 단일 공격 (적 1체)\naoeAttack = 광역 공격 (전체 적)\nsingleCC = 단일 CC (적 1체 + 행동방해)\naoeCC = 광역 CC (전체 적 + 행동방해)\nsingleHeal = 단일 회복 (아군 1체)\naoeHeal = 광역 회복 (전체 아군)\nbuff = 버프 (자신/아군 강화)\nutility = 유틸리티 (자원/상태 관리)\n\n【은신(stealth) 버프 만드는 법】\n은신은 buff 카테고리 스킬로 만듭니다.\n1. 카테고리: buff\n2. 대상: self (자기 자신)\n3. 버프 스탯: 원하는 스탯 (예: agi +5)\n4. 지속 턴: 원하는 턴수 (예: 3)\n5. 은신 체크박스: 체크 ✓\n효과: 은신 중에는 모든 공격 대상에서 제외됩니다.\n  보스를 포함한 모든 적의 공격에서 은신이 적용됩니다.\n  은신 상태에서 공격하면 즉시 은신이 해제됩니다.\n  지속 턴이 끝나도 자동 해제됩니다.\n\n【특수효과 설정법】\n장비와 스킬에 특수효과를 추가할 수 있습니다.\n1. 효과 종류: 버프(자신/아군 강화) 또는 디버프(적에게 받는 피해 증가)\n2. 발동확률: 0~100% (장비는 피격/공격 시, 스킬은 사용 시)\n3. 효과 선택: 버프는 다양한 효과, 디버프는 받는 피해 증가만 선택 가능\n4. 효과 수치: 효과의 크기 (%, 절대값 등)\n버프: 자신이나 아군의 해당 효과 증가\n디버프: 적에게 받는 피해 증가 적용 (물리/마법/속성별 받는 피해 증가)\n\n【대상 설명】\nsingleEnemy = 적 1체\nallEnemies = 전체 적 (광역)\nrowFront = 전열 적만 (전열 광역)\nrowMid = 중열 적만\nrowBack = 후열 적만\nrowFrontMid = 전열+중열 적\nrowMidBack = 중열+후열 적\nsingleAlly = 아군 1체\nallAllies = 전체 아군\nself = 자기 자신\n※ 열 공격: 해당 열이 비면 가장 앞 열의 적을 공격\n\n【CC 종류 설명】\nstun = 기절 (행동불가, 2턴, 이후 5턴 면역)\nbind = 속박 (감각-50%, 명중률-50%, 이후 5턴 면역)\nsleep = 수면 (행동불가, 3턴, 피격 시 해제, 이후 5턴 면역)\nsilence = 침묵 (스킬 사용불가)\nslow = 둔화 (명중률-30%, 회피율-50%)\nblind = 실명 (명중률-50%)\nfreeze = 빙결 (행동불가, 2턴, 이후 5턴 면역)\nparalyze = 마비 (행동불가, 2턴, 이후 5턴 면역)\n※ CC 확률: 비우면 100%. 0~1 사이 소수로 입력 (예: 0.3=30%)\n\n【속성-상태이상 매칭】\n빛→실명, 어둠→저주, 불→화상, 물→둔화, 대지→기절, 바람→출혈, 얼음→빙결, 전기→마비\n\n【상태이상 설명 및 기본 확률/턴수】\npoison = 독 — 확률23%, 3턴, 최대3중첩\n  효과: 매턴 방어무시 DoT (기본값×계수×0.2×중첩수)\nbleed = 출혈 — 확률23%, 3턴\n  효과: 발동 시 해당 공격 피해의 30% 추가피해(1회)\n  + 3턴간 받는 회복량 50% 감소\nburn = 화상 — 확률23%, 5턴, 최대5중첩\n  효과: 매턴 방어무시 DoT (기본값×계수×0.12×중첩수)\n  + 받는 데미지 +10% (중첩 무관)\ncurse = 저주 — 확률18%, 3턴 (하드CC, 이후 5턴 면역)\n  효과: 등급별 공격력 감소 + 받는 피해 증가 (E:10%~S:30%)\nsilence = 침묵 — 확률20%, 2턴\n  효과: 스킬 사용불가 (기본공격만 가능)\nslow = 둔화 — 확률25%, 3턴\n  효과: 명중률 -30%, 회피율 -50%\nbind = 속박 — 확률18%, 2턴 (하드CC, 이후 5턴 면역)\n  효과: 감각(SENSE) -50%, 명중률 -50% (크리율도 함께 감소)\n  둔화보다 명중 감소폭이 크고, 감각 감소로 크리티컬률도 하락\n\n※ 상태이상 확률: 비우면 위 기본값 자동 적용\n0~1 사이 소수로 입력 (예: 0.5=50%)\n\n【등급별 계수 — 순수 공격 (단일 기준)】\n하한 → 상한\nE: 1.2 → 1.5\nD: 1.92 → 2.4\nC: 2.88 → 3.6\nB: 4.8 → 6.0\nA: 7.68 → 9.6\nS: 11.52 → 14.4\n광역/열공격 = 단일 × 0.58\n\n【CC/상태이상 스킬 추천 계수】\n상태이상이 붙는 스킬은 직접 데미지를 낮추는 대신\n상태이상 효과로 총 가치를 보상하는 구조.\n추천: 순수공격 하한값 × 0.8 (20% 약화)\n\n단일 CC/상태이상 추천계수 (기본확률일 경우):\nE: 0.96 / D: 1.54 / C: 2.30\nB: 3.84 / A: 6.14 / S: 9.22\n\n광역 CC/상태이상 추천계수 (단일×0.58):\nE: 0.56 / D: 0.89 / C: 1.33\nB: 2.23 / A: 3.56 / S: 5.35\n\n※ 밸런스 기준:\n직접피해 + 상태이상 효과(DoT/추가피해/디버프)\n총합이 최소 상한계수급 이상이면 적절.\n독/화상: 총합≈상한의 102%\n출혈: 직접+즉시추가≈상한의 83% + 회복량50%감소 유틸\n상태이상이 강할수록 계수를 더 낮춰도 됨.\n\n【데미지 공식】\n데미지 기본값 = (2 × 주스탯) + (3 × ATK)\n회복 기본값 = 주스탯 × 0.5\n힐 전용 계수: E:1.2~1.3 / D:1.4~1.5 / C:1.6~1.7 / B:1.8~2.0 / A:2.1~2.3 / S:2.4~2.6\n광역힐 = 단일힐 계수 × 0.58\n최종데미지 = 기본값 × 계수 × 크리배율 × 속성배율\n※ 크리티컬: ×1.5 / 속성유리: ×1.25 / 속성불리: ×0.75\n\n【상태이상 효과 공식】\n독(DoT): 매턴 기본값 × 계수 × 0.2 × 중첩수 (최대3)\n화상(DoT): 매턴 기본값 × 계수 × 0.12 × 중첩수 (최대5)\n  + 받는 데미지 +10% (중첩 무관)\n출혈: 발동 시 해당 공격 피해의 30% 추가피해(1회)\n  + 3턴간 받는 회복량 50% 감소\n저주: 등급별 공격력 감소 + 받는 피해 증가 (E:10%~S:30%)\n\n【E급 예시 (주스탯15, ATK5)】\n기본값 = (2×15)+(3×5) = 45\n상한 직접피해 = 45×1.5 = 67.5\n\n■ 순수 단일공격 (계수1.35): 45×1.35 = 60.75\n■ 순수 광역공격 (계수0.78): 45×0.78 = 35.10\n\n■ 단일CC/상태이상 (추천계수0.96):\n  직접피해: 45×0.96 = 43.20\n  독1중첩 3턴합: 45×0.96×0.2×3 = 25.92\n  → 총합: 43.20+25.92 = 69.12 (상한의 102%) ✓\n  화상1중첩 5턴합: 45×0.96×0.12×5 = 25.92\n  → 총합: 43.20+25.92 = 69.12 + 피격+10% ✓\n  출혈 즉시추가: 43.20×0.3 = 12.96\n  → 총합: 43.20+12.96 = 56.16 (상한83%) + 회복량50%감소 ✓\n\n■ 광역CC/상태이상 (추천계수0.56):\n  직접피해: 45×0.56 = 25.20 (각 적)\n  독1중첩 3턴합: 45×0.56×0.2×3 = 15.12\n  → 총합: 25.20+15.12 = 40.32/적\n  출혈 즉시추가: 25.20×0.3 = 7.56\n  → 총합: 25.20+7.56 = 32.76/적 + 회복량50%감소\n\n이 스킬은 삭제해도 됩니다.' }
+          desc:'【스킬 만드는 법】\n1. "새 스킬" 클릭 → ID/이름 입력\n2. 각 항목을 설정 후 저장\n\n【카테고리 설명】\nsingleAttack = 단일 공격 (적 1체)\naoeAttack = 광역 공격 (전체 적)\nsingleCC = 단일 CC (적 1체 + 행동방해)\naoeCC = 광역 CC (전체 적 + 행동방해)\nsingleHeal = 단일 회복 (아군 1체)\naoeHeal = 광역 회복 (전체 아군)\nbuff = 버프 (자신/아군 강화)\nutility = 유틸리티 (자원/상태 관리)\n\n【은신(stealth) 버프 만드는 법】\n은신은 buff 카테고리 스킬로 만듭니다.\n1. 카테고리: buff\n2. 대상: self (자기 자신)\n3. 버프 스탯: 원하는 스탯 (예: agi +5)\n4. 지속 턴: 원하는 턴수 (예: 3)\n5. 은신 체크박스: 체크 ✓\n효과: 은신 중에는 모든 공격 대상에서 제외됩니다.\n  보스를 포함한 모든 적의 공격에서 은신이 적용됩니다.\n  은신 상태에서 공격하면 즉시 은신이 해제됩니다.\n  지속 턴이 끝나도 자동 해제됩니다.\n\n【특수효과 설정법】\n장비와 스킬에 특수효과를 추가할 수 있습니다.\n1. 효과 종류: 버프(자신/아군 강화) 또는 디버프(적에게 받는 피해 증가)\n2. 발동확률: 0~100% (장비는 피격/공격 시, 스킬은 사용 시)\n3. 효과 선택: 버프는 다양한 효과, 디버프는 받는 피해 증가만 선택 가능\n4. 효과 수치: 효과의 크기 (%, 절대값 등)\n버프: 자신이나 아군의 해당 효과 증가\n디버프: 적에게 받는 피해 증가 적용 (물리/마법/속성별 받는 피해 증가)\n\n【대상 설명】\nsingleEnemy = 적 1체\nallEnemies = 전체 적 (광역)\nrowFront = 전열 적만 (전열 광역)\nrowMid = 중열 적만\nrowBack = 후열 적만\nrowFrontMid = 전열+중열 적\nrowMidBack = 중열+후열 적\nsingleAlly = 아군 1체\nallAllies = 전체 아군\nself = 자기 자신\n※ 열 공격: 해당 열이 비면 가장 앞 열의 적을 공격\n\n【CC 종류 설명】\nstun = 기절 (행동불가, 2턴, 이후 5턴 면역)\nbind = 속박 (감각-50%, 명중률-50%, 이후 5턴 면역)\nsleep = 수면 (행동불가, 3턴, 피격 시 해제, 이후 5턴 면역)\nsilence = 침묵 (스킬 사용불가)\nslow = 둔화 (명중률-30%, 회피율-50%)\nblind = 실명 (명중률-50%)\nfreeze = 빙결 (행동불가, 2턴, 이후 5턴 면역)\nparalyze = 마비 (행동불가, 2턴, 이후 5턴 면역)\n※ CC 확률: 비우면 해당 CC 타입의 기본 확률 적용 (기절16%, 속박18%, 수면16%, 침묵20%, 둔화25%). 0~1 사이 소수로 입력 (예: 0.3=30%)\n\n【속성-상태이상 매칭】\n빛→실명, 어둠→저주, 불→화상, 물→둔화, 대지→기절, 바람→출혈, 얼음→빙결, 전기→마비\n\n【상태이상 설명 및 기본 확률/턴수】\npoison = 독 — 확률23%, 3턴, 최대3중첩\n  효과: 매턴 방어무시 DoT (기본값×계수×0.2×중첩수)\nbleed = 출혈 — 확률23%, 3턴\n  효과: 발동 시 해당 공격 피해의 30% 추가피해(1회)\n  + 3턴간 받는 회복량 50% 감소\nburn = 화상 — 확률23%, 5턴, 최대5중첩\n  효과: 매턴 방어무시 DoT (기본값×계수×0.12×중첩수)\n  + 받는 데미지 +10% (중첩 무관)\ncurse = 저주 — 확률18%, 3턴 (하드CC, 이후 5턴 면역)\n  효과: 등급별 공격력 감소 + 받는 피해 증가 (E:10%~S:30%)\nsilence = 침묵 — 확률20%, 2턴\n  효과: 스킬 사용불가 (기본공격만 가능)\nslow = 둔화 — 확률25%, 3턴\n  효과: 명중률 -30%, 회피율 -50%\nbind = 속박 — 확률18%, 2턴 (하드CC, 이후 5턴 면역)\n  효과: 감각(SENSE) -50%, 명중률 -50% (크리율도 함께 감소)\n  둔화보다 명중 감소폭이 크고, 감각 감소로 크리티컬률도 하락\n\n※ 상태이상 확률: 비우면 위 기본값 자동 적용\n0~1 사이 소수로 입력 (예: 0.5=50%)\n\n【등급별 계수 — 순수 공격 (단일 기준)】\n하한 → 상한\nE: 1.2 → 1.5\nD: 1.92 → 2.4\nC: 2.88 → 3.6\nB: 4.8 → 6.0\nA: 7.68 → 9.6\nS: 11.52 → 14.4\n광역/열공격 = 단일 × 0.58\n\n【CC/상태이상 스킬 추천 계수】\n상태이상이 붙는 스킬은 직접 데미지를 낮추는 대신\n상태이상 효과로 총 가치를 보상하는 구조.\n추천: 순수공격 하한값 × 0.8 (20% 약화)\n\n단일 CC/상태이상 추천계수 (기본확률일 경우):\nE: 0.96 / D: 1.54 / C: 2.30\nB: 3.84 / A: 6.14 / S: 9.22\n\n광역 CC/상태이상 추천계수 (단일×0.58):\nE: 0.56 / D: 0.89 / C: 1.33\nB: 2.23 / A: 3.56 / S: 5.35\n\n※ 밸런스 기준:\n직접피해 + 상태이상 효과(DoT/추가피해/디버프)\n총합이 최소 상한계수급 이상이면 적절.\n독/화상: 총합≈상한의 102%\n출혈: 직접+즉시추가≈상한의 83% + 회복량50%감소 유틸\n상태이상이 강할수록 계수를 더 낮춰도 됨.\n\n【데미지 공식】\n데미지 기본값 = (2 × 주스탯) + (3 × ATK)\n회복 기본값 = 주스탯 × 0.5\n힐 전용 계수: E:1.2~1.3 / D:1.4~1.5 / C:1.6~1.7 / B:1.8~2.0 / A:2.1~2.3 / S:2.4~2.6\n광역힐 = 단일힐 계수 × 0.58\n최종데미지 = 기본값 × 계수 × 크리배율 × 속성배율\n※ 크리티컬: ×1.5 / 속성유리: ×1.25 / 속성불리: ×0.75\n\n【상태이상 효과 공식】\n독(DoT): 매턴 기본값 × 계수 × 0.2 × 중첩수 (최대3)\n화상(DoT): 매턴 기본값 × 계수 × 0.12 × 중첩수 (최대5)\n  + 받는 데미지 +10% (중첩 무관)\n출혈: 발동 시 해당 공격 피해의 30% 추가피해(1회)\n  + 3턴간 받는 회복량 50% 감소\n저주: 등급별 공격력 감소 + 받는 피해 증가 (E:10%~S:30%)\n\n【E급 예시 (주스탯15, ATK5)】\n기본값 = (2×15)+(3×5) = 45\n상한 직접피해 = 45×1.5 = 67.5\n\n■ 순수 단일공격 (계수1.35): 45×1.35 = 60.75\n■ 순수 광역공격 (계수0.78): 45×0.78 = 35.10\n\n■ 단일CC/상태이상 (추천계수0.96):\n  직접피해: 45×0.96 = 43.20\n  독1중첩 3턴합: 45×0.96×0.2×3 = 25.92\n  → 총합: 43.20+25.92 = 69.12 (상한의 102%) ✓\n  화상1중첩 5턴합: 45×0.96×0.12×5 = 25.92\n  → 총합: 43.20+25.92 = 69.12 + 피격+10% ✓\n  출혈 즉시추가: 43.20×0.3 = 12.96\n  → 총합: 43.20+12.96 = 56.16 (상한83%) + 회복량50%감소 ✓\n\n■ 광역CC/상태이상 (추천계수0.56):\n  직접피해: 45×0.56 = 25.20 (각 적)\n  독1중첩 3턴합: 45×0.56×0.2×3 = 15.12\n  → 총합: 25.20+15.12 = 40.32/적\n  출혈 즉시추가: 25.20×0.3 = 7.56\n  → 총합: 25.20+7.56 = 32.76/적 + 회복량50%감소\n\n이 스킬은 삭제해도 됩니다.' }
       ],
       rareMaterialPack: deepClone(DEFAULT_RARE_MATERIAL_PACK),
       rareMaterialCatalog: [],
@@ -5620,8 +5620,9 @@ function getBuffedStat(unit, statKey) {
       }
       const type = normStatus(skill.cc.type);
       if (!type) return;
-      // CC 확률 판정
-      let ccChance = skill.cc.chance != null ? Number(skill.cc.chance) : 1.0;
+      // CC 확률 판정 (비우면 해당 CC 타입의 기본 확률 적용)
+      const ccProfile = getStatusDefaultProfile(type);
+      let ccChance = skill.cc.chance != null ? Number(skill.cc.chance) : ccProfile.chance;
       if (ccChance < 1.0 && Math.random() > ccChance) return;
       if (unitHasImmunity(target, type)) {
         addRoundHighlight(summary, `${target.name}은(는) ${type} 면역`);
@@ -6856,7 +6857,7 @@ function seedNpcAuctionListings() {
       const sbTier = pickSkillbookTier();
       const tierCats = { 1:['aoeAttack','aoeCC'], 2:['singleAttack','singleCC'], 3:['aoeHeal','buff'], 4:['singleHeal','passive','utility'] };
       const cats = tierCats[sbTier] || tierCats[4];
-      // 빌트인 + 커스텀 스킬 통합 풀 (커스텀 스킬도 동일 등급/티어 분배)
+      // 빌트인 + 커스텀 스킬 통합 풀 (포지션/직업스킬은 경매장 제외, 범용스킬만)
       const allSkillEntries = [];
       const skillKeys = Object.keys(BUILTIN_SKILLS || {});
       skillKeys.forEach(k => {
@@ -6864,7 +6865,7 @@ function seedNpcAuctionListings() {
         if (sk) allSkillEntries.push({ key: k, skill: sk });
       });
       (model.db.customSkills || []).forEach(sk => {
-        if (sk && sk.id && sk.name) allSkillEntries.push({ key: sk.id, skill: sk });
+        if (sk && sk.id && sk.name && (!sk.skillUsage || sk.skillUsage === 'general')) allSkillEntries.push({ key: sk.id, skill: sk });
       });
       const matchingSkills = allSkillEntries.filter(e => e.skill.grade === sbRank && cats.includes(e.skill.category));
       // 해당 등급+티어 스킬이 없으면 등급만 맞추기
@@ -10492,6 +10493,7 @@ function renderCommandPanel(runtime) {
         target: sk.target || 'singleEnemy',
         coef: sk.coef != null ? sk.coef : 0,
         growth: !!sk.growth,
+        skillUsage: sk.skillUsage || 'general',
         mp: (sk.costs && sk.costs.mp) || 0,
         sp: (sk.costs && sk.costs.sp) || 0,
         damageType: sk.damageType || 'physical',
@@ -10512,7 +10514,7 @@ function renderCommandPanel(runtime) {
       };
     } else {
       item = {
-        id:'', name:'', grade:'E', rarity:'Normal', category:'singleAttack', target:'singleEnemy', coef:0, growth:false, mp:0, sp:0,
+        id:'', name:'', grade:'E', rarity:'Normal', category:'singleAttack', target:'singleEnemy', coef:0, growth:false, skillUsage:'general', mp:0, sp:0,
         damageType:'physical', element:'none', statTypes:'', duration:0, ccType:'', ccTurns:0, ccChance:'', buffStat:'', buffValue:0, stealth:false, statusType:'', statusTurns:0, statusChance:'', cooldown:0, desc:''
       };
     }
@@ -10569,9 +10571,11 @@ function renderCommandPanel(runtime) {
       const clickAttr = isCustom ? `data-select-type="skills" data-id="${escapeHtml(sk.id)}"` : `data-load-builtin-skill="${escapeHtml(sk.id)}"`;
       const customBadge = isCustom ? ' <span class="gb-badge" style="background:#22c55e;color:#fff;">커스텀</span>' : '';
       const growthBadge = sk.growth ? ' <span class="gb-badge" style="background:#8b5cf6;color:#fff;">성장형</span>' : '';
+      const usageLabels = { position:'포지션', job:'직업' };
+      const usageBadge = sk.skillUsage && usageLabels[sk.skillUsage] ? ` <span class="gb-badge" style="background:#f97316;color:#fff;">${usageLabels[sk.skillUsage]}</span>` : '';
       const isActive = isCustom && sk.id === model.state.selected.skills;
       return `<div class="gb-skill-row" ${clickAttr} style="padding:6px 0;border-bottom:1px solid rgba(148,163,184,0.1);cursor:pointer;${isActive?'background:#1e293b;border-radius:6px;padding-left:6px;':''}" title="클릭하면 편집기로 불러옵니다">
-        <div><strong>${escapeHtml(sk.name)}</strong> <span class="gb-badge">${escapeHtml(grade)}</span>${rarity} <span class="gb-badge">${escapeHtml(cat)}</span> <span class="gb-badge">${escapeHtml(sk.id)}</span>${overrideBadge}${customBadge}${growthBadge}</div>
+        <div><strong>${escapeHtml(sk.name)}</strong> <span class="gb-badge">${escapeHtml(grade)}</span>${rarity} <span class="gb-badge">${escapeHtml(cat)}</span> <span class="gb-badge">${escapeHtml(sk.id)}</span>${overrideBadge}${customBadge}${growthBadge}${usageBadge}</div>
         <div style="font-size:12px;margin-top:2px;">${coefStr ? `<span style="color:#3b82f6;font-weight:600;">${escapeHtml(coefStr)}</span>` : ''}${costStr ? ` <span style="color:#f59e0b;">[${escapeHtml(costStr)}]</span>` : ''}</div>
         ${byRankStr ? `<div class="gb-sub" style="font-size:11px;margin-top:2px;">📈 성장: ${escapeHtml(byRankStr)}</div>` : ''}
         ${extraStr ? `<div class="gb-sub" style="font-size:11px;margin-top:1px;">${escapeHtml(extraStr)}</div>` : ''}
@@ -10617,6 +10621,7 @@ function renderCommandPanel(runtime) {
             <label>카테고리<select class="gb-input" id="gb-skill-category">${['singleAttack','aoeAttack','singleCC','aoeCC','singleHeal','aoeHeal','buff','passive','utility'].map(v=>optionHtml(v,v,item.category===v)).join('')}</select></label>
             <label>대상<select class="gb-input" id="gb-skill-target">${['singleEnemy','allEnemies','rowFront','rowMid','rowBack','rowFrontMid','rowMidBack','singleAlly','allAllies','self'].map(v=>optionHtml(v,v,item.target===v)).join('')}</select></label>
             <label>스킬 타입<select class="gb-input" id="gb-skill-growth"><option value="normal" ${!item.growth?'selected':''}>일반 스킬</option><option value="growth" ${item.growth?'selected':''}>성장형 스킬</option></select></label>
+            <label>용도<select class="gb-input" id="gb-skill-usage"><option value="general" ${item.skillUsage==='general'?'selected':''}>범용스킬</option><option value="position" ${item.skillUsage==='position'?'selected':''}>포지션스킬</option><option value="job" ${item.skillUsage==='job'?'selected':''}>직업스킬</option></select></label>
             <label>계수<input class="gb-input" id="gb-skill-coef" type="number" step="0.001" value="${escapeHtml(item.coef)}" /></label>
             <label>MP 비용<input class="gb-input" id="gb-skill-mp" type="number" value="${escapeHtml(item.mp)}" /></label>
             <label>SP 비용<input class="gb-input" id="gb-skill-sp" type="number" value="${escapeHtml(item.sp)}" /></label>
@@ -10626,7 +10631,7 @@ function renderCommandPanel(runtime) {
             <label>지속 턴<input class="gb-input" id="gb-skill-duration" type="number" value="${escapeHtml(item.duration)}" /></label>
             <label>CC 종류<select class="gb-input" id="gb-skill-cctype">${['','stun','bind','sleep','silence','slow'].map(v=>optionHtml(v,v||'(없음)',(item.ccType||'')===v)).join('')}</select></label>
             <label>CC 턴<input class="gb-input" id="gb-skill-ccturns" type="number" value="${escapeHtml(item.ccTurns)}" /></label>
-            <label>CC 확률(0~1)<input class="gb-input" id="gb-skill-ccchance" type="number" step="0.01" min="0" max="1" value="${escapeHtml(item.ccChance)}" placeholder="비우면 100%" /></label>
+            <label>CC 확률(0~1)<input class="gb-input" id="gb-skill-ccchance" type="number" step="0.01" min="0" max="1" value="${escapeHtml(item.ccChance)}" placeholder="비우면 기본확률" /></label>
             <label>버프 스탯<select class="gb-input" id="gb-skill-buffstat">${['','str','con','int','agi','sense'].map(v=>optionHtml(v,v||'(없음)',(item.buffStat||'')===v)).join('')}</select></label>
             <label>버프 수치<input class="gb-input" id="gb-skill-buffvalue" type="number" value="${escapeHtml(item.buffValue)}" /></label>
             <label style="display:flex;align-items:center;gap:6px;">🥷 은신 (공격 대상에서 제외, 공격 시 해제)<input type="checkbox" id="gb-skill-stealth" ${item.stealth?'checked':''} /></label>
@@ -11574,6 +11579,8 @@ async function saveMaterialTraitFromForm() {
       desc:fieldValue('#gb-skill-desc')
     };
     if (isGrowth) item.growth = true;
+    const usageVal = fieldValue('#gb-skill-usage') || 'general';
+    if (usageVal !== 'general') item.skillUsage = usageVal;
     const cooldownVal = Number(fieldValue('#gb-skill-cooldown') || 0);
     if (cooldownVal > 0) item.cooldown = cooldownVal;
     const stealthEl = document.getElementById('gb-skill-stealth');
