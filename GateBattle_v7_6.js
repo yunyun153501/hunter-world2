@@ -504,7 +504,8 @@ const SKILL_BOOK_PRICE_MUL = 5;
 // T1: aoeAttack, aoeCC — game-changing AoE skills
 // T2: singleAttack, singleCC — strong single-target combat
 // T3: aoeHeal, buff — team support skills
-// T4: singleHeal, passive, utility — utility/passive skills
+// T3 also includes: stat-boosting passives (passiveBonuses with stat keys)
+// T4: singleHeal, utility, weak passives (passiveMods only) — utility skills
 const SKILL_BOOK_TIERS = {
   aoeAttack: 1, aoeCC: 1,
   singleAttack: 2, singleCC: 2,
@@ -517,6 +518,18 @@ const SKILL_BOOK_TIER_PART = { 1:'weapon', 2:'armor', 3:'subweapon', 4:'accessor
 function calcSkillBookPrice(rank, tier) {
   const part = SKILL_BOOK_TIER_PART[tier] || 'accessory';
   return Math.round(calcEquipBasePrice(rank, part) * SKILL_BOOK_PRICE_MUL);
+}
+// Helper: determine skill book tier accounting for passive subtypes
+// Stat-boosting passives (passiveBonuses with stat keys) → T3 (same as buff)
+// Utility passives (passiveMods only, no stat bonuses) → T4
+function getSkillBookTier(sk) {
+  if (!sk) return 4;
+  const cat = sk.category || 'utility';
+  if (cat === 'passive' && sk.passiveBonuses) {
+    const statKeys = ['str','con','int','agi','sense','pdef','mdef'];
+    if (statKeys.some(k => sk.passiveBonuses[k])) return 3;
+  }
+  return SKILL_BOOK_TIERS[cat] || 4;
 }
 
 // Max enhancement by part
@@ -1514,13 +1527,13 @@ const RARE_FAMILY_PRESETS = {
     "buffPdefE":{"id":"buffPdefE","name":"방어 강화","grade":"E","category":"buff","target":"self","costs":{"mp":20,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{},"pdefFlat":3},"duration":3,"desc":"물리방어력 +3 버프 3턴 (E랭크)","cooldown":0},
     "buffMdefE":{"id":"buffMdefE","name":"마방 강화","grade":"E","category":"buff","target":"self","costs":{"mp":20,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{},"mdefFlat":3},"duration":3,"desc":"마법방어력 +3 버프 3턴 (E랭크)","cooldown":0},
     "buffTauntE":{"id":"buffTauntE","name":"위협","grade":"E","category":"buff","target":"self","costs":{"mp":0,"sp":20},"coef":0,"statTypes":["con"],"damageType":"physical","element":"none","buff":{"stats":{},"threatBonus":3},"duration":3,"desc":"도발 버프 3턴, 위협 +3 (E랭크)","cooldown":0},
-    "passiveStrE":{"id":"passiveStrE","name":"기초 근력","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR 패시브 영구 보너스 (E랭크)","cooldown":0,"passiveBonuses":{"str":2}},
-    "passiveConE":{"id":"passiveConE","name":"기초 체력","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON 패시브 영구 보너스 (E랭크)","cooldown":0,"passiveBonuses":{"con":2}},
-    "passiveIntE":{"id":"passiveIntE","name":"기초 지력","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","duration":0,"desc":"INT 패시브 영구 보너스 (E랭크)","cooldown":0,"passiveBonuses":{"int":2}},
-    "passiveAgiE":{"id":"passiveAgiE","name":"기초 민첩","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","duration":0,"desc":"AGI 패시브 영구 보너스 (E랭크)","cooldown":0,"passiveBonuses":{"agi":2}},
-    "passiveSenseE":{"id":"passiveSenseE","name":"기초 감각","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","duration":0,"desc":"SENSE 패시브 영구 보너스 (E랭크)","cooldown":0,"passiveBonuses":{"sense":2}},
-    "passivePdefE":{"id":"passivePdefE","name":"기초 방어","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","duration":0,"desc":"PDEF 패시브 영구 보너스 (E랭크)","cooldown":0,"passiveBonuses":{"pdef":2}},
-    "passiveMdefE":{"id":"passiveMdefE","name":"기초 마방","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","duration":0,"desc":"MDEF 패시브 영구 보너스 (E랭크)","cooldown":0,"passiveBonuses":{"mdef":2}},
+    "passiveStrE":{"id":"passiveStrE","name":"기초 근력","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR +1 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"str":1}},
+    "passiveConE":{"id":"passiveConE","name":"기초 체력","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON +1 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"con":1}},
+    "passiveIntE":{"id":"passiveIntE","name":"기초 지력","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","duration":0,"desc":"INT +1 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"int":1}},
+    "passiveAgiE":{"id":"passiveAgiE","name":"기초 민첩","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","duration":0,"desc":"AGI +1 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"agi":1}},
+    "passiveSenseE":{"id":"passiveSenseE","name":"기초 감각","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","duration":0,"desc":"SENSE +1 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"sense":1}},
+    "passivePdefE":{"id":"passivePdefE","name":"기초 방어","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","duration":0,"desc":"PDEF +1 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"pdef":1}},
+    "passiveMdefE":{"id":"passiveMdefE","name":"기초 마방","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","duration":0,"desc":"MDEF +1 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"mdef":1}},
     "singleAttackPhysD":{"id":"singleAttackPhysD","name":"강타","grade":"D","category":"singleAttack","target":"singleEnemy","costs":{"mp":0,"sp":25},"coef":1.92,"statTypes":["str"],"damageType":"physical","element":"none","desc":"무속성 물리 단일 공격 (D랭크)","cooldown":0},
     "singleAttackMagD":{"id":"singleAttackMagD","name":"마력탄","grade":"D","category":"singleAttack","target":"singleEnemy","costs":{"mp":25,"sp":0},"coef":1.92,"statTypes":["int"],"damageType":"magic","element":"none","desc":"무속성 마법 단일 공격 (D랭크)","cooldown":0},
     "aoeAttackPhysD":{"id":"aoeAttackPhysD","name":"난무","grade":"D","category":"aoeAttack","target":"allEnemies","costs":{"mp":0,"sp":50},"coef":1.11,"statTypes":["str"],"damageType":"physical","element":"none","desc":"무속성 물리 광역 공격 (D랭크)","cooldown":0},
@@ -1559,13 +1572,13 @@ const RARE_FAMILY_PRESETS = {
     "buffPdefD":{"id":"buffPdefD","name":"석갑 부여","grade":"D","category":"buff","target":"self","costs":{"mp":25,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{},"pdefFlat":8},"duration":3,"desc":"물리방어력 +8 버프 3턴 (D랭크)","cooldown":0},
     "buffMdefD":{"id":"buffMdefD","name":"마력 방벽","grade":"D","category":"buff","target":"self","costs":{"mp":25,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{},"mdefFlat":8},"duration":3,"desc":"마법방어력 +8 버프 3턴 (D랭크)","cooldown":0},
     "buffTauntD":{"id":"buffTauntD","name":"도발","grade":"D","category":"buff","target":"self","costs":{"mp":0,"sp":25},"coef":0,"statTypes":["con"],"damageType":"physical","element":"none","buff":{"stats":{},"threatBonus":5},"duration":3,"desc":"도발 버프 3턴, 위협 +5 (D랭크)","cooldown":0},
-    "passiveStrD":{"id":"passiveStrD","name":"근력 단련","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR 패시브 영구 보너스 (D랭크)","cooldown":0,"passiveBonuses":{"str":4}},
-    "passiveConD":{"id":"passiveConD","name":"체력 단련","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON 패시브 영구 보너스 (D랭크)","cooldown":0,"passiveBonuses":{"con":4}},
-    "passiveIntD":{"id":"passiveIntD","name":"지력 수련","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","duration":0,"desc":"INT 패시브 영구 보너스 (D랭크)","cooldown":0,"passiveBonuses":{"int":4}},
-    "passiveAgiD":{"id":"passiveAgiD","name":"신속 수련","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","duration":0,"desc":"AGI 패시브 영구 보너스 (D랭크)","cooldown":0,"passiveBonuses":{"agi":4}},
-    "passiveSenseD":{"id":"passiveSenseD","name":"감각 연마","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","duration":0,"desc":"SENSE 패시브 영구 보너스 (D랭크)","cooldown":0,"passiveBonuses":{"sense":4}},
-    "passivePdefD":{"id":"passivePdefD","name":"방어 숙련","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","duration":0,"desc":"PDEF 패시브 영구 보너스 (D랭크)","cooldown":0,"passiveBonuses":{"pdef":4}},
-    "passiveMdefD":{"id":"passiveMdefD","name":"마법 내성","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","duration":0,"desc":"MDEF 패시브 영구 보너스 (D랭크)","cooldown":0,"passiveBonuses":{"mdef":4}},
+    "passiveStrD":{"id":"passiveStrD","name":"근력 단련","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR +3 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"str":3}},
+    "passiveConD":{"id":"passiveConD","name":"체력 단련","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON +3 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"con":3}},
+    "passiveIntD":{"id":"passiveIntD","name":"지력 수련","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","duration":0,"desc":"INT +3 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"int":3}},
+    "passiveAgiD":{"id":"passiveAgiD","name":"신속 수련","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","duration":0,"desc":"AGI +3 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"agi":3}},
+    "passiveSenseD":{"id":"passiveSenseD","name":"감각 연마","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","duration":0,"desc":"SENSE +3 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"sense":3}},
+    "passivePdefD":{"id":"passivePdefD","name":"방어 숙련","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","duration":0,"desc":"PDEF +3 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"pdef":3}},
+    "passiveMdefD":{"id":"passiveMdefD","name":"마법 내성","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","duration":0,"desc":"MDEF +3 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"mdef":3}},
     "singleAttackPhysC":{"id":"singleAttackPhysC","name":"분쇄격","grade":"C","category":"singleAttack","target":"singleEnemy","costs":{"mp":0,"sp":30},"coef":2.88,"statTypes":["str"],"damageType":"physical","element":"none","desc":"무속성 물리 단일 공격 (C랭크)","cooldown":0},
     "singleAttackMagC":{"id":"singleAttackMagC","name":"마력포","grade":"C","category":"singleAttack","target":"singleEnemy","costs":{"mp":30,"sp":0},"coef":2.88,"statTypes":["int"],"damageType":"magic","element":"none","desc":"무속성 마법 단일 공격 (C랭크)","cooldown":0},
     "aoeAttackPhysC":{"id":"aoeAttackPhysC","name":"질풍연타","grade":"C","category":"aoeAttack","target":"allEnemies","costs":{"mp":0,"sp":60},"coef":1.67,"statTypes":["str"],"damageType":"physical","element":"none","desc":"무속성 물리 광역 공격 (C랭크)","cooldown":0},
@@ -1604,13 +1617,13 @@ const RARE_FAMILY_PRESETS = {
     "buffPdefC":{"id":"buffPdefC","name":"철벽방어","grade":"C","category":"buff","target":"self","costs":{"mp":30,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{},"pdefFlat":20},"duration":3,"desc":"물리방어력 +20 버프 3턴 (C랭크)","cooldown":0},
     "buffMdefC":{"id":"buffMdefC","name":"마법저항","grade":"C","category":"buff","target":"self","costs":{"mp":30,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{},"mdefFlat":20},"duration":3,"desc":"마법방어력 +20 버프 3턴 (C랭크)","cooldown":0},
     "buffTauntC":{"id":"buffTauntC","name":"전장의 포효","grade":"C","category":"buff","target":"self","costs":{"mp":0,"sp":30},"coef":0,"statTypes":["con"],"damageType":"physical","element":"none","buff":{"stats":{},"threatBonus":7},"duration":3,"desc":"도발 버프 3턴, 위협 +7 (C랭크)","cooldown":0},
-    "passiveStrC":{"id":"passiveStrC","name":"전사의 힘","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR 패시브 영구 보너스 (C랭크)","cooldown":0,"passiveBonuses":{"str":6}},
-    "passiveConC":{"id":"passiveConC","name":"전사의 체력","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON 패시브 영구 보너스 (C랭크)","cooldown":0,"passiveBonuses":{"con":6}},
-    "passiveIntC":{"id":"passiveIntC","name":"학자의 지식","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","duration":0,"desc":"INT 패시브 영구 보너스 (C랭크)","cooldown":0,"passiveBonuses":{"int":6}},
-    "passiveAgiC":{"id":"passiveAgiC","name":"암살자의 발걸음","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","duration":0,"desc":"AGI 패시브 영구 보너스 (C랭크)","cooldown":0,"passiveBonuses":{"agi":6}},
-    "passiveSenseC":{"id":"passiveSenseC","name":"사냥꾼의 감각","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","duration":0,"desc":"SENSE 패시브 영구 보너스 (C랭크)","cooldown":0,"passiveBonuses":{"sense":6}},
-    "passivePdefC":{"id":"passivePdefC","name":"철벽 수호","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","duration":0,"desc":"PDEF 패시브 영구 보너스 (C랭크)","cooldown":0,"passiveBonuses":{"pdef":6}},
-    "passiveMdefC":{"id":"passiveMdefC","name":"마력 차단","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","duration":0,"desc":"MDEF 패시브 영구 보너스 (C랭크)","cooldown":0,"passiveBonuses":{"mdef":6}},
+    "passiveStrC":{"id":"passiveStrC","name":"전사의 힘","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR +4 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"str":4}},
+    "passiveConC":{"id":"passiveConC","name":"전사의 체력","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON +4 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"con":4}},
+    "passiveIntC":{"id":"passiveIntC","name":"학자의 지식","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","duration":0,"desc":"INT +4 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"int":4}},
+    "passiveAgiC":{"id":"passiveAgiC","name":"암살자의 발걸음","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","duration":0,"desc":"AGI +4 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"agi":4}},
+    "passiveSenseC":{"id":"passiveSenseC","name":"사냥꾼의 감각","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","duration":0,"desc":"SENSE +4 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"sense":4}},
+    "passivePdefC":{"id":"passivePdefC","name":"철벽 수호","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","duration":0,"desc":"PDEF +4 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"pdef":4}},
+    "passiveMdefC":{"id":"passiveMdefC","name":"마력 차단","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","duration":0,"desc":"MDEF +4 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"mdef":4}},
     "singleAttackPhysB":{"id":"singleAttackPhysB","name":"파쇄일섬","grade":"B","category":"singleAttack","target":"singleEnemy","costs":{"mp":0,"sp":40},"coef":4.8,"statTypes":["str"],"damageType":"physical","element":"none","desc":"무속성 물리 단일 공격 (B랭크)","cooldown":0},
     "singleAttackMagB":{"id":"singleAttackMagB","name":"섬멸의 탄환","grade":"B","category":"singleAttack","target":"singleEnemy","costs":{"mp":40,"sp":0},"coef":4.8,"statTypes":["int"],"damageType":"magic","element":"none","desc":"무속성 마법 단일 공격 (B랭크)","cooldown":0},
     "aoeAttackPhysB":{"id":"aoeAttackPhysB","name":"광풍난무","grade":"B","category":"aoeAttack","target":"allEnemies","costs":{"mp":0,"sp":80},"coef":2.78,"statTypes":["str"],"damageType":"physical","element":"none","desc":"무속성 물리 광역 공격 (B랭크)","cooldown":0},
@@ -1649,13 +1662,13 @@ const RARE_FAMILY_PRESETS = {
     "buffPdefB":{"id":"buffPdefB","name":"난공불락","grade":"B","category":"buff","target":"self","costs":{"mp":40,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{},"pdefFlat":35},"duration":3,"desc":"물리방어력 +35 버프 3턴 (B랭크)","cooldown":0},
     "buffMdefB":{"id":"buffMdefB","name":"마법반사","grade":"B","category":"buff","target":"self","costs":{"mp":40,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{},"mdefFlat":35},"duration":3,"desc":"마법방어력 +35 버프 3턴 (B랭크)","cooldown":0},
     "buffTauntB":{"id":"buffTauntB","name":"왕의 위엄","grade":"B","category":"buff","target":"self","costs":{"mp":0,"sp":40},"coef":0,"statTypes":["con"],"damageType":"physical","element":"none","buff":{"stats":{},"threatBonus":10},"duration":3,"desc":"도발 버프 3턴, 위협 +10 (B랭크)","cooldown":0},
-    "passiveStrB":{"id":"passiveStrB","name":"강인한 근력","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR 패시브 영구 보너스 (B랭크)","cooldown":0,"passiveBonuses":{"str":8}},
-    "passiveConB":{"id":"passiveConB","name":"강인한 체력","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON 패시브 영구 보너스 (B랭크)","cooldown":0,"passiveBonuses":{"con":8}},
-    "passiveIntB":{"id":"passiveIntB","name":"현자의 지혜","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","duration":0,"desc":"INT 패시브 영구 보너스 (B랭크)","cooldown":0,"passiveBonuses":{"int":8}},
-    "passiveAgiB":{"id":"passiveAgiB","name":"바람의 민첩","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","duration":0,"desc":"AGI 패시브 영구 보너스 (B랭크)","cooldown":0,"passiveBonuses":{"agi":8}},
-    "passiveSenseB":{"id":"passiveSenseB","name":"예리한 감각","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","duration":0,"desc":"SENSE 패시브 영구 보너스 (B랭크)","cooldown":0,"passiveBonuses":{"sense":8}},
-    "passivePdefB":{"id":"passivePdefB","name":"요새의 몸","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","duration":0,"desc":"PDEF 패시브 영구 보너스 (B랭크)","cooldown":0,"passiveBonuses":{"pdef":8}},
-    "passiveMdefB":{"id":"passiveMdefB","name":"마법저항 체질","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","duration":0,"desc":"MDEF 패시브 영구 보너스 (B랭크)","cooldown":0,"passiveBonuses":{"mdef":8}},
+    "passiveStrB":{"id":"passiveStrB","name":"강인한 근력","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR +6 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"str":6}},
+    "passiveConB":{"id":"passiveConB","name":"강인한 체력","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON +6 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"con":6}},
+    "passiveIntB":{"id":"passiveIntB","name":"현자의 지혜","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","duration":0,"desc":"INT +6 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"int":6}},
+    "passiveAgiB":{"id":"passiveAgiB","name":"바람의 민첩","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","duration":0,"desc":"AGI +6 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"agi":6}},
+    "passiveSenseB":{"id":"passiveSenseB","name":"예리한 감각","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","duration":0,"desc":"SENSE +6 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"sense":6}},
+    "passivePdefB":{"id":"passivePdefB","name":"요새의 몸","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","duration":0,"desc":"PDEF +6 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"pdef":6}},
+    "passiveMdefB":{"id":"passiveMdefB","name":"마법저항 체질","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","duration":0,"desc":"MDEF +6 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"mdef":6}},
     "singleAttackPhysA":{"id":"singleAttackPhysA","name":"멸살참","grade":"A","category":"singleAttack","target":"singleEnemy","costs":{"mp":0,"sp":55},"coef":7.68,"statTypes":["str"],"damageType":"physical","element":"none","desc":"무속성 물리 단일 공격 (A랭크)","cooldown":0},
     "singleAttackMagA":{"id":"singleAttackMagA","name":"마멸포","grade":"A","category":"singleAttack","target":"singleEnemy","costs":{"mp":55,"sp":0},"coef":7.68,"statTypes":["int"],"damageType":"magic","element":"none","desc":"무속성 마법 단일 공격 (A랭크)","cooldown":0},
     "aoeAttackPhysA":{"id":"aoeAttackPhysA","name":"천격연무","grade":"A","category":"aoeAttack","target":"allEnemies","costs":{"mp":0,"sp":110},"coef":4.45,"statTypes":["str"],"damageType":"physical","element":"none","desc":"무속성 물리 광역 공격 (A랭크)","cooldown":0},
@@ -1694,13 +1707,13 @@ const RARE_FAMILY_PRESETS = {
     "buffPdefA":{"id":"buffPdefA","name":"무적의 방패","grade":"A","category":"buff","target":"self","costs":{"mp":55,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{},"pdefFlat":50},"duration":3,"desc":"물리방어력 +50 버프 3턴 (A랭크)","cooldown":0},
     "buffMdefA":{"id":"buffMdefA","name":"마력무효화","grade":"A","category":"buff","target":"self","costs":{"mp":55,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{},"mdefFlat":50},"duration":3,"desc":"마법방어력 +50 버프 3턴 (A랭크)","cooldown":0},
     "buffTauntA":{"id":"buffTauntA","name":"공포의 기운","grade":"A","category":"buff","target":"self","costs":{"mp":0,"sp":55},"coef":0,"statTypes":["con"],"damageType":"physical","element":"none","buff":{"stats":{},"threatBonus":13},"duration":3,"desc":"도발 버프 3턴, 위협 +13 (A랭크)","cooldown":0},
-    "passiveStrA":{"id":"passiveStrA","name":"초인의 힘","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR 패시브 영구 보너스 (A랭크)","cooldown":0,"passiveBonuses":{"str":11}},
-    "passiveConA":{"id":"passiveConA","name":"초인의 체력","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON 패시브 영구 보너스 (A랭크)","cooldown":0,"passiveBonuses":{"con":11}},
-    "passiveIntA":{"id":"passiveIntA","name":"대마도사의 지력","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","duration":0,"desc":"INT 패시브 영구 보너스 (A랭크)","cooldown":0,"passiveBonuses":{"int":11}},
-    "passiveAgiA":{"id":"passiveAgiA","name":"번개의 몸놀림","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","duration":0,"desc":"AGI 패시브 영구 보너스 (A랭크)","cooldown":0,"passiveBonuses":{"agi":11}},
-    "passiveSenseA":{"id":"passiveSenseA","name":"초감각","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","duration":0,"desc":"SENSE 패시브 영구 보너스 (A랭크)","cooldown":0,"passiveBonuses":{"sense":11}},
-    "passivePdefA":{"id":"passivePdefA","name":"강철 피부","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","duration":0,"desc":"PDEF 패시브 영구 보너스 (A랭크)","cooldown":0,"passiveBonuses":{"pdef":11}},
-    "passiveMdefA":{"id":"passiveMdefA","name":"마력 면역","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","duration":0,"desc":"MDEF 패시브 영구 보너스 (A랭크)","cooldown":0,"passiveBonuses":{"mdef":11}},
+    "passiveStrA":{"id":"passiveStrA","name":"초인의 힘","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR +8 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"str":8}},
+    "passiveConA":{"id":"passiveConA","name":"초인의 체력","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON +8 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"con":8}},
+    "passiveIntA":{"id":"passiveIntA","name":"대마도사의 지력","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","duration":0,"desc":"INT +8 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"int":8}},
+    "passiveAgiA":{"id":"passiveAgiA","name":"번개의 몸놀림","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","duration":0,"desc":"AGI +8 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"agi":8}},
+    "passiveSenseA":{"id":"passiveSenseA","name":"초감각","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","duration":0,"desc":"SENSE +8 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"sense":8}},
+    "passivePdefA":{"id":"passivePdefA","name":"강철 피부","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","duration":0,"desc":"PDEF +8 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"pdef":8}},
+    "passiveMdefA":{"id":"passiveMdefA","name":"마력 면역","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","duration":0,"desc":"MDEF +8 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"mdef":8}},
     "singleAttackPhysS":{"id":"singleAttackPhysS","name":"천벌의 일격","grade":"S","category":"singleAttack","target":"singleEnemy","costs":{"mp":0,"sp":70},"coef":11.52,"statTypes":["str"],"damageType":"physical","element":"none","desc":"무속성 물리 단일 공격 (S랭크)","cooldown":0},
     "singleAttackMagS":{"id":"singleAttackMagS","name":"성천의 마탄","grade":"S","category":"singleAttack","target":"singleEnemy","costs":{"mp":70,"sp":0},"coef":11.52,"statTypes":["int"],"damageType":"magic","element":"none","desc":"무속성 마법 단일 공격 (S랭크)","cooldown":0},
     "aoeAttackPhysS":{"id":"aoeAttackPhysS","name":"멸살의 광풍","grade":"S","category":"aoeAttack","target":"allEnemies","costs":{"mp":0,"sp":140},"coef":6.68,"statTypes":["str"],"damageType":"physical","element":"none","desc":"무속성 물리 광역 공격 (S랭크)","cooldown":0},
@@ -1739,13 +1752,13 @@ const RARE_FAMILY_PRESETS = {
     "buffPdefS":{"id":"buffPdefS","name":"절대방어","grade":"S","category":"buff","target":"self","costs":{"mp":70,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{},"pdefFlat":70},"duration":3,"desc":"물리방어력 +70 버프 3턴 (S랭크)","cooldown":0},
     "buffMdefS":{"id":"buffMdefS","name":"절대마방","grade":"S","category":"buff","target":"self","costs":{"mp":70,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{},"mdefFlat":70},"duration":3,"desc":"마법방어력 +70 버프 3턴 (S랭크)","cooldown":0},
     "buffTauntS":{"id":"buffTauntS","name":"절대지배","grade":"S","category":"buff","target":"self","costs":{"mp":0,"sp":70},"coef":0,"statTypes":["con"],"damageType":"physical","element":"none","buff":{"stats":{},"threatBonus":16},"duration":3,"desc":"도발 버프 3턴, 위협 +16 (S랭크)","cooldown":0},
-    "passiveStrS":{"id":"passiveStrS","name":"신의 근력","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR 패시브 영구 보너스 (S랭크)","cooldown":0,"passiveBonuses":{"str":14}},
-    "passiveConS":{"id":"passiveConS","name":"신의 체력","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON 패시브 영구 보너스 (S랭크)","cooldown":0,"passiveBonuses":{"con":14}},
-    "passiveIntS":{"id":"passiveIntS","name":"신의 지력","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","duration":0,"desc":"INT 패시브 영구 보너스 (S랭크)","cooldown":0,"passiveBonuses":{"int":14}},
-    "passiveAgiS":{"id":"passiveAgiS","name":"신의 민첩","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","duration":0,"desc":"AGI 패시브 영구 보너스 (S랭크)","cooldown":0,"passiveBonuses":{"agi":14}},
-    "passiveSenseS":{"id":"passiveSenseS","name":"신의 감각","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","duration":0,"desc":"SENSE 패시브 영구 보너스 (S랭크)","cooldown":0,"passiveBonuses":{"sense":14}},
-    "passivePdefS":{"id":"passivePdefS","name":"신의 갑옷","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","duration":0,"desc":"PDEF 패시브 영구 보너스 (S랭크)","cooldown":0,"passiveBonuses":{"pdef":14}},
-    "passiveMdefS":{"id":"passiveMdefS","name":"신의 마력","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","duration":0,"desc":"MDEF 패시브 영구 보너스 (S랭크)","cooldown":0,"passiveBonuses":{"mdef":14}}
+    "passiveStrS":{"id":"passiveStrS","name":"신의 근력","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR +10 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"str":10}},
+    "passiveConS":{"id":"passiveConS","name":"신의 체력","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON +10 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"con":10}},
+    "passiveIntS":{"id":"passiveIntS","name":"신의 지력","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","duration":0,"desc":"INT +10 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"int":10}},
+    "passiveAgiS":{"id":"passiveAgiS","name":"신의 민첩","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","duration":0,"desc":"AGI +10 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"agi":10}},
+    "passiveSenseS":{"id":"passiveSenseS","name":"신의 감각","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","duration":0,"desc":"SENSE +10 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"sense":10}},
+    "passivePdefS":{"id":"passivePdefS","name":"신의 갑옷","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","duration":0,"desc":"PDEF +10 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"pdef":10}},
+    "passiveMdefS":{"id":"passiveMdefS","name":"신의 마력","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","duration":0,"desc":"MDEF +10 영구 패시브 (버프의 70%)","cooldown":0,"passiveBonuses":{"mdef":10}}
   };
 
   function buildSampleCharacters() {
@@ -4545,7 +4558,7 @@ function createSkillBookDrop(rank, tier) {
   const tierCategories = {
     1: ['aoeAttack','aoeCC'],
     2: ['singleAttack','singleCC'],
-    3: ['aoeHeal','buff'],
+    3: ['aoeHeal','buff','passive'],
     4: ['singleHeal','passive','utility']
   };
   const cats = tierCategories[tier] || tierCategories[4];
@@ -4554,25 +4567,45 @@ function createSkillBookDrop(rank, tier) {
     const sk = BUILTIN_SKILLS[k];
     return sk && sk.grade === rank && cats.includes(sk.category);
   });
+  // For tier 3: only include stat-boosting passives; for tier 4: only utility passives
+  const filtered = matching.filter(k => {
+    const sk = BUILTIN_SKILLS[k];
+    if (sk && sk.category === 'passive') {
+      const isStatPassive = sk.passiveBonuses && ['str','con','int','agi','sense','pdef','mdef'].some(s => sk.passiveBonuses[s]);
+      return tier <= 3 ? isStatPassive : !isStatPassive;
+    }
+    return true;
+  });
   // 해당 등급·카테고리 스킬 없으면 한 등급 낮은 걸로 시도
-  if (!matching.length) {
+  if (!filtered.length) {
     const lowerRank = lowerGrade(rank);
     if (lowerRank) {
       const lowerMatching = skillKeys.filter(k => {
         const sk = BUILTIN_SKILLS[k];
         return sk && sk.grade === lowerRank && cats.includes(sk.category);
       });
-      if (lowerMatching.length) {
-        const pickedKey = lowerMatching[Math.floor(Math.random() * lowerMatching.length)];
+      // Apply same stat-vs-utility passive filter to fallback
+      const lowerFiltered = lowerMatching.filter(k => {
+        const sk = BUILTIN_SKILLS[k];
+        if (sk && sk.category === 'passive') {
+          const isStatPassive = sk.passiveBonuses && ['str','con','int','agi','sense','pdef','mdef'].some(s => sk.passiveBonuses[s]);
+          return tier <= 3 ? isStatPassive : !isStatPassive;
+        }
+        return true;
+      });
+      if (lowerFiltered.length) {
+        const pickedKey = lowerFiltered[Math.floor(Math.random() * lowerFiltered.length)];
         const skill = BUILTIN_SKILLS[pickedKey];
-        return { id: `drop_skillbook_${rank.toLowerCase()}_${Date.now().toString(36)}`, name: `📖 ${skill.name || pickedKey} 스킬북`, category: 'skillbook', rank, skillId: pickedKey, skillCategory: skill.category, skillTier: tier, price: calcSkillBookPrice(rank, tier), stackable: false, unitWeightG: 200, note: `${rank}급 T${tier} 스킬북 [${skill.category}]`, effect: skill.desc || '' };
+        const effectiveTier = getSkillBookTier(skill);
+        return { id: `drop_skillbook_${rank.toLowerCase()}_${Date.now().toString(36)}`, name: `📖 ${skill.name || pickedKey} 스킬북`, category: 'skillbook', rank, skillId: pickedKey, skillCategory: skill.category, skillTier: effectiveTier, price: calcSkillBookPrice(rank, effectiveTier), stackable: false, unitWeightG: 200, note: `${rank}급 T${effectiveTier} 스킬북 [${skill.category}]`, effect: skill.desc || '' };
       }
     }
     return null;
   }
-  const pickedKey = matching[Math.floor(Math.random() * matching.length)];
+  const pickedKey = filtered[Math.floor(Math.random() * filtered.length)];
   const skill = BUILTIN_SKILLS[pickedKey];
-  return { id: `drop_skillbook_${rank.toLowerCase()}_${Date.now().toString(36)}`, name: `📖 ${skill.name || pickedKey} 스킬북`, category: 'skillbook', rank, skillId: pickedKey, skillCategory: skill.category, skillTier: tier, price: calcSkillBookPrice(rank, tier), stackable: false, unitWeightG: 200, note: `${rank}급 T${tier} 스킬북 [${skill.category}]`, effect: skill.desc || '' };
+  const effectiveTier = getSkillBookTier(skill);
+  return { id: `drop_skillbook_${rank.toLowerCase()}_${Date.now().toString(36)}`, name: `📖 ${skill.name || pickedKey} 스킬북`, category: 'skillbook', rank, skillId: pickedKey, skillCategory: skill.category, skillTier: effectiveTier, price: calcSkillBookPrice(rank, effectiveTier), stackable: false, unitWeightG: 200, note: `${rank}급 T${effectiveTier} 스킬북 [${skill.category}]`, effect: skill.desc || '' };
 }
 function addNormalRollLoot(bucket, rank, roll, sourceRef) {
   if (!rank) return;
@@ -7237,7 +7270,7 @@ function seedNpcAuctionListings() {
       }
       const sbRank = pickSkillbookRank();
       const sbTier = pickSkillbookTier();
-      const tierCats = { 1:['aoeAttack','aoeCC'], 2:['singleAttack','singleCC'], 3:['aoeHeal','buff'], 4:['singleHeal','passive','utility'] };
+      const tierCats = { 1:['aoeAttack','aoeCC'], 2:['singleAttack','singleCC'], 3:['aoeHeal','buff','passive'], 4:['singleHeal','passive','utility'] };
       const cats = tierCats[sbTier] || tierCats[4];
       // 빌트인 + 커스텀 스킬 통합 풀 (포지션/직업스킬은 경매장 제외, 범용스킬만)
       const allSkillEntries = [];
@@ -7250,14 +7283,22 @@ function seedNpcAuctionListings() {
         if (sk && sk.id && sk.name && (!sk.skillUsage || sk.skillUsage === 'general')) allSkillEntries.push({ key: sk.id, skill: sk });
       });
       const matchingSkills = allSkillEntries.filter(e => e.skill.grade === sbRank && cats.includes(e.skill.category));
+      // For tier 3: only stat-boosting passives; for tier 4: only utility passives
+      const filteredSkills = matchingSkills.filter(e => {
+        if (e.skill.category === 'passive') {
+          const isStatPassive = e.skill.passiveBonuses && ['str','con','int','agi','sense','pdef','mdef'].some(s => e.skill.passiveBonuses[s]);
+          return sbTier <= 3 ? isStatPassive : !isStatPassive;
+        }
+        return true;
+      });
       // 해당 등급+티어 스킬이 없으면 등급만 맞추기
-      const fallbackSkills = matchingSkills.length > 0 ? matchingSkills : allSkillEntries.filter(e => e.skill.grade === sbRank);
+      const fallbackSkills = filteredSkills.length > 0 ? filteredSkills : allSkillEntries.filter(e => e.skill.grade === sbRank);
       if (fallbackSkills.length === 0) continue;
       const picked = fallbackSkills[Math.floor(Math.random() * fallbackSkills.length)];
       const pickedKey = picked.key;
       const skill = picked.skill;
       const cat = skill.category || 'utility';
-      const tier = SKILL_BOOK_TIERS[cat] || 4;
+      const tier = getSkillBookTier(skill);
       const bookPrice = calcSkillBookPrice(sbRank, tier);
       const ratio = randomAuctionRatio();
       const askPrice = Math.round(bookPrice * ratio);
