@@ -1889,19 +1889,19 @@ const RARE_FAMILY_PRESETS = {
           costs:{ mp:0, sp:0 }, coef:1.0, damageType:'physical', element:'none', statTypes:['str'], duration:0,
           desc:'【스킬 만드는 법】\n1. "새 스킬" 클릭 → ID/이름 입력\n2. 각 항목을 설정 후 저장\n\n【카테고리 설명】\nsingleAttack = 단일 공격 (적 1체)\naoeAttack = 광역 공격 (전체 적)\nsingleCC = 단일 CC (적 1체 + 행동방해)\naoeCC = 광역 CC (전체 적 + 행동방해)\nsingleHeal = 단일 회복 (아군 1체)\naoeHeal = 광역 회복 (전체 아군)\nbuff = 버프 (자신/아군 강화)\nutility = 유틸리티 (자원/상태 관리)\n\n【은신(stealth) 버프 만드는 법】\n은신은 buff 카테고리 스킬로 만듭니다.\n1. 카테고리: buff\n2. 대상: self (자기 자신)\n3. 버프 스탯: 원하는 스탯 (예: agi +5)\n4. 지속 턴: 원하는 턴수 (예: 3)\n5. 은신 체크박스: 체크 ✓\n효과: 은신 중에는 모든 공격 대상에서 제외됩니다.\n  보스를 포함한 모든 적의 공격에서 은신이 적용됩니다.\n  은신 상태에서 공격하면 즉시 은신이 해제됩니다.\n  지속 턴이 끝나도 자동 해제됩니다.\n\n【특수효과 설정법】\n장비와 스킬에 특수효과를 추가할 수 있습니다.\n1. 효과 종류: 버프(자신/아군 강화) 또는 디버프(적에게 받는 피해 증가)\n2. 발동확률: 0~100% (장비는 피격/공격 시, 스킬은 사용 시)\n3. 효과 선택: 버프는 다양한 효과, 디버프는 받는 피해 증가만 선택 가능\n4. 효과 수치: 효과의 크기 (%, 절대값 등)\n버프: 자신이나 아군의 해당 효과 증가\n디버프: 적에게 받는 피해 증가 적용 (물리/마법/속성별 받는 피해 증가)\n\n【대상 설명】\nsingleEnemy = 적 1체\nallEnemies = 전체 적 (광역)\nrowFront = 전열 적만 (전열 광역)\nrowMid = 중열 적만\nrowBack = 후열 적만\nrowFrontMid = 전열+중열 적\nrowMidBack = 중열+후열 적\nsingleAlly = 아군 1체\nallAllies = 전체 아군\nself = 자기 자신\n※ 열 공격: 해당 열이 비면 가장 앞 열의 적을 공격\n\n【CC 종류 설명】\nstun = 기절 (행동불가, 2턴, 이후 5턴 면역)\nbind = 속박 (감각-50%, 명중률-50%, 이후 5턴 면역)\nsleep = 수면 (행동불가, 3턴, 피격 시 해제, 이후 5턴 면역)\nsilence = 침묵 (스킬 사용불가)\nslow = 둔화 (명중률-30%, 회피율-50%)\nblind = 실명 (명중률-50%)\nfreeze = 빙결 (행동불가, 2턴, 이후 5턴 면역)\nparalyze = 마비 (행동불가, 2턴, 이후 5턴 면역)\n※ CC 확률: 비우면 해당 CC 타입의 기본 확률 적용 (기절16%, 속박18%, 수면16%, 침묵20%, 둔화25%). 0~1 사이 소수로 입력 (예: 0.3=30%)\n\n【속성-상태이상 매칭】\n빛→실명, 어둠→저주, 불→화상, 물→둔화, 대지→기절, 바람→출혈, 얼음→빙결, 전기→마비\n\n【상태이상 설명 및 기본 확률/턴수】\npoison = 독 — 확률23%, 3턴, 최대3중첩\n  효과: 매턴 방어무시 DoT (기본값×계수×0.2×중첩수)\nbleed = 출혈 — 확률23%, 3턴\n  효과: 발동 시 해당 공격 피해의 30% 추가피해(1회)\n  + 3턴간 받는 회복량 50% 감소\nburn = 화상 — 확률23%, 5턴, 최대5중첩\n  효과: 매턴 방어무시 DoT (기본값×계수×0.12×중첩수)\n  + 받는 데미지 +10% (중첩 무관)\ncurse = 저주 — 확률18%, 3턴 (하드CC, 이후 5턴 면역)\n  효과: 등급별 공격력 감소 + 받는 피해 증가 (E:10%~S:30%)\nsilence = 침묵 — 확률20%, 2턴\n  효과: 스킬 사용불가 (기본공격만 가능)\nslow = 둔화 — 확률25%, 3턴\n  효과: 명중률 -30%, 회피율 -50%\nbind = 속박 — 확률18%, 2턴 (하드CC, 이후 5턴 면역)\n  효과: 감각(SENSE) -50%, 명중률 -50% (크리율도 함께 감소)\n  둔화보다 명중 감소폭이 크고, 감각 감소로 크리티컬률도 하락\n\n※ 상태이상 확률: 비우면 위 기본값 자동 적용\n0~1 사이 소수로 입력 (예: 0.5=50%)\n\n【등급별 계수 — 순수 공격 (단일 기준)】\n하한 → 상한\nE: 1.2 → 1.5\nD: 1.92 → 2.4\nC: 2.88 → 3.6\nB: 4.8 → 6.0\nA: 7.68 → 9.6\nS: 11.52 → 14.4\n광역/열공격 = 단일 × 0.58\n\n【CC/상태이상 스킬 추천 계수】\n상태이상이 붙는 스킬은 직접 데미지를 낮추는 대신\n상태이상 효과로 총 가치를 보상하는 구조.\n추천: 순수공격 하한값 × 0.8 (20% 약화)\n\n단일 CC/상태이상 추천계수 (기본확률일 경우):\nE: 0.96 / D: 1.54 / C: 2.30\nB: 3.84 / A: 6.14 / S: 9.22\n\n광역 CC/상태이상 추천계수 (단일×0.58):\nE: 0.56 / D: 0.89 / C: 1.33\nB: 2.23 / A: 3.56 / S: 5.35\n\n※ 밸런스 기준:\n직접피해 + 상태이상 효과(DoT/추가피해/디버프)\n총합이 최소 상한계수급 이상이면 적절.\n독/화상: 총합≈상한의 102%\n출혈: 직접+즉시추가≈상한의 83% + 회복량50%감소 유틸\n상태이상이 강할수록 계수를 더 낮춰도 됨.\n\n【데미지 공식】\n데미지 기본값 = (2 × 주스탯) + (3 × ATK)\n회복 기본값 = 주스탯 × 0.5\n힐 전용 계수: E:1.2~1.3 / D:1.4~1.5 / C:1.6~1.7 / B:1.8~2.0 / A:2.1~2.3 / S:2.4~2.6\n광역힐 = 단일힐 계수 × 0.58\n최종데미지 = 기본값 × 계수 × 크리배율 × 속성배율\n※ 크리티컬: ×1.5 / 속성유리: ×1.25 / 속성불리: ×0.75\n\n【상태이상 효과 공식】\n독(DoT): 매턴 기본값 × 계수 × 0.2 × 중첩수 (최대3)\n화상(DoT): 매턴 기본값 × 계수 × 0.12 × 중첩수 (최대5)\n  + 받는 데미지 +10% (중첩 무관)\n출혈: 발동 시 해당 공격 피해의 30% 추가피해(1회)\n  + 3턴간 받는 회복량 50% 감소\n저주: 등급별 공격력 감소 + 받는 피해 증가 (E:10%~S:30%)\n\n【E급 예시 (주스탯15, ATK5)】\n기본값 = (2×15)+(3×5) = 45\n상한 직접피해 = 45×1.5 = 67.5\n\n■ 순수 단일공격 (계수1.35): 45×1.35 = 60.75\n■ 순수 광역공격 (계수0.78): 45×0.78 = 35.10\n\n■ 단일CC/상태이상 (추천계수0.96):\n  직접피해: 45×0.96 = 43.20\n  독1중첩 3턴합: 45×0.96×0.2×3 = 25.92\n  → 총합: 43.20+25.92 = 69.12 (상한의 102%) ✓\n  화상1중첩 5턴합: 45×0.96×0.12×5 = 25.92\n  → 총합: 43.20+25.92 = 69.12 + 피격+10% ✓\n  출혈 즉시추가: 43.20×0.3 = 12.96\n  → 총합: 43.20+12.96 = 56.16 (상한83%) + 회복량50%감소 ✓\n\n■ 광역CC/상태이상 (추천계수0.56):\n  직접피해: 45×0.56 = 25.20 (각 적)\n  독1중첩 3턴합: 45×0.56×0.2×3 = 15.12\n  → 총합: 25.20+15.12 = 40.32/적\n  출혈 즉시추가: 25.20×0.3 = 7.56\n  → 총합: 25.20+7.56 = 32.76/적 + 회복량50%감소\n\n이 스킬은 삭제해도 됩니다.' },
         // ── 최유나 전용 스킬 ──
-        { id:'skill_yuna_anvil', name:'강철모루', grade:'E', rarity:'Rare', category:'buff', target:'self',
+        { id:'skill_yuna_anvil', name:'강철모루', grade:'E', rarity:'Rare', category:'passive', target:'self',
           growth: true, skillUsage: 'position',
-          costs:{ mp:0, sp:30 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:3,
-          buff:{ stats:{}, pdefFlat:3 },
+          costs:{ mp:0, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:0,
+          passiveBonuses:{ pdef:3 },
           byRank:{
-            E:{ buff:{ stats:{}, pdefFlat:3 }, desc:'[E] 물리방어력 +3. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            D:{ buff:{ stats:{}, pdefFlat:8 }, desc:'[D] 물리방어력 +8. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            C:{ buff:{ stats:{}, pdefFlat:20 }, desc:'[C] 물리방어력 +20. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            B:{ buff:{ stats:{}, pdefFlat:35 }, desc:'[B] 물리방어력 +35. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            A:{ name:'백금모루', rarity:'Unique', buff:{ stats:{}, pdefFlat:60 }, desc:'[A] 유니크 승급! 물리방어력 +60 (+20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' },
-            S:{ name:'백금모루', rarity:'Unique', buff:{ stats:{}, pdefFlat:84 }, desc:'[S] 유니크! 물리방어력 +84 (+20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' }
+            E:{ passiveBonuses:{ pdef:3 }, desc:'[E] 물리방어력 +3 (패시브). 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            D:{ passiveBonuses:{ pdef:8 }, desc:'[D] 물리방어력 +8 (패시브). 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            C:{ passiveBonuses:{ pdef:20 }, desc:'[C] 물리방어력 +20 (패시브). 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            B:{ passiveBonuses:{ pdef:35 }, desc:'[B] 물리방어력 +35 (패시브). 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            A:{ name:'백금모루', rarity:'Unique', passiveBonuses:{ pdef:60 }, desc:'[A] 유니크 승급! 물리방어력 +60 (패시브, +20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' },
+            S:{ name:'백금모루', rarity:'Unique', passiveBonuses:{ pdef:84 }, desc:'[S] 유니크! 물리방어력 +84 (패시브, +20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' }
           },
-          desc:'[성장형/포지션] 등급별로 물리방어력 상승 (defenseFlat 스케일). 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.\n★ A급 달성 시 백금모루(유니크)로 승급: 물방 +20% 추가 / 최대 70% / HP 40% 이하 시 회복.' },
+          desc:'[성장형/포지션/패시브] 등급별로 물리방어력 상승 (defenseFlat 스케일). 전투 시 자동 적용.\n타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.\n★ A급 달성 시 백금모루(유니크)로 승급: 물방 +20% 추가 / 최대 70% / HP 40% 이하 시 회복.' },
         { id:'skill_yuna_shield', name:'방패숙련', grade:'E', rarity:'Normal', category:'passive', target:'self',
           skillUsage: 'general',
           costs:{ mp:0, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:0,
@@ -7992,9 +7992,11 @@ function renderAssociationView() {
     // 납부 기한: 다음달 1~10일 → 현재달 1~10일이 전월 납부 기한
     const isPaymentPeriod = curDay >= 1 && curDay <= 10;
     const isOverdue = curDay > 10;
-    // 전월 소득 기록
+    // 전월 소득 기록 (선택된 엔티티 기준)
     const incomeLogAll = Array.isArray(model.db.incomeLog) ? model.db.incomeLog : [];
-    const prevMonthRecords = incomeLogAll.filter(r => (r.date || '').startsWith(prevMonthStr));
+    const activeCharId = model.state.activeCharId || '';
+    const isEntityActive = activeCharId.startsWith('persona:') || activeCharId.startsWith('char:');
+    const prevMonthRecords = incomeLogAll.filter(r => (r.date || '').startsWith(prevMonthStr) && r.charKey === activeCharId);
     const prevMonthTotal = prevMonthRecords.reduce((s, r) => s + Number(r.final || 0), 0);
     const prevMonthTax = prevMonthTotal > 0 ? calcMonthlyIncomeTax(prevMonthTotal) : 0;
     // 연체 이자 계산 (연 9.9%, 일할 계산: 10일 이후부터)
@@ -8003,32 +8005,28 @@ function renderAssociationView() {
     const totalDue = prevMonthTax + overdueInterest;
 
     // 납부 상태 표시
-    const activeCharId = model.state.activeCharId || '';
-    const isEntityActive = activeCharId.startsWith('persona:') || activeCharId.startsWith('char:');
     const entityGold = isEntityActive ? Number(getActiveInventory().gold || 0) : 0;
     let payStatusHtml = '';
-    if (prevMonthRecords.length === 0) {
-      payStatusHtml = `<div class="gb-sub" style="color:#22c55e;margin-top:6px;">✅ ${prevMonthStr} 소득 기록 없음 — 납부 불필요</div>`;
+    if (!isEntityActive) {
+      payStatusHtml = `<div class="gb-sub" style="color:#ef4444;margin-top:6px;">⚠️ 캐릭터 또는 페르소나를 선택하면 해당 엔티티의 소득세를 확인/납부할 수 있습니다.</div>`;
+    } else if (prevMonthRecords.length === 0) {
+      payStatusHtml = `<div class="gb-sub" style="color:#22c55e;margin-top:6px;">✅ ${getActiveLabel()} — ${prevMonthStr} 소득 기록 없음 — 납부 불필요</div>`;
     } else if (isPaymentPeriod) {
       payStatusHtml = `
-        <div class="gb-sub" style="color:#fbbf24;font-weight:700;margin-top:6px;">⏳ 납부 기한 내 (${curMonthStr} 1~10일)</div>
+        <div class="gb-sub" style="color:#fbbf24;font-weight:700;margin-top:6px;">⏳ 납부 기한 내 (${curMonthStr} 1~10일) — ${getActiveLabel()}</div>
         <div class="gb-sub">${prevMonthStr} 소득 ${prevMonthRecords.length}건 / 총 지급액 ₩${formatWon(prevMonthTotal)}</div>
         <div class="gb-sub" style="font-weight:700;">납부할 소득세: ₩${formatWon(prevMonthTax)}</div>
-        ${isEntityActive
-          ? `<div class="gb-sub">💰 ${getActiveLabel()} 소지금: ₩${formatWon(entityGold)}${entityGold < prevMonthTax ? ' <span style="color:#ef4444;">(부족!)</span>' : ''}</div>
-             <button class="gb-btn primary" id="gb-tax-pay-confirm" style="margin-top:6px;">✅ ${prevMonthStr} 소득세 납부 (₩${formatWon(prevMonthTax)} 차감)</button>`
-          : `<div class="gb-sub" style="color:#ef4444;">⚠️ 캐릭터 또는 페르소나를 선택하세요</div>`}`;
+        <div class="gb-sub">💰 ${getActiveLabel()} 소지금: ₩${formatWon(entityGold)}${entityGold < prevMonthTax ? ' <span style="color:#ef4444;">(부족!)</span>' : ''}</div>
+        <button class="gb-btn primary" id="gb-tax-pay-confirm" style="margin-top:6px;">✅ ${getActiveLabel()} ${prevMonthStr} 소득세 납부 (₩${formatWon(prevMonthTax)} 차감)</button>`;
     } else if (isOverdue && prevMonthRecords.length > 0) {
       payStatusHtml = `
-        <div class="gb-sub" style="color:#ef4444;font-weight:700;margin-top:6px;">🚨 연체! 납부 기한 초과 (${overdueDays}일 경과)</div>
+        <div class="gb-sub" style="color:#ef4444;font-weight:700;margin-top:6px;">🚨 연체! 납부 기한 초과 (${overdueDays}일 경과) — ${getActiveLabel()}</div>
         <div class="gb-sub">${prevMonthStr} 소득 ${prevMonthRecords.length}건 / 총 지급액 ₩${formatWon(prevMonthTotal)}</div>
         <div class="gb-sub" style="font-weight:700;">원래 소득세: ₩${formatWon(prevMonthTax)}</div>
         <div class="gb-sub" style="color:#ef4444;font-weight:700;">연체 이자 (연 9.9%, ${overdueDays}일): ₩${formatWon(overdueInterest)}</div>
         <div class="gb-sub" style="color:#ef4444;font-weight:900;font-size:15px;">총 납부액: ₩${formatWon(totalDue)}</div>
-        ${isEntityActive
-          ? `<div class="gb-sub">💰 ${getActiveLabel()} 소지금: ₩${formatWon(entityGold)}${entityGold < totalDue ? ' <span style="color:#ef4444;">(부족!)</span>' : ''}</div>
-             <button class="gb-btn danger" id="gb-tax-pay-confirm" style="margin-top:6px;">💸 ${prevMonthStr} 연체 소득세 납부 (₩${formatWon(totalDue)} 차감)</button>`
-          : `<div class="gb-sub" style="color:#ef4444;">⚠️ 캐릭터 또는 페르소나를 선택하세요</div>`}`;
+        <div class="gb-sub">💰 ${getActiveLabel()} 소지금: ₩${formatWon(entityGold)}${entityGold < totalDue ? ' <span style="color:#ef4444;">(부족!)</span>' : ''}</div>
+        <button class="gb-btn danger" id="gb-tax-pay-confirm" style="margin-top:6px;">💸 ${getActiveLabel()} ${prevMonthStr} 연체 소득세 납부 (₩${formatWon(totalDue)} 차감)</button>`;
     }
     // 현재달 기록은 납부 불가 안내
     const curMonthRecords = incomeLogAll.filter(r => (r.date || '').startsWith(curMonthStr));
@@ -12661,21 +12659,24 @@ async function saveMaterialTraitFromForm() {
         const _settleActiveId = model.state.activeCharId || '';
         const _settleChar = getActiveCharacter();
         const _settleCharName = _settleChar ? (_settleChar.name || _settleActiveId) : '공용';
-        model.db.incomeLog.push({
-          date:       dateVal || '날짜 미입력',
-          charKey:    _settleActiveId,
-          runTitle:   runTitle,
-          gross:      result ? result.subtotal : 0,
-          fee:        result ? result.fee : 0,
-          corpTax:    isGuildSettle ? (result ? result.fee : 0) : 0,
-          net:        result ? result.net : 0,
-          perPerson:  result ? result.perPerson : 0,
-          guildShare: result ? (result.guildShare || 0) : 0,
-          final:      goldGain,
-          type:       isGuildSettle ? 'guild' : 'association',
-          guildName:  guildName,
-          participant: _settleCharName,
-        });
+        // 소득기록: 공용(캐릭터 미선택)은 공동비용으로 처리 — 소득기록 제외
+        if (_settleActiveId) {
+          model.db.incomeLog.push({
+            date:       dateVal || '날짜 미입력',
+            charKey:    _settleActiveId,
+            runTitle:   runTitle,
+            gross:      result ? result.subtotal : 0,
+            fee:        result ? result.fee : 0,
+            corpTax:    isGuildSettle ? (result ? result.fee : 0) : 0,
+            net:        result ? result.net : 0,
+            perPerson:  result ? result.perPerson : 0,
+            guildShare: result ? (result.guildShare || 0) : 0,
+            final:      goldGain,
+            type:       isGuildSettle ? 'guild' : 'association',
+            guildName:  guildName,
+            participant: _settleCharName,
+          });
+        }
         pushActivityLog(_settleCharName, '게이트 정산', `${runTitle} — ${isGuildSettle ? '길드(' + guildName + ')' : '협회'} 정산 / 총수익 ₩${formatWon(result ? result.subtotal : 0)} → 수수료 차감 → 최종 ₩${formatWon(goldGain)} 획득 / 인원 ${st.settlePartyCount || '?'}명`);
         // Write guild tax log for guild settlements
         if (isGuildSettle) {
@@ -12796,12 +12797,14 @@ async function saveMaterialTraitFromForm() {
         const net = total - fee;
         inv.gold = Number(inv.gold||0) + net;
         model.state.settleItemSel = {};
-        // 소득 기록 (페르소나/캐릭터 모두 기록)
+        // 소득 기록: 공용(캐릭터 미선택)은 공동비용으로 처리 — 소득기록 제외
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
         const _directSellActiveId = model.state.activeCharId || '';
         const _dsChar = getActiveCharacter();
         const _participantName = _dsChar ? (_dsChar.name || _directSellActiveId) : '공용';
-        model.db.incomeLog.push({ date: dateVal||'날짜 미입력', charKey: _directSellActiveId, runTitle: '직접 판매', gross: total, fee, net, perPerson: net, final: net, type: isGuild ? 'guild' : 'association', participant: _participantName });
+        if (_directSellActiveId) {
+          model.db.incomeLog.push({ date: dateVal||'날짜 미입력', charKey: _directSellActiveId, runTitle: '직접 판매', gross: total, fee, net, perPerson: net, final: net, type: isGuild ? 'guild' : 'association', participant: _participantName });
+        }
         pushActivityLog(_participantName, '직접 판매', `${isGuild ? '길드' : '협회'} 정산 / ${toRemove.length}개 아이템 판매 — 세전 ₩${formatWon(total)} → 수수료 5% 차감 → ₩${formatWon(net)} 획득`);
         await saveDb(); await saveState(); renderApp();
         toast(`💰 ${toRemove.length}개 아이템 판매 완료 (세전 ${fmtS(total)} → 수수료 5% 차감 후 ${fmtS(net)})`);
@@ -12873,12 +12876,14 @@ async function saveMaterialTraitFromForm() {
           }
           lines.push(`${charName}: +${fmtS(share)}`);
         }
-        // 소득 기록 (페르소나/캐릭터 모두 기록)
+        // 소득 기록: 공용(캐릭터 미선택)은 공동비용으로 처리 — 소득기록 제외
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
         const _teamSellActiveId = model.state.activeCharId || '';
         const _tsChar = getActiveCharacter();
         const _firstPersonaName = _tsChar ? (_tsChar.name || _teamSellActiveId) : '공용';
-        model.db.incomeLog.push({ date: dateVal||'날짜 미입력', charKey: _teamSellActiveId, runTitle: '직접 판매 (팀 분배)', gross: total, fee, net: netTotal, perPerson: netTotal, final: netTotal, type: isGuild?'guild':'association', participant: _firstPersonaName });
+        if (_teamSellActiveId) {
+          model.db.incomeLog.push({ date: dateVal||'날짜 미입력', charKey: _teamSellActiveId, runTitle: '직접 판매 (팀 분배)', gross: total, fee, net: netTotal, perPerson: netTotal, final: netTotal, type: isGuild?'guild':'association', participant: _firstPersonaName });
+        }
         pushActivityLog(_firstPersonaName, '직접 판매 (팀 분배)', `${isGuild ? '길드' : '협회'} 정산 / 세전 ₩${formatWon(total)} → 5% 차감 → ₩${formatWon(netTotal)} / 분배: ${lines.join(', ')}`);
         model.state.settleItemSel = {};
         await saveDb(); await saveState(); renderApp();
@@ -12938,9 +12943,9 @@ async function saveMaterialTraitFromForm() {
         const curMonthStr = `${gd.year}-${String(gd.month).padStart(2,'0')}`;
         // 현재달 기록은 납부 불가
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
-        // 전월 소득 계산
-        const prevMonthRecords = model.db.incomeLog.filter(r => (r.date || '').startsWith(prevMonthStr));
-        if (prevMonthRecords.length === 0) { toast(`${prevMonthStr}에 해당하는 소득 기록이 없다.`, true); return; }
+        // 전월 소득 계산 — 선택된 엔티티의 기록만 대상
+        const prevMonthRecords = model.db.incomeLog.filter(r => (r.date || '').startsWith(prevMonthStr) && r.charKey === activeId);
+        if (prevMonthRecords.length === 0) { toast(`${getActiveLabel()} — ${prevMonthStr}에 해당하는 소득 기록이 없다.`, true); return; }
         const prevMonthTotal = prevMonthRecords.reduce((s, r) => s + Number(r.final || 0), 0);
         const prevMonthTax = prevMonthTotal > 0 ? calcMonthlyIncomeTax(prevMonthTotal) : 0;
         // 연체 이자 계산
@@ -12949,24 +12954,23 @@ async function saveMaterialTraitFromForm() {
         const overdueDays = isOverdue ? curDay - 10 : 0;
         const overdueInterest = isOverdue && prevMonthTax > 0 ? Math.floor(prevMonthTax * 0.099 * overdueDays / 365) : 0;
         const totalDue = prevMonthTax + overdueInterest;
-        // 페르소나 인벤토리에서 골드 차감
+        // 엔티티 인벤토리에서 골드 차감
         const inv = getActiveInventory();
         const curGold = Number(inv.gold || 0);
         if (curGold < totalDue) {
           toast(`소지금 부족 (${getActiveLabel()}: ₩${formatWon(curGold)} / 필요 ₩${formatWon(totalDue)})`, true); return;
         }
         inv.gold = curGold - totalDue;
-        // 전월 기록만 삭제 (현재달 기록은 유지)
+        // 선택된 엔티티의 전월 기록만 삭제 (다른 엔티티 기록 및 현재달 기록은 유지)
         const before = model.db.incomeLog.length;
         model.db.incomeLog = model.db.incomeLog.filter(r => {
-          const d = (r.date || '');
-          if (d.startsWith(prevMonthStr)) return false; // 전월 삭제
-          return true; // 나머지 유지
+          if ((r.date || '').startsWith(prevMonthStr) && r.charKey === activeId) return false;
+          return true;
         });
         const removed = before - model.db.incomeLog.length;
         pushActivityLog(getActiveLabel(), '소득세 납부', `${prevMonthStr} 소득 ₩${formatWon(prevMonthTotal)} / 세액 ₩${formatWon(prevMonthTax)}${isOverdue ? ` + 연체이자 ₩${formatWon(overdueInterest)} (${overdueDays}일)` : ''} → 총 ₩${formatWon(totalDue)} 납부 / 잔액 ₩${formatWon(inv.gold)}`);
         await saveDb(); await saveState(); renderApp();
-        toast(`✅ ${prevMonthStr} 소득세 납부 완료 — ₩${formatWon(totalDue)} 차감 (${removed}건 기록 삭제)`);
+        toast(`✅ ${getActiveLabel()} ${prevMonthStr} 소득세 납부 완료 — ₩${formatWon(totalDue)} 차감 (${removed}건 기록 삭제)`);
       } catch (e) { toast(e.message || String(e), true); }
     });
     // ── Shop handlers ─────────────────────────────────────────────────────────
