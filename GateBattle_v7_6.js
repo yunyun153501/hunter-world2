@@ -417,6 +417,8 @@ const GUILD_TAX_RATE      = 0.033; // 원천세 3.3% (길드가 법인세로 대
 // 장비 바이아웃 비율
 const GEAR_BUYOUT_ASSOC   = 0.85;
 const GEAR_BUYOUT_GUILD   = 0.90;
+// 협회지급 장비 재구매 가격 (인당 1회 무료 이후)
+const ASSOC_EQUIP_REPURCHASE_PRICE = 750000;
 // 월 소득세 구간 (누진공제 포함)
 const MONTHLY_INCOME_TAX_BRACKETS = [
   { limit: 1000000,    rate: 0.06,  deduction: 0         },
@@ -1993,7 +1995,7 @@ function buildDefaultState() {
       if (upperCoef != null) skill.coef = upperCoef;
     }
     // ── 계수 0 자동처리: 일반스킬→하한, 성장형→상한 ──
-    if (!skill.coef || Number(skill.coef) === 0) {
+    if (Number(skill.coef || 0) === 0) {
       if (skill.growth) {
         const upperCoef = getGrowthCoef(skill.category, rank);
         if (upperCoef != null) skill.coef = upperCoef;
@@ -8013,7 +8015,7 @@ function renderEquipShopHtml() {
           const activeId = model.state.activeCharId || '';
           if (!model.db.assocEquipClaimed) model.db.assocEquipClaimed = {};
           assocClaimed = !!model.db.assocEquipClaimed[activeId];
-          if (assocClaimed) price = 750000;
+          if (assocClaimed) price = ASSOC_EQUIP_REPURCHASE_PRICE;
         }
         const canAfford = price === 0 || gold >= price;
         const traitTags = (e.traits||[]).map(t => `<span class="gb-badge">${escapeHtml(equipTraitDisplay(t, e.rank))}</span>`).join(' ');
@@ -12733,7 +12735,7 @@ async function saveMaterialTraitFromForm() {
         if (isAssocFree) {
           if (!model.db.assocEquipClaimed) model.db.assocEquipClaimed = {};
           if (model.db.assocEquipClaimed[activeId]) {
-            price = 750000; // 재구매 시 75만원
+            price = ASSOC_EQUIP_REPURCHASE_PRICE; // 재구매 시 75만원
           }
         }
         const inv = getActiveInventory();
