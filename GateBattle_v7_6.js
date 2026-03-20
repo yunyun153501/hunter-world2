@@ -7793,10 +7793,11 @@ function renderAuctionHouseHtml() {
 }
 
 // ── 등록과 (4F) 승급 시스템 ──────────────────────────────────────────────────
-// 승급 조건: 동급 게이트 클리어 10회 이상 (소형×1, 중형×2, 대형×3) + 아이템 없이 목표 등급의 최소 스탯 이상
+// 승급 조건: 동급 게이트 클리어 점수 + 아이템 없이 목표 등급의 최소 스탯 이상
 // 재측정: 주 1회, 실패 시 1주간 재도전 불가, 캐릭터/페르소나별 독립
 const RANKUP_MIN_STAT_SUM = { D:70, C:90, B:120, A:160, S:200 }; // 목표등급의 최소 스탯합 (BALANCE_FORMULAS.md 기준)
-const RANKUP_GATE_CLEAR_REQ = 10; // 동급 게이트 클리어 필요 횟수 (소형×1, 중형×2, 대형×3 환산)
+// 현재 등급 기준 필요 클리어 점수 (소형×1, 중형×2, 대형×3 환산)
+const RANKUP_GATE_CLEAR_REQ = { E:5, D:10, C:10, B:10, A:15 };
 const RANKUP_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7일 쿨다운
 
 function calcGateClearScore(charId, rank) {
@@ -7842,8 +7843,9 @@ function attemptRankUp(entry) {
 
   // 게이트 클리어 확인
   const clearScore = calcGateClearScore(charId, currentRank);
-  if (clearScore < RANKUP_GATE_CLEAR_REQ) {
-    return { success: false, reason: `${currentRank}급 게이트 클리어 점수 부족: ${clearScore}/${RANKUP_GATE_CLEAR_REQ} (소형×1, 중형×2, 대형×3)`, noRecord: true };
+  const clearReq = RANKUP_GATE_CLEAR_REQ[currentRank] || 10;
+  if (clearScore < clearReq) {
+    return { success: false, reason: `${currentRank}급 게이트 클리어 점수 부족: ${clearScore}/${clearReq} (소형×1, 중형×2, 대형×3)`, noRecord: true };
   }
 
   // 스탯합 확인 (아이템 없이)
@@ -7888,7 +7890,8 @@ function renderRankUpView() {
     const lastResult = history ? history.result : '';
 
     const statOk = !isMaxRank && baseSum >= (RANKUP_MIN_STAT_SUM[targetRank] || 999);
-    const clearOk = clearScore >= RANKUP_GATE_CLEAR_REQ;
+    const clearReq = RANKUP_GATE_CLEAR_REQ[currentRank] || 10;
+    const clearOk = clearScore >= clearReq;
     const canAttempt = !isMaxRank && statOk && clearOk && cooldownCheck.ok;
 
     // 개별 클리어 횟수 표시
@@ -7906,7 +7909,7 @@ function renderRankUpView() {
       </div>
       ${isMaxRank ? '' : `
         <div style="font-size:12px;margin:4px 0;">
-          <div>📋 <b>${currentRank}급 게이트 클리어</b>: 소형 ${sml}회(×1) + 중형 ${med}회(×2) + 대형 ${lrg}회(×3) = <b>${clearScore}점</b> / ${RANKUP_GATE_CLEAR_REQ}점 ${clearOk ? '✅' : '❌'}</div>
+          <div>📋 <b>${currentRank}급 게이트 클리어</b>: 소형 ${sml}회(×1) + 중형 ${med}회(×2) + 대형 ${lrg}회(×3) = <b>${clearScore}점</b> / ${clearReq}점 ${clearOk ? '✅' : '❌'}</div>
           <div>📊 <b>기본 스탯합</b> (아이템 미착용): <b>${baseSum}</b> / ${minStatSum} ${statOk ? '✅' : '❌'}</div>
           ${!cooldownCheck.ok ? `<div style="color:#ef4444;">⏳ ${cooldownCheck.reason}</div>` : ''}
           ${lastResult === 'fail' && !cooldownCheck.ok ? '<div style="color:#ef4444;">이전 결과: 실패 (쿨다운 진행 중)</div>' : ''}
@@ -7922,7 +7925,7 @@ function renderRankUpView() {
     <div class="gb-section-title">📊 등록과 (4F) — 측정·등록·승급</div>
     <div class="gb-sub">첨단 하이테크 장비를 이용한 마나 측정 및 공식 랭크 부여. 헌터 등록 및 재측정도 이 층에서 진행됩니다.</div>
     <div class="gb-sub" style="margin-top:4px;font-size:11px;">
-      📌 승급 조건: ① 동급 게이트 클리어 ${RANKUP_GATE_CLEAR_REQ}점 이상 (소형×1/중형×2/대형×3) ② 아이템 미착용 기준 목표 등급 최소 스탯합 충족<br>
+      📌 승급 조건: ① 동급 게이트 클리어 점수 충족 (E급5점/D~B급10점/A급15점, 소형×1/중형×2/대형×3) ② 아이템 미착용 기준 목표 등급 최소 스탯합 충족<br>
       📌 재측정은 주 1회. 실패 시 1주간 재도전 불가. 캐릭터/페르소나 각각 독립 적용.
     </div>
   </div>
