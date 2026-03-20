@@ -549,10 +549,10 @@ const ARMOR_STAT_BY_RANK = {
 };
 // Armor subtypes: different defense multipliers, stat pools, and stat bonus modifiers
 const ARMOR_SUBTYPES = {
-  heavy:   { label:'중갑',   defMul:[0.90,1.00], statPool:['con','str'], atkMul:-0.10, statBonusMul:0 },
-  light:   { label:'경갑',   defMul:[0.70,0.80], statPool:['con','str','agi'], atkMul:0, statBonusMul:0 },
-  leather: { label:'가죽갑', defMul:[0.50,0.60], statPool:['str','agi','int','sense'], atkMul:0, statBonusMul:0.10 },
-  robe:    { label:'로브',   defMul:[0.40,0.50], statPool:['agi','int','sense'], atkMul:0, statBonusMul:0.20 }
+  heavy:   { label:'중갑',   defMul:[0.90,1.00], atkMul:-0.10, statBonusMul:0 },
+  light:   { label:'경갑',   defMul:[0.70,0.80], atkMul:0, statBonusMul:0 },
+  leather: { label:'가죽갑', defMul:[0.50,0.60], atkMul:0, statBonusMul:0.10 },
+  robe:    { label:'로브',   defMul:[0.40,0.50], atkMul:0, statBonusMul:0.20 }
 };
 const ARMOR_SUBTYPE_KEYS = ['heavy','light','leather','robe'];
 
@@ -1835,7 +1835,6 @@ const RARE_FAMILY_PRESETS = {
           const pdef = Math.max(1, Math.round(maxDef * defMul * (0.85 + Math.random() * 0.10)));
           const mdef = Math.max(1, Math.round(maxDef * defMul * (0.85 + Math.random() * 0.10)));
           const atkPenalty = sub.atkMul ? Math.round(baseAtk * sub.atkMul) : 0;
-          const mainStat = sub.statPool[a % sub.statPool.length];
           const price = Math.round(calcEquipBasePrice(rank, 'armor') * (0.85 + Math.random() * 0.10));
           items.push({
             id: `eq_${rank.toLowerCase()}_armor_${subKey}_${String(++idx).padStart(2,'0')}`,
@@ -1845,7 +1844,7 @@ const RARE_FAMILY_PRESETS = {
             enhance: 0, infuse: 0, maxInfuse: 2, traits: [],
             durability: 100, maxDurability: 100,
             atk: atkPenalty, pdef, mdef,
-            mainStat, resistType: '', resistPct: 0,
+            mainStat: '', resistType: '', resistPct: 0,
             price,
             note: `${rank}급 ${sub.label}.`
           });
@@ -1892,9 +1891,9 @@ const RARE_FAMILY_PRESETS = {
           skills:['skill_yuna_anvil','skill_yuna_shield','skill_yuna_dagger'],
           threatBase:5,
           inventory:{ gold:0, items:[], equipped:{
-            weapon:{ id:'eq_npc_yuna_weapon', name:'협회지급 단검', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 단검.' },
-            subweapon:{ id:'eq_npc_yuna_sub', name:'E급 조악한 방패', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['physical_defense'], durability:100, maxDurability:100, atk:0, pdef:1, mdef:0, mainStat:'con', resistType:'', resistPct:0, price:300000, note:'E급 표준 방패.' },
-            armor:{ id:'eq_npc_yuna_armor', name:'E급 조악한 판금갑옷', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'heavy', armorStatBonusMul:0, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:3, mdef:0, mainStat:'con', resistType:'', resistPct:0, price:400000, note:'E급 표준 중갑.' },
+            weapon:{ id:'eq_npc_yuna_weapon', name:'협회지급 단검', category:'equipment', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 단검.' },
+            subweapon:{ id:'eq_npc_yuna_sub', name:'E급 조악한 방패', category:'equipment', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['physical_defense'], durability:100, maxDurability:100, atk:0, pdef:1, mdef:0, mainStat:'con', resistType:'', resistPct:0, price:300000, note:'E급 표준 방패.' },
+            armor:{ id:'eq_npc_yuna_armor', name:'E급 조악한 판금갑옷', category:'equipment', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'heavy', armorStatBonusMul:0, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:3, mdef:0, mainStat:'', resistType:'', resistPct:0, price:400000, note:'E급 표준 중갑.' },
             accessory:null, bag:null
           }},
           note:'고유 NPC. E급 탱커. 강철모루(성장형 포지션스킬) 보유 — A급 달성 시 백금모루(유니크)로 승급.\n장비: 협회지급 단검, E급 조악한 방패, E급 조악한 판금갑옷.' },
@@ -1906,9 +1905,9 @@ const RARE_FAMILY_PRESETS = {
           skills:['skill_haneul_reload','skill_haneul_powershot','skill_haneul_quickshot','skill_haneul_tripleshot'],
           threatBase:1,
           inventory:{ gold:0, items:[], equipped:{
-            weapon:{ id:'eq_npc_haneul_weapon', name:'협회지급 활', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 활.' },
-            subweapon:{ id:'eq_npc_haneul_sub', name:'E급 조악한 장갑', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['physical_damage'], durability:100, maxDurability:100, atk:0, pdef:0, mdef:0, mainStat:'', resistType:'', resistPct:0, price:300000, note:'E급 표준 장갑.' },
-            armor:{ id:'eq_npc_haneul_armor', name:'E급 투박한 기동조끼', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'leather', armorStatBonusMul:0.10, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:1, mdef:1, mainStat:'agi', resistType:'', resistPct:0, price:400000, note:'E급 표준 가죽갑.' },
+            weapon:{ id:'eq_npc_haneul_weapon', name:'협회지급 활', category:'equipment', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'agi', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 활.' },
+            subweapon:{ id:'eq_npc_haneul_sub', name:'E급 조악한 장갑', category:'equipment', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['physical_damage'], durability:100, maxDurability:100, atk:0, pdef:0, mdef:0, mainStat:'', resistType:'', resistPct:0, price:300000, note:'E급 표준 장갑.' },
+            armor:{ id:'eq_npc_haneul_armor', name:'E급 투박한 기동조끼', category:'equipment', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'leather', armorStatBonusMul:0.10, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:1, mdef:1, mainStat:'', resistType:'', resistPct:0, price:400000, note:'E급 표준 가죽갑.' },
             accessory:null, bag:null
           }},
           note:'고유 NPC. E급 궁수. 전탄회수/파워샷/퀵샷/트리플샷(성장형 직업스킬) 보유.\n장비: 협회지급 활, E급 조악한 장갑, E급 투박한 기동조끼.' }
@@ -2454,6 +2453,14 @@ function buildDefaultState() {
       Object.entries(statMap).forEach(([traitId, statKey]) => {
         const val = Number(unit.traitBonuses[traitId] || 0);
         if (val > 0) unit.stats[statKey] = (unit.stats[statKey] || 0) + val;
+      });
+    }
+    // 장비 주스탯 보너스 적용: 방어구(캐릭터 주스탯 기반) / 악세서리 강화 보너스
+    if (!isMonster && entry.inventory && entry.inventory.equipped) {
+      const charMainStat = unit.attackStat || 'str';
+      const eqBonus = calcEquippedStatBonus(entry.inventory.equipped, charMainStat);
+      ['str','con','int','agi','sense'].forEach(k => {
+        if (eqBonus[k]) unit.stats[k] = (unit.stats[k] || 0) + eqBonus[k];
       });
     }
     return unit;
@@ -4506,7 +4513,7 @@ function buildDropEquipment(rank, forcePart) {
     atk: part === 'weapon' ? (WEAPON_BASE_ATK[r] || 5) : (part === 'armor' && armorSubtype && armorSubtype.atkMul ? Math.round((WEAPON_BASE_ATK[r] || 5) * armorSubtype.atkMul) : 0),
     pdef: part === 'armor' ? (() => { const base = (ARMOR_STAT_BY_RANK[r]||{defRange:[0,5]}).defRange[1]; const [lo,hi] = armorSubtype ? armorSubtype.defMul : [0.5,0.5]; const mul = lo + Math.random()*(hi-lo); return Math.round(base * mul); })() : (part === 'subweapon' && isShield ? Math.round((ARMOR_STAT_BY_RANK[r]||{defRange:[0,5]}).defRange[1] * 0.25) : 0),
     mdef: part === 'armor' ? (() => { const base = (ARMOR_STAT_BY_RANK[r]||{defRange:[0,5]}).defRange[1]; const [lo,hi] = armorSubtype ? armorSubtype.defMul : [0.5,0.5]; const mul = lo + Math.random()*(hi-lo); return Math.round(base * mul); })() : 0,
-    mainStat: part === 'weapon' ? (Math.random() < 0.5 ? 'str' : 'int') : (part === 'armor' && armorSubtype ? armorSubtype.statPool[Math.floor(Math.random() * armorSubtype.statPool.length)] : (part === 'subweapon' && isShield ? 'con' : (part === 'armor' ? 'con' : ''))),
+    mainStat: part === 'weapon' ? (Math.random() < 0.5 ? 'str' : 'int') : (part === 'armor' ? '' : (part === 'subweapon' && isShield ? 'con' : '')),
     armorSubtype: armorSubtype ? armorSubtype.key : undefined,
     armorStatBonusMul: armorSubtype ? armorSubtype.statBonusMul : undefined,
     resistType: '',
@@ -7397,7 +7404,7 @@ function seedNpcAuctionListings() {
       atk: part === 'weapon' ? (WEAPON_BASE_ATK[rank] || 5) : (part === 'armor' && _armorSub && _armorSub.atkMul ? Math.round((WEAPON_BASE_ATK[rank] || 5) * _armorSub.atkMul) : 0),
       pdef: part === 'armor' ? (() => { const base = (ARMOR_STAT_BY_RANK[rank]||{defRange:[0,5]}).defRange[1]; const [lo,hi] = _armorSub ? _armorSub.defMul : [0.5,0.5]; const mul = lo + Math.random()*(hi-lo); return Math.round(base * mul); })() : (part === 'subweapon' && _isShield ? Math.round((ARMOR_STAT_BY_RANK[rank]||{defRange:[0,5]}).defRange[1] * 0.25) : 0),
       mdef: part === 'armor' ? (() => { const base = (ARMOR_STAT_BY_RANK[rank]||{defRange:[0,5]}).defRange[1]; const [lo,hi] = _armorSub ? _armorSub.defMul : [0.5,0.5]; const mul = lo + Math.random()*(hi-lo); return Math.round(base * mul); })() : 0,
-      mainStat: part === 'weapon' ? (Math.random() < 0.5 ? 'str' : 'int') : (part === 'armor' && _armorSub ? _armorSub.statPool[Math.floor(Math.random() * _armorSub.statPool.length)] : (part === 'subweapon' && _isShield ? 'con' : (part === 'armor' ? 'con' : ''))),
+      mainStat: part === 'weapon' ? (Math.random() < 0.5 ? 'str' : 'int') : (part === 'armor' ? '' : (part === 'subweapon' && _isShield ? 'con' : '')),
       armorSubtype: _armorSub ? _armorSub.key : undefined,
       armorStatBonusMul: _armorSub ? _armorSub.statBonusMul : undefined,
       resistType: '', resistPct: 0
@@ -8584,7 +8591,7 @@ function seedNpcUsedListings() {
       atk: part === 'weapon' ? (WEAPON_BASE_ATK[rank] || 5) : (part === 'armor' && _armorSub && _armorSub.atkMul ? Math.round((WEAPON_BASE_ATK[rank] || 5) * _armorSub.atkMul) : 0),
       pdef: part === 'armor' ? (() => { const base = (ARMOR_STAT_BY_RANK[rank]||{defRange:[0,5]}).defRange[1]; const [lo,hi] = _armorSub ? _armorSub.defMul : [0.5,0.5]; const mul = lo + Math.random()*(hi-lo); return Math.round(base * mul); })() : (part === 'subweapon' ? Math.round((ARMOR_STAT_BY_RANK[rank]||{defRange:[0,5]}).defRange[1] * 0.25) : 0),
       mdef: part === 'armor' ? (() => { const base = (ARMOR_STAT_BY_RANK[rank]||{defRange:[0,5]}).defRange[1]; const [lo,hi] = _armorSub ? _armorSub.defMul : [0.5,0.5]; const mul = lo + Math.random()*(hi-lo); return Math.round(base * mul); })() : 0,
-      mainStat: part === 'weapon' ? (Math.random() < 0.5 ? 'str' : 'int') : (part === 'armor' && _armorSub ? _armorSub.statPool[Math.floor(Math.random() * _armorSub.statPool.length)] : (part === 'armor' ? 'con' : 'str')),
+      mainStat: part === 'weapon' ? (Math.random() < 0.5 ? 'str' : 'int') : (part === 'armor' ? '' : 'str'),
       armorSubtype: _armorSub ? _armorSub.key : undefined,
       armorStatBonusMul: _armorSub ? _armorSub.statBonusMul : undefined,
       resistType: '', resistPct: 0
@@ -10649,9 +10656,17 @@ function renderCommandPanel(runtime) {
     if (!entity || !entity.stats) return;
     const s = entity.stats;
     const lvBonus = Math.max(0, (Number(entity.level) || 1) - 1) * 2;
-    entity.hp = 100 + ((Number(s.con)||0) - 10) * 10 + ((Number(s.str)||0) - 10) * 3 + lvBonus;
-    entity.mp = 100 + ((Number(s.int)||0) - 10) * 10 + ((Number(s.sense)||0) - 10) * 3 + lvBonus;
-    entity.sp = 100 + ((Number(s.agi)||0) - 10) * 10 + ((Number(s.sense)||0) - 10) * 3 + lvBonus;
+    // 장착 장비 주스탯 보너스 반영
+    const charMainStat = entity.attackStat || inferAttackStat(entity.position, entity.job);
+    const eqBonus = (entity.inventory && entity.inventory.equipped) ? calcEquippedStatBonus(entity.inventory.equipped, charMainStat) : { atk:0, pdef:0, mdef:0, str:0, con:0, int:0, agi:0, sense:0 };
+    const effStr = (Number(s.str)||0) + eqBonus.str;
+    const effCon = (Number(s.con)||0) + eqBonus.con;
+    const effInt = (Number(s.int)||0) + eqBonus.int;
+    const effAgi = (Number(s.agi)||0) + eqBonus.agi;
+    const effSense = (Number(s.sense)||0) + eqBonus.sense;
+    entity.hp = 100 + (effCon - 10) * 10 + (effStr - 10) * 3 + lvBonus;
+    entity.mp = 100 + (effInt - 10) * 10 + (effSense - 10) * 3 + lvBonus;
+    entity.sp = 100 + (effAgi - 10) * 10 + (effSense - 10) * 3 + lvBonus;
     // 장착 장비 ATK/PDEF/MDEF 반영
     let weaponAtk = 0;
     let equipPdef = 0;
@@ -10666,13 +10681,14 @@ function renderCommandPanel(runtime) {
         equipMdef += Number(eq.mdef || 0);
       });
     }
-    entity.atk = Math.round(weaponAtk + ((Number(s.str)||0) - 10) * 0.2 + ((Number(s.agi)||0) - 10) * 0.2 + ((Number(s.int)||0) - 10) * 0.3);
+    entity.atk = Math.round(weaponAtk + (effStr - 10) * 0.2 + (effAgi - 10) * 0.2 + (effInt - 10) * 0.3);
     entity.pdef = equipPdef;
     entity.mdef = equipMdef;
   }
 
   // 장착 장비 스탯 합산 반환 { atk, pdef, mdef, str, con, int, agi, sense }
-  function calcEquippedStatBonus(equipped) {
+  // charMainStat: 캐릭터의 주스탯 (attackStat). 방어구 보너스는 캐릭터 주스탯에 적용
+  function calcEquippedStatBonus(equipped, charMainStat) {
     const bonus = { atk:0, pdef:0, mdef:0, str:0, con:0, int:0, agi:0, sense:0 };
     if (!equipped) return bonus;
     EQUIP_PARTS.forEach(part => {
@@ -10681,12 +10697,12 @@ function renderCommandPanel(runtime) {
       bonus.atk   += Number(eq.atk   || 0);
       bonus.pdef  += Number(eq.pdef  || 0);
       bonus.mdef  += Number(eq.mdef  || 0);
-      // 방어구/악세서리만 totalStatSum 기반 주스탯 보너스 적용 (무기/보조무기는 주스탯 없음)
-      if (part === 'armor' && eq.mainStat && bonus[eq.mainStat] !== undefined) {
+      // 방어구: 캐릭터 주스탯에 보너스 적용 (방어구 자체 mainStat 대신 charMainStat 사용)
+      if (part === 'armor' && charMainStat && bonus[charMainStat] !== undefined) {
         const armorData = ARMOR_STAT_BY_RANK[eq.rank || 'E'] || ARMOR_STAT_BY_RANK.E;
         const baseStat = armorData.totalStatSum || 0;
         const subBonusMul = (eq.armorSubtype && ARMOR_SUBTYPES[eq.armorSubtype]) ? ARMOR_SUBTYPES[eq.armorSubtype].statBonusMul : 0;
-        bonus[eq.mainStat] += Math.round(baseStat * (1 + subBonusMul)) + (eq.enhance || 0) * (armorData.enhanceStat || 0);
+        bonus[charMainStat] += Math.round(baseStat * (1 + subBonusMul)) + (eq.enhance || 0) * (armorData.enhanceStat || 0);
       }
       if (part === 'accessory' && eq.mainStat && bonus[eq.mainStat] !== undefined) {
         const accData = ACCESSORY_STAT_BY_RANK[eq.rank || 'E'] || ACCESSORY_STAT_BY_RANK.E;
@@ -10717,7 +10733,8 @@ function renderCommandPanel(runtime) {
   function renderEquippedStatSection(item, type) {
     const inv = getPersonalInv(type, item.id);
     if (!inv) return '';
-    const bonus = calcEquippedStatBonus(inv.equipped);
+    const charMainStat = item.attackStat || inferAttackStat(item.position, item.job);
+    const bonus = calcEquippedStatBonus(inv.equipped, charMainStat);
     const hasAny = Object.values(bonus).some(v => v !== 0);
     const equipNames = EQUIP_PARTS.map(p => {
       const eq = inv.equipped[p];
