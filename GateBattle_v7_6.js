@@ -1478,8 +1478,8 @@ const RARE_FAMILY_PRESETS = {
     "buffIntE":{"id":"buffIntE","name":"지력 강화","grade":"E","category":"buff","target":"self","costs":{"mp":20,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","buff":{"stats":{"int":2}},"duration":3,"desc":"INT 강화 버프 3턴 (E랭크)","cooldown":0},
     "buffAgiE":{"id":"buffAgiE","name":"민첩 강화","grade":"E","category":"buff","target":"self","costs":{"mp":20,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","buff":{"stats":{"agi":2}},"duration":3,"desc":"AGI 강화 버프 3턴 (E랭크)","cooldown":0},
     "buffSenseE":{"id":"buffSenseE","name":"감각 강화","grade":"E","category":"buff","target":"self","costs":{"mp":20,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","buff":{"stats":{"sense":2}},"duration":3,"desc":"SENSE 강화 버프 3턴 (E랭크)","cooldown":0},
-    "buffPdefE":{"id":"buffPdefE","name":"방어 강화","grade":"E","category":"buff","target":"self","costs":{"mp":20,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{"pdef":2}},"duration":3,"desc":"PDEF 강화 버프 3턴 (E랭크)","cooldown":0},
-    "buffMdefE":{"id":"buffMdefE","name":"마방 강화","grade":"E","category":"buff","target":"self","costs":{"mp":20,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{"mdef":2}},"duration":3,"desc":"MDEF 강화 버프 3턴 (E랭크)","cooldown":0},
+    "buffPdefE":{"id":"buffPdefE","name":"방어 강화","grade":"E","category":"buff","target":"self","costs":{"mp":20,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{},"pdefFlat":3},"duration":3,"desc":"물리방어력 +3 버프 3턴 (E랭크)","cooldown":0},
+    "buffMdefE":{"id":"buffMdefE","name":"마방 강화","grade":"E","category":"buff","target":"self","costs":{"mp":20,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{},"mdefFlat":3},"duration":3,"desc":"마법방어력 +3 버프 3턴 (E랭크)","cooldown":0},
     "buffTauntE":{"id":"buffTauntE","name":"위협","grade":"E","category":"buff","target":"self","costs":{"mp":0,"sp":20},"coef":0,"statTypes":["con"],"damageType":"physical","element":"none","buff":{"stats":{},"threatBonus":3},"duration":3,"desc":"도발 버프 3턴, 위협 +3 (E랭크)","cooldown":0},
     "passiveStrE":{"id":"passiveStrE","name":"기초 근력","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR 패시브 영구 보너스 (E랭크)","cooldown":0,"passiveBonuses":{"str":2}},
     "passiveConE":{"id":"passiveConE","name":"기초 체력","grade":"E","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON 패시브 영구 보너스 (E랭크)","cooldown":0,"passiveBonuses":{"con":2}},
@@ -1523,8 +1523,8 @@ const RARE_FAMILY_PRESETS = {
     "buffIntD":{"id":"buffIntD","name":"명석의 비전","grade":"D","category":"buff","target":"self","costs":{"mp":25,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","buff":{"stats":{"int":4}},"duration":3,"desc":"INT 강화 버프 3턴 (D랭크)","cooldown":0},
     "buffAgiD":{"id":"buffAgiD","name":"질풍 보법","grade":"D","category":"buff","target":"self","costs":{"mp":25,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","buff":{"stats":{"agi":4}},"duration":3,"desc":"AGI 강화 버프 3턴 (D랭크)","cooldown":0},
     "buffSenseD":{"id":"buffSenseD","name":"매의 눈","grade":"D","category":"buff","target":"self","costs":{"mp":25,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","buff":{"stats":{"sense":4}},"duration":3,"desc":"SENSE 강화 버프 3턴 (D랭크)","cooldown":0},
-    "buffPdefD":{"id":"buffPdefD","name":"석갑 부여","grade":"D","category":"buff","target":"self","costs":{"mp":25,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{"pdef":4}},"duration":3,"desc":"PDEF 강화 버프 3턴 (D랭크)","cooldown":0},
-    "buffMdefD":{"id":"buffMdefD","name":"마력 방벽","grade":"D","category":"buff","target":"self","costs":{"mp":25,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{"mdef":4}},"duration":3,"desc":"MDEF 강화 버프 3턴 (D랭크)","cooldown":0},
+    "buffPdefD":{"id":"buffPdefD","name":"석갑 부여","grade":"D","category":"buff","target":"self","costs":{"mp":25,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{},"pdefFlat":8},"duration":3,"desc":"물리방어력 +8 버프 3턴 (D랭크)","cooldown":0},
+    "buffMdefD":{"id":"buffMdefD","name":"마력 방벽","grade":"D","category":"buff","target":"self","costs":{"mp":25,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{},"mdefFlat":8},"duration":3,"desc":"마법방어력 +8 버프 3턴 (D랭크)","cooldown":0},
     "buffTauntD":{"id":"buffTauntD","name":"도발","grade":"D","category":"buff","target":"self","costs":{"mp":0,"sp":25},"coef":0,"statTypes":["con"],"damageType":"physical","element":"none","buff":{"stats":{},"threatBonus":5},"duration":3,"desc":"도발 버프 3턴, 위협 +5 (D랭크)","cooldown":0},
     "passiveStrD":{"id":"passiveStrD","name":"근력 단련","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR 패시브 영구 보너스 (D랭크)","cooldown":0,"passiveBonuses":{"str":4}},
     "passiveConD":{"id":"passiveConD","name":"체력 단련","grade":"D","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON 패시브 영구 보너스 (D랭크)","cooldown":0,"passiveBonuses":{"con":4}},
@@ -1568,8 +1568,8 @@ const RARE_FAMILY_PRESETS = {
     "buffIntC":{"id":"buffIntC","name":"지혜의 각성","grade":"C","category":"buff","target":"self","costs":{"mp":30,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","buff":{"stats":{"int":6}},"duration":3,"desc":"INT 강화 버프 3턴 (C랭크)","cooldown":0},
     "buffAgiC":{"id":"buffAgiC","name":"그림자 걸음","grade":"C","category":"buff","target":"self","costs":{"mp":30,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","buff":{"stats":{"agi":6}},"duration":3,"desc":"AGI 강화 버프 3턴 (C랭크)","cooldown":0},
     "buffSenseC":{"id":"buffSenseC","name":"천리안","grade":"C","category":"buff","target":"self","costs":{"mp":30,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","buff":{"stats":{"sense":6}},"duration":3,"desc":"SENSE 강화 버프 3턴 (C랭크)","cooldown":0},
-    "buffPdefC":{"id":"buffPdefC","name":"철벽방어","grade":"C","category":"buff","target":"self","costs":{"mp":30,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{"pdef":6}},"duration":3,"desc":"PDEF 강화 버프 3턴 (C랭크)","cooldown":0},
-    "buffMdefC":{"id":"buffMdefC","name":"마법저항","grade":"C","category":"buff","target":"self","costs":{"mp":30,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{"mdef":6}},"duration":3,"desc":"MDEF 강화 버프 3턴 (C랭크)","cooldown":0},
+    "buffPdefC":{"id":"buffPdefC","name":"철벽방어","grade":"C","category":"buff","target":"self","costs":{"mp":30,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{},"pdefFlat":20},"duration":3,"desc":"물리방어력 +20 버프 3턴 (C랭크)","cooldown":0},
+    "buffMdefC":{"id":"buffMdefC","name":"마법저항","grade":"C","category":"buff","target":"self","costs":{"mp":30,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{},"mdefFlat":20},"duration":3,"desc":"마법방어력 +20 버프 3턴 (C랭크)","cooldown":0},
     "buffTauntC":{"id":"buffTauntC","name":"전장의 포효","grade":"C","category":"buff","target":"self","costs":{"mp":0,"sp":30},"coef":0,"statTypes":["con"],"damageType":"physical","element":"none","buff":{"stats":{},"threatBonus":7},"duration":3,"desc":"도발 버프 3턴, 위협 +7 (C랭크)","cooldown":0},
     "passiveStrC":{"id":"passiveStrC","name":"전사의 힘","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR 패시브 영구 보너스 (C랭크)","cooldown":0,"passiveBonuses":{"str":6}},
     "passiveConC":{"id":"passiveConC","name":"전사의 체력","grade":"C","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON 패시브 영구 보너스 (C랭크)","cooldown":0,"passiveBonuses":{"con":6}},
@@ -1613,8 +1613,8 @@ const RARE_FAMILY_PRESETS = {
     "buffIntB":{"id":"buffIntB","name":"마력 해방","grade":"B","category":"buff","target":"self","costs":{"mp":40,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","buff":{"stats":{"int":8}},"duration":3,"desc":"INT 강화 버프 3턴 (B랭크)","cooldown":0},
     "buffAgiB":{"id":"buffAgiB","name":"번개 발걸음","grade":"B","category":"buff","target":"self","costs":{"mp":40,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","buff":{"stats":{"agi":8}},"duration":3,"desc":"AGI 강화 버프 3턴 (B랭크)","cooldown":0},
     "buffSenseB":{"id":"buffSenseB","name":"예지의 눈","grade":"B","category":"buff","target":"self","costs":{"mp":40,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","buff":{"stats":{"sense":8}},"duration":3,"desc":"SENSE 강화 버프 3턴 (B랭크)","cooldown":0},
-    "buffPdefB":{"id":"buffPdefB","name":"난공불락","grade":"B","category":"buff","target":"self","costs":{"mp":40,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{"pdef":8}},"duration":3,"desc":"PDEF 강화 버프 3턴 (B랭크)","cooldown":0},
-    "buffMdefB":{"id":"buffMdefB","name":"마법반사","grade":"B","category":"buff","target":"self","costs":{"mp":40,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{"mdef":8}},"duration":3,"desc":"MDEF 강화 버프 3턴 (B랭크)","cooldown":0},
+    "buffPdefB":{"id":"buffPdefB","name":"난공불락","grade":"B","category":"buff","target":"self","costs":{"mp":40,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{},"pdefFlat":35},"duration":3,"desc":"물리방어력 +35 버프 3턴 (B랭크)","cooldown":0},
+    "buffMdefB":{"id":"buffMdefB","name":"마법반사","grade":"B","category":"buff","target":"self","costs":{"mp":40,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{},"mdefFlat":35},"duration":3,"desc":"마법방어력 +35 버프 3턴 (B랭크)","cooldown":0},
     "buffTauntB":{"id":"buffTauntB","name":"왕의 위엄","grade":"B","category":"buff","target":"self","costs":{"mp":0,"sp":40},"coef":0,"statTypes":["con"],"damageType":"physical","element":"none","buff":{"stats":{},"threatBonus":10},"duration":3,"desc":"도발 버프 3턴, 위협 +10 (B랭크)","cooldown":0},
     "passiveStrB":{"id":"passiveStrB","name":"강인한 근력","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR 패시브 영구 보너스 (B랭크)","cooldown":0,"passiveBonuses":{"str":8}},
     "passiveConB":{"id":"passiveConB","name":"강인한 체력","grade":"B","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON 패시브 영구 보너스 (B랭크)","cooldown":0,"passiveBonuses":{"con":8}},
@@ -1658,8 +1658,8 @@ const RARE_FAMILY_PRESETS = {
     "buffIntA":{"id":"buffIntA","name":"대현자의 지혜","grade":"A","category":"buff","target":"self","costs":{"mp":55,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","buff":{"stats":{"int":11}},"duration":3,"desc":"INT 강화 버프 3턴 (A랭크)","cooldown":0},
     "buffAgiA":{"id":"buffAgiA","name":"잔상보법","grade":"A","category":"buff","target":"self","costs":{"mp":55,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","buff":{"stats":{"agi":11}},"duration":3,"desc":"AGI 강화 버프 3턴 (A랭크)","cooldown":0},
     "buffSenseA":{"id":"buffSenseA","name":"만물감지","grade":"A","category":"buff","target":"self","costs":{"mp":55,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","buff":{"stats":{"sense":11}},"duration":3,"desc":"SENSE 강화 버프 3턴 (A랭크)","cooldown":0},
-    "buffPdefA":{"id":"buffPdefA","name":"무적의 방패","grade":"A","category":"buff","target":"self","costs":{"mp":55,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{"pdef":11}},"duration":3,"desc":"PDEF 강화 버프 3턴 (A랭크)","cooldown":0},
-    "buffMdefA":{"id":"buffMdefA","name":"마력무효화","grade":"A","category":"buff","target":"self","costs":{"mp":55,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{"mdef":11}},"duration":3,"desc":"MDEF 강화 버프 3턴 (A랭크)","cooldown":0},
+    "buffPdefA":{"id":"buffPdefA","name":"무적의 방패","grade":"A","category":"buff","target":"self","costs":{"mp":55,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{},"pdefFlat":50},"duration":3,"desc":"물리방어력 +50 버프 3턴 (A랭크)","cooldown":0},
+    "buffMdefA":{"id":"buffMdefA","name":"마력무효화","grade":"A","category":"buff","target":"self","costs":{"mp":55,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{},"mdefFlat":50},"duration":3,"desc":"마법방어력 +50 버프 3턴 (A랭크)","cooldown":0},
     "buffTauntA":{"id":"buffTauntA","name":"공포의 기운","grade":"A","category":"buff","target":"self","costs":{"mp":0,"sp":55},"coef":0,"statTypes":["con"],"damageType":"physical","element":"none","buff":{"stats":{},"threatBonus":13},"duration":3,"desc":"도발 버프 3턴, 위협 +13 (A랭크)","cooldown":0},
     "passiveStrA":{"id":"passiveStrA","name":"초인의 힘","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR 패시브 영구 보너스 (A랭크)","cooldown":0,"passiveBonuses":{"str":11}},
     "passiveConA":{"id":"passiveConA","name":"초인의 체력","grade":"A","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON 패시브 영구 보너스 (A랭크)","cooldown":0,"passiveBonuses":{"con":11}},
@@ -1703,8 +1703,8 @@ const RARE_FAMILY_PRESETS = {
     "buffIntS":{"id":"buffIntS","name":"전지의 축복","grade":"S","category":"buff","target":"self","costs":{"mp":70,"sp":0},"coef":0,"statTypes":["int"],"damageType":"magic","element":"none","buff":{"stats":{"int":14}},"duration":3,"desc":"INT 강화 버프 3턴 (S랭크)","cooldown":0},
     "buffAgiS":{"id":"buffAgiS","name":"시공의 축복","grade":"S","category":"buff","target":"self","costs":{"mp":70,"sp":0},"coef":0,"statTypes":["agi"],"damageType":"magic","element":"none","buff":{"stats":{"agi":14}},"duration":3,"desc":"AGI 강화 버프 3턴 (S랭크)","cooldown":0},
     "buffSenseS":{"id":"buffSenseS","name":"전지전능의 눈","grade":"S","category":"buff","target":"self","costs":{"mp":70,"sp":0},"coef":0,"statTypes":["sense"],"damageType":"magic","element":"none","buff":{"stats":{"sense":14}},"duration":3,"desc":"SENSE 강화 버프 3턴 (S랭크)","cooldown":0},
-    "buffPdefS":{"id":"buffPdefS","name":"절대방어","grade":"S","category":"buff","target":"self","costs":{"mp":70,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{"pdef":14}},"duration":3,"desc":"PDEF 강화 버프 3턴 (S랭크)","cooldown":0},
-    "buffMdefS":{"id":"buffMdefS","name":"절대마방","grade":"S","category":"buff","target":"self","costs":{"mp":70,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{"mdef":14}},"duration":3,"desc":"MDEF 강화 버프 3턴 (S랭크)","cooldown":0},
+    "buffPdefS":{"id":"buffPdefS","name":"절대방어","grade":"S","category":"buff","target":"self","costs":{"mp":70,"sp":0},"coef":0,"statTypes":["pDef"],"damageType":"magic","element":"none","buff":{"stats":{},"pdefFlat":70},"duration":3,"desc":"물리방어력 +70 버프 3턴 (S랭크)","cooldown":0},
+    "buffMdefS":{"id":"buffMdefS","name":"절대마방","grade":"S","category":"buff","target":"self","costs":{"mp":70,"sp":0},"coef":0,"statTypes":["mDef"],"damageType":"magic","element":"none","buff":{"stats":{},"mdefFlat":70},"duration":3,"desc":"마법방어력 +70 버프 3턴 (S랭크)","cooldown":0},
     "buffTauntS":{"id":"buffTauntS","name":"절대지배","grade":"S","category":"buff","target":"self","costs":{"mp":0,"sp":70},"coef":0,"statTypes":["con"],"damageType":"physical","element":"none","buff":{"stats":{},"threatBonus":16},"duration":3,"desc":"도발 버프 3턴, 위협 +16 (S랭크)","cooldown":0},
     "passiveStrS":{"id":"passiveStrS","name":"신의 근력","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["str"],"damageType":"magic","element":"none","duration":0,"desc":"STR 패시브 영구 보너스 (S랭크)","cooldown":0,"passiveBonuses":{"str":14}},
     "passiveConS":{"id":"passiveConS","name":"신의 체력","grade":"S","category":"passive","target":"self","costs":{"mp":0,"sp":0},"coef":0,"statTypes":["con"],"damageType":"magic","element":"none","duration":0,"desc":"CON 패시브 영구 보너스 (S랭크)","cooldown":0,"passiveBonuses":{"con":14}},
@@ -1866,17 +1866,17 @@ const RARE_FAMILY_PRESETS = {
         // ── 최유나 전용 스킬 ──
         { id:'skill_yuna_anvil', name:'강철모루', grade:'E', rarity:'Rare', category:'buff', target:'self',
           growth: true, skillUsage: 'position',
-          costs:{ mp:0, sp:30 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:0,
-          buff:{ stats:{ con:0 } },
+          costs:{ mp:0, sp:30 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:3,
+          buff:{ stats:{}, pdefFlat:3 },
           byRank:{
-            E:{ desc:'[E] 물리방어력+2. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            D:{ desc:'[D] 물리방어력+4. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            C:{ desc:'[C] 물리방어력+6. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            B:{ desc:'[B] 물리방어력+8. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            A:{ name:'백금모루', rarity:'Unique', desc:'[A] 유니크 승급! 물리방어력+31(+20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' },
-            S:{ name:'백금모루', rarity:'Unique', desc:'[S] 유니크! 물리방어력+34(+20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' }
+            E:{ buff:{ stats:{}, pdefFlat:3 }, desc:'[E] 물리방어력 +3. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            D:{ buff:{ stats:{}, pdefFlat:8 }, desc:'[D] 물리방어력 +8. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            C:{ buff:{ stats:{}, pdefFlat:20 }, desc:'[C] 물리방어력 +20. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            B:{ buff:{ stats:{}, pdefFlat:35 }, desc:'[B] 물리방어력 +35. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            A:{ name:'백금모루', rarity:'Unique', buff:{ stats:{}, pdefFlat:60 }, desc:'[A] 유니크 승급! 물리방어력 +60 (+20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' },
+            S:{ name:'백금모루', rarity:'Unique', buff:{ stats:{}, pdefFlat:84 }, desc:'[S] 유니크! 물리방어력 +84 (+20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' }
           },
-          desc:'[성장형/포지션] 등급별로 물리방어력 상승. 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.\n★ A급 달성 시 백금모루(유니크)로 승급: 물방 20% 추가 상승 / 최대 70% / HP 40% 이하 시 회복.' },
+          desc:'[성장형/포지션] 등급별로 물리방어력 상승 (defenseFlat 스케일). 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.\n★ A급 달성 시 백금모루(유니크)로 승급: 물방 +20% 추가 / 최대 70% / HP 40% 이하 시 회복.' },
         { id:'skill_yuna_shield', name:'방패숙련', grade:'E', rarity:'Normal', category:'buff', target:'self',
           skillUsage: 'general',
           costs:{ mp:0, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:0,
@@ -5299,7 +5299,11 @@ function getBuffedStat(unit, statKey) {
     const passive = Number((unit.passiveBonuses && unit.passiveBonuses[kind === 'magic' ? 'mdef' : 'pdef']) || 0);
     // 장비 특성: 물리방어력/마법방어력 고정값 보너스
     const traitFlat = Number((unit.traitBonuses && unit.traitBonuses[kind === 'magic' ? 'mdef_flat' : 'pdef_flat']) || 0);
-    return Math.max(0, base + passive + traitFlat);
+    // 활성 버프: 물리방어력/마법방어력 고정값 보너스 (스킬 buff.pdefFlat / buff.mdefFlat)
+    let buffFlat = 0;
+    const buffKey = kind === 'magic' ? 'mdefFlat' : 'pdefFlat';
+    (unit.buffs || []).forEach(b => { if (b && b[buffKey]) buffFlat += Number(b[buffKey]); });
+    return Math.max(0, base + passive + traitFlat + buffFlat);
   }
   function getStatPower(unit, skill) {
     const types = (skill && skill.statTypes && skill.statTypes.length > 0) ? skill.statTypes : [unit.attackStat || 'str'];
@@ -5704,6 +5708,9 @@ function getBuffedStat(unit, statKey) {
       if (skill.buff.parryStance) { buffEntry.parryStance = true; buffEntry.parryCoef = Number(skill.buff.parryCoef || 1); }
       if (skill.buff.onContactStun) buffEntry.onContactStun = Object.assign({}, skill.buff.onContactStun);
       if (skill.buff.stealth) buffEntry.stealth = true;
+      // 방어력 고정값 버프 (defenseFlat 스케일: E:3,D:8,C:20,B:35,A:50,S:70)
+      if (skill.buff.pdefFlat) buffEntry.pdefFlat = Number(skill.buff.pdefFlat);
+      if (skill.buff.mdefFlat) buffEntry.mdefFlat = Number(skill.buff.mdefFlat);
       target.buffs.push(buffEntry);
       if (skill.buff.threatBonus) target.threatBonus += Number(skill.buff.threatBonus || 0);
       changed.push(target.name);

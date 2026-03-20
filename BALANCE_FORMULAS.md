@@ -186,10 +186,15 @@ finalDamage = rawDamage × (1 - 피해감소율)
 ### 4.2 유효 방어력 계산
 
 ```
-유효 DEF = unit.pdef(또는 mdef) + passiveBonuses.pdef(또는 mdef) + traitBonuses.pdef_flat(또는 mdef_flat)
+유효 DEF = unit.pdef(또는 mdef)
+         + passiveBonuses.pdef(또는 mdef)
+         + traitBonuses.pdef_flat(또는 mdef_flat)
+         + Σ(활성 버프.pdefFlat 또는 mdefFlat)
 ```
 
-> passiveBonuses는 패시브 스킬에서 온 방어 보너스, traitBonuses는 장비 특성에서 온 고정값 보너스
+> passiveBonuses는 패시브 스킬, traitBonuses는 장비 특성, 활성 버프는 buff 카테고리 스킬의 pdefFlat/mdefFlat  
+> **버프 방어력은 defenseFlat 스케일을 따름** (E:+3, D:+8, C:+20, B:+35, A:+50, S:+70)  
+> 방어력은 **스탯이 아님** — buff.stats가 아니라 buff.pdefFlat / buff.mdefFlat 사용
 
 ### 4.3 방어 수치 예시
 
