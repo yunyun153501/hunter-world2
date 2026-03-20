@@ -6289,11 +6289,12 @@ function getBuffedStat(unit, statKey) {
     if (utilityBuff && unit.hp / unit.maxHp <= 0.5 && Math.random() < 0.6) return { type:'skill', skillId:utilityBuff.id, target:unit.uid };
     const singleAtk = skillPool.filter(sk => sk.category === 'singleAttack').sort((a,b)=>(b.coef||0)-(a.coef||0))[0];
     // 몬스터: 기본공격 쿨타임 중이면 스킬 사용, 스킬 쿨타임 중이면 기본공격
+    // 위협도(threatBase) 기반 가중 랜덤으로 타겟 선택 — 탱커 어그로 분배 정상화
     const basicOnCooldown = unit.isMonster && Number(unit.cooldowns && unit.cooldowns['basicAttack'] || 0) > 0;
-    if (basicOnCooldown && singleAtk) return { type:'skill', skillId:singleAtk.id, target:(choosePriorityTarget(unit, foes, singleAtk) || {}).uid };
-    if (!basicOnCooldown && unit.isMonster) return { type:'basic', target:(choosePriorityTarget(unit, foes, null) || {}).uid };
-    if (singleAtk) return { type:'skill', skillId:singleAtk.id, target:(choosePriorityTarget(unit, foes, singleAtk) || {}).uid };
-    return { type:'basic', target:(choosePriorityTarget(unit, foes, null) || {}).uid };
+    if (basicOnCooldown && singleAtk) return { type:'skill', skillId:singleAtk.id, target:(chooseWeightedTarget(unit, foes, singleAtk) || {}).uid };
+    if (!basicOnCooldown && unit.isMonster) return { type:'basic', target:(chooseWeightedTarget(unit, foes, null) || {}).uid };
+    if (singleAtk) return { type:'skill', skillId:singleAtk.id, target:(chooseWeightedTarget(unit, foes, singleAtk) || {}).uid };
+    return { type:'basic', target:(chooseWeightedTarget(unit, foes, null) || {}).uid };
   }
 
   function resolveSkillOrBasic(runtime, actor, action, summary) {
