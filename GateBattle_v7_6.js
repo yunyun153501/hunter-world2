@@ -2010,6 +2010,16 @@ const RARE_FAMILY_PRESETS = {
   }
 
   // ── DB 마이그레이션: JSON 불러오기 시 누락된 NPC/스킬/필드 자동 보충 + 빌트인 스킬 자동 업데이트 ──
+  // ── DB 스키마 버전 ──────────────────────────────────────────────────────────
+  // 예전 저장 데이터를 불러올 때 누락된 필드/구조를 자동 패치하는 버전 관리 시스템.
+  // 새 패치에서 데이터 구조가 바뀌면:
+  //   1) DB_SCHEMA_VERSION 을 +1 올리고
+  //   2) migrateDb() 안의 VERSIONED_MIGRATIONS 배열에 { version, name, run } 항목 추가
+  //   3) run() 안에서 model.db 를 직접 수정 (예: 새 필드 추가, 값 보정 등)
+  // 저장 데이터의 dbVersion 이 현재보다 낮으면 해당 마이그레이션만 순차 실행됨.
+  // 20시간 세이브든 100시간 세이브든 초기화 없이 자동 패치.
+  const DB_SCHEMA_VERSION = 1;
+
   function migrateDb() {
     const defaults = buildDefaultDb();
 
@@ -2103,29 +2113,52 @@ const RARE_FAMILY_PRESETS = {
       }
     }
 
-    // 8) 장비 아이템 category 보정 — 예전 저장 데이터에서 category 누락된 장비 복원
-    //    part 필드(weapon/armor/subweapon/accessory)가 있으면 category:'equipment' 자동 부여
-    function _migrateEquipCategory(item) {
-      if (item && typeof item === 'object' && item.part && EQUIP_PARTS.includes(item.part) && item.category !== 'equipment') {
-        item.category = 'equipment';
-      }
-    }
-    // 캐릭터 + 페르소나 인벤토리
-    const allEntities = [...(model.db.characters || []), ...(model.db.personas || [])];
-    for (const entity of allEntities) {
-      if (!entity.inventory) continue;
-      (entity.inventory.items || []).forEach(_migrateEquipCategory);
-      if (entity.inventory.equipped) {
-        for (const slot of EQUIP_PARTS) {
-          _migrateEquipCategory(entity.inventory.equipped[slot]);
+    // ── 버전별 마이그레이션 (VERSIONED_MIGRATIONS) ─────────────────────────────
+    // 패치할 때마다 여기에 항목을 추가하면 예전 세이브를 불러와도 자동 패치됨.
+    // run()은 한 번만 실행되고, dbVersion이 올라가면 다시 실행되지 않음.
+    const VERSIONED_MIGRATIONS = [
+      {
+        version: 1,
+        name: '장비 아이템 category 보정',
+        run() {
+          // part 필드(weapon/armor/subweapon/accessory)가 있는데 category:'equipment'가 없는 아이템 복원
+          function fixCategory(item) {
+            if (item && typeof item === 'object' && item.part && EQUIP_PARTS.includes(item.part) && item.category !== 'equipment') {
+              item.category = 'equipment';
+            }
+          }
+          const entities = [...(model.db.characters || []), ...(model.db.personas || [])];
+          for (const entity of entities) {
+            if (!entity.inventory) continue;
+            (entity.inventory.items || []).forEach(fixCategory);
+            if (entity.inventory.equipped) {
+              for (const slot of EQUIP_PARTS) fixCategory(entity.inventory.equipped[slot]);
+            }
+          }
+          if (model.db.inventory) {
+            (model.db.inventory.items || []).forEach(fixCategory);
+            (model.db.inventory.overflow || []).forEach(fixCategory);
+          }
         }
+      },
+      // ── 다음 패치 예시 (추가 방법) ──
+      // {
+      //   version: 2,
+      //   name: '새로운 필드 추가',
+      //   run() {
+      //     // model.db.xxx 수정 로직
+      //   }
+      // },
+    ];
+
+    const savedVersion = Number(model.db.dbVersion) || 0;
+    for (const m of VERSIONED_MIGRATIONS) {
+      if (savedVersion < m.version) {
+        try { m.run(); }
+        catch (e) { console.warn(PLUGIN_NAME, `migration v${m.version} (${m.name}) failed:`, e); }
       }
     }
-    // 공용 인벤토리
-    if (model.db.inventory) {
-      (model.db.inventory.items || []).forEach(_migrateEquipCategory);
-      (model.db.inventory.overflow || []).forEach(_migrateEquipCategory);
-    }
+    model.db.dbVersion = DB_SCHEMA_VERSION;
   }
 
 function buildDefaultRuntime() {
