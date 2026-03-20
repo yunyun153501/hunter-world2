@@ -11236,7 +11236,7 @@ function renderCommandPanel(runtime) {
           </div>
 
           <label>설명<textarea class="gb-textarea short" id="gb-skill-desc">${escapeHtml(item.desc || '')}</textarea></label>
-          <div class="gb-btn-row"><button class="gb-btn primary" id="gb-skill-save">저장</button>${isEditingBuiltin ? '<button class="gb-btn" id="gb-skill-restore" style="background:#ef4444;color:#fff;">원본 복원</button>' : '<button class="gb-btn" id="gb-skill-delete">삭제</button>'}</div>
+          <div class="gb-btn-row"><button class="gb-btn primary" id="gb-skill-save">저장</button>${isEditingBuiltin ? '<button class="gb-btn" id="gb-skill-restore" style="background:#ef4444;color:#fff;">원본 복원</button>' : '<button class="gb-btn" id="gb-skill-delete">삭제</button>'}<button class="gb-btn" id="gb-skill-to-skillbook" style="background:#8b5cf6;color:#fff;">📖 스킬북 생성 → 공용</button></div>
           <div class="gb-sub">${isEditingBuiltin ? '내장 스킬을 수정하면 커스텀 오버라이드로 저장된다. "원본 복원"으로 되돌릴 수 있다.' : '광역 CC는 플러그인 공통 규칙으로 자동 보정된다. 즉 입력 계수는 단일CC 기준으로 넣고, 실제 적용은 1/2 계수 + 비용 2배다.'}</div>
           <div class="gb-sub">📈 성장형 스킬: 전투 시 사용자 등급에 맞춰 계수가 자동 조정된다. CC/상태이상 확률을 0으로 두면 기본값이 적용된다(CC=100%, 상태이상=타입별 기본 확률).</div>
         </div>
@@ -15195,6 +15195,37 @@ async function saveMaterialTraitFromForm() {
     on('#gb-skill-new', 'click', async () => { model.state.selected.skills = ''; await saveState(); renderApp(); });
     on('#gb-skill-save', 'click', async () => { try { await saveSkillFromForm(); } catch (e) { toast(e.message || String(e), true); } });
     on('#gb-skill-delete', 'click', async () => { try { await deleteSelected('skills'); } catch (e) { toast(e.message || String(e), true); } });
+    on('#gb-skill-to-skillbook', 'click', async () => {
+      try {
+        const skillId = model.state.selected.skills;
+        if (!skillId) throw new Error('스킬을 먼저 선택해 주세요.');
+        const skill = getCustomSkillById(skillId) || BUILTIN_SKILLS[skillId];
+        if (!skill) throw new Error('선택된 스킬을 찾을 수 없습니다.');
+        const rank = skill.grade || 'E';
+        const tier = getSkillBookTier(skill);
+        const sharedInv = getInventory();
+        const cap = inventoryCapacity();
+        if (inventoryUsedSlots(sharedInv) >= cap.slots) throw new Error('공용 인벤이 꽉 차서 스킬북을 추가할 수 없습니다.');
+        const bookItem = {
+          id: `admin_skillbook_${skillId}_${Date.now().toString(36)}`,
+          name: `📖 ${skill.name || skillId} 스킬북`,
+          category: 'skillbook',
+          rank,
+          skillId,
+          skillCategory: skill.category,
+          skillTier: tier,
+          price: calcSkillBookPrice(rank, tier),
+          stackable: false,
+          unitWeightG: 200,
+          note: `${rank}급 T${tier} 스킬북 [${skill.category}] (관리자 생성)`,
+          effect: skill.desc || ''
+        };
+        sharedInv.items.push(bookItem);
+        pushInventoryRecent(`📖 ${bookItem.name} x1`);
+        await saveDb(); await saveState(); renderApp();
+        toast(`📖 ${skill.name} 스킬북 → 공용 인벤토리 추가 완료 (T${tier}, ${rank}급)`);
+      } catch (e) { toast(e.message || String(e), true); }
+    });
     on('#gb-skill-clear-all', 'click', async () => { try { await clearAllCustomSkills(); } catch (e) { toast(e.message || String(e), true); } });
     // 스킬 JSON 가져오기/내보내기
     on('#gb-skill-export-json', 'click', async () => {
