@@ -207,16 +207,16 @@ const GATE_RANK_WEIGHTS = {
   large:[['E',2],['D',5],['C',25],['B',30],['A',24],['S',14]]
 };
 const GATE_SPECIES_COMPAT = {
-  undead:['ghost','elemental','demon'],
-  ghost:['undead','elemental','demon','celestial'],
-  beast:['elemental','plant'],
-  plant:['slime','elemental','beast'],
-  slime:['plant','elemental'],
-  construct:['elemental','frost'],
+  undead:['ghost','elemental','demon','frost','beast','construct','celestial','plant','slime'],
+  ghost:['undead','elemental','demon','celestial','beast','frost','plant','slime','construct'],
+  beast:['elemental','plant','ghost','demon','frost','undead','slime','construct','celestial'],
+  plant:['slime','elemental','beast','ghost','frost','celestial','undead','demon','construct'],
+  slime:['plant','elemental','construct','demon','frost','beast','ghost','undead','celestial'],
+  construct:['elemental','frost','slime','demon','undead','beast','ghost','plant','celestial'],
   elemental:['construct','beast','plant','slime','ghost','undead','demon','frost','celestial'],
-  demon:['undead','ghost','elemental'],
-  frost:['elemental','construct'],
-  celestial:['elemental','ghost']
+  demon:['undead','ghost','elemental','beast','construct','frost','celestial','plant','slime'],
+  frost:['elemental','construct','beast','undead','plant','slime','ghost','demon','celestial'],
+  celestial:['elemental','ghost','demon','beast','plant','undead','frost','slime','construct']
 };
 const GATE_NAME_PARTS = {
   undead:{ adjectives:['썩은','장송의','침잠한','무너진','흑빛의'], places:['골목','묘역','회랑','납골당','안치소'] },
@@ -244,7 +244,31 @@ const GATE_COMBO_PLACES = {
   'elemental+frost':['서리 균열','냉기 핵심부','동결된 파편역','빙하 심장부'],
   'construct+frost':['얼어붙은 격납고','냉기 송전실','동결 기계묘지','서리 철탑군'],
   'celestial+elemental':['빛나는 균열','성광 핵심부','신성한 파편역','축복의 심장부'],
-  'celestial+ghost':['정화의 장막','빛의 영안실','성스러운 회랑','신성한 빈터']
+  'celestial+ghost':['정화의 장막','빛의 영안실','성스러운 회랑','신성한 빈터'],
+  'beast+ghost':['울부짖는 영안실','유령 수렵장','흐느끼는 사냥터','안개 능선'],
+  'beast+demon':['피비린내 나는 마계','사나운 지옥문','타락한 수렵장','화염 초원'],
+  'beast+frost':['얼어붙은 수렵장','냉혹한 초원','동결된 사냥터','서리 능선'],
+  'beast+undead':['썩은 수렵장','묘역 사냥터','장송의 초원','언데드 능선'],
+  'ghost+frost':['서리 낀 장막','동결된 회랑','식어붙은 빙궁','냉기 영안실'],
+  'ghost+plant':['속삭이는 온실','유령 정원','포자 장막','뒤틀린 빈터'],
+  'plant+frost':['동결된 온실','서리 정원','얼어붙은 습지','냉기 수림'],
+  'plant+celestial':['축복받은 정원','성스러운 온실','빛나는 수림','신성한 습지'],
+  'slime+frost':['얼어붙은 수로','냉기 웅덩이','동결된 늪지','서리 저수실'],
+  'slime+demon':['타락한 수로','불타는 늪지','암흑 웅덩이','마염의 습지'],
+  'slime+construct':['녹슨 수로','기름 웅덩이','미끌거리는 격납고','출렁이는 송전실'],
+  'construct+demon':['타락한 격납고','마계 송전실','암흑 기계묘지','저주받은 철탑군'],
+  'construct+undead':['녹슨 안치소','기계 묘역','과충전된 납골당','경보 울리는 회랑'],
+  'frost+undead':['얼어붙은 묘역','동결된 안치소','냉혹한 납골당','서리 골목'],
+  'frost+demon':['냉기 지옥문','얼어붙은 마계','동결 화염구','서리 암흑사원'],
+  'celestial+demon':['성마 교차로','빛과 암흑의 틈','신성한 마계문','정화의 지옥문'],
+  'celestial+beast':['신수의 초원','축복의 수렵장','성스러운 사냥터','빛나는 능선'],
+  'celestial+undead':['정화의 묘역','성광 안치소','빛의 납골당','신성한 골목'],
+  'celestial+frost':['빛나는 빙궁','성스러운 동토','축복의 설산','성광 빙하'],
+  'celestial+construct':['신성한 격납고','빛의 송전실','축복의 기계묘지','성광 철탑군'],
+  'undead+frost':['얼어붙은 묘역','동결된 안치소','냉혹한 납골당','서리 골목'],
+  'undead+beast':['썩은 수렵장','묘역 사냥터','장송의 초원','언데드 능선'],
+  'undead+construct':['녹슨 안치소','기계 묘역','과충전된 납골당','경보 울리는 회랑'],
+  'undead+celestial':['정화의 묘역','성광 안치소','빛의 납골당','신성한 골목']
 };
 const ROOM_UNIT_LIMITS = { small:[3,5], medium:[4,7], large:[6,10] };
 const GATE_STAGE_TEMPLATES = {
@@ -2313,6 +2337,26 @@ function buildDefaultState() {
     });
     return bonuses;
   }
+  // 파티 유닛 ATK 실시간 계산 (장비 ATK + 스탯 보정)
+  function calcUnitAtk(entry, stats) {
+    let weaponAtk = 0;
+    const inv = entry.inventory;
+    if (inv && inv.equipped && inv.equipped.weapon) weaponAtk = Number(inv.equipped.weapon.atk || 0);
+    const s = stats || normaliseStats(entry.stats);
+    return Math.round(weaponAtk + ((Number(s.str)||0) - 10) * 0.2 + ((Number(s.agi)||0) - 10) * 0.2 + ((Number(s.int)||0) - 10) * 0.3);
+  }
+  // 파티 유닛 장비 PDEF/MDEF 실시간 계산
+  function calcUnitEquipDef(entry, key) {
+    let total = 0;
+    const inv = entry.inventory;
+    if (inv && inv.equipped) {
+      EQUIP_PARTS.forEach(part => {
+        const eq = inv.equipped[part];
+        if (eq) total += Number(eq[key] || 0);
+      });
+    }
+    return total;
+  }
   function buildUnit(entry, side, slotIndex) {
     const rank = String(entry.rank || 'E').toUpperCase();
     const row = normRow(entry.row) || inferRow(entry.position, entry.job);
@@ -2353,9 +2397,10 @@ function buildDefaultState() {
       mp: Number(entry.currentMp != null ? entry.currentMp : baseMp), maxMp: baseMp,
       sp: Number(entry.currentSp != null ? entry.currentSp : baseSp), maxSp: baseSp,
       // 몬스터: ATK = 프로필 damage, pdef/mdef = 0 (개별 스탯 없음)
-      atk: Number(isMonster ? monsterProfile.damage : (entry.atk != null ? entry.atk : 0)),
-      pdef: Number(isMonster ? 0 : (entry.pdef != null ? entry.pdef : 0)),
-      mdef: Number(isMonster ? 0 : (entry.mdef != null ? entry.mdef : 0)),
+      // 파티: 장비+스탯에서 ATK/PDEF/MDEF 실시간 계산 (DB 값이 0일 수 있으므로)
+      atk: Number(isMonster ? monsterProfile.damage : calcUnitAtk(entry, stats)),
+      pdef: Number(isMonster ? 0 : calcUnitEquipDef(entry, 'pdef')),
+      mdef: Number(isMonster ? 0 : calcUnitEquipDef(entry, 'mdef')),
       damageType: entry.damageType || inferDamageType(entry.position, entry.job),
       attackStat: entry.attackStat || inferAttackStat(entry.position, entry.job),
       skills: Array.isArray(entry.skills) ? entry.skills.slice() : [],
@@ -2365,7 +2410,7 @@ function buildDefaultState() {
       cooldowns: {},
       lastAction:'',
       dead:false,
-      threatBase: Number(entry.threatBase != null ? entry.threatBase : inferThreatBase(entry.position, row)),
+      threatBase: Number(isMonster ? (entry.threatBase != null ? entry.threatBase : inferThreatBase(entry.position, row)) : inferThreatBase(entry.position, row)),
       threatBonus:0,
       note: entry.note || '',
       resists: normResists(entry.resists),
@@ -4023,7 +4068,7 @@ function flattenVeinEligibleRooms(run) {
   return rooms.filter(room => room && !['camp','passage'].includes(room.type));
 }
 // Pre-select up to 4 unique Normal monster types for the whole gate.
-// Keeps all rooms thematically consistent: ~3 from primary species, 1 slot for secondary.
+// Keeps rooms thematically consistent: ~3 from primary species, 1 slot for secondary.
 function buildGateNormalPool(run) {
   const primaries = shuffle(findMonsterCandidates([run.primarySpecies], run.rank, 'Normal').slice());
   const secondaries = (run.secondarySpecies && run.secondarySpecies !== run.primarySpecies)
@@ -5131,7 +5176,7 @@ function currentGatePrompt(run) {
   } else if (room.type === 'puzzle' && !room.cleared) {
     // 퍼즐방: 2~3개 선택지 표시 (장식용 — 결과는 확률로 결정)
     if (!room._puzzleChoices) {
-      const shuffled = PUZZLE_ROOM_CHOICES.slice().sort(() => Math.random() - 0.5);
+      const shuffled = shuffle(PUZZLE_ROOM_CHOICES.slice());
       room._puzzleChoices = shuffled.slice(0, randInt(2, 3));
     }
     actions = `<div class="gb-sub" style="margin-bottom:6px;">방 안에 수상한 구조물이 보인다. 어떻게 할까?</div>` +
@@ -5139,7 +5184,7 @@ function currentGatePrompt(run) {
   } else if (room.type === 'secret' && !room.cleared) {
     // 비밀방: 2개 선택지 표시 (장식용)
     if (!room._secretChoices) {
-      const shuffled = SECRET_ROOM_CHOICES.slice().sort(() => Math.random() - 0.5);
+      const shuffled = shuffle(SECRET_ROOM_CHOICES.slice());
       room._secretChoices = shuffled.slice(0, 2);
     }
     actions = `<div class="gb-sub" style="margin-bottom:6px;">비밀방 안쪽에 무언가가 보인다. 무엇을 선택할까?</div>` +
@@ -5464,8 +5509,9 @@ function getBuffedStat(unit, statKey) {
   }
   function getStatPower(unit, skill) {
     const types = (skill && skill.statTypes && skill.statTypes.length > 0) ? skill.statTypes : [unit.attackStat || 'str'];
+    if (!types.length) return 0;
     const values = types.map(key => getBuffedStat(unit, key));
-    return Math.round(values.reduce((a,b)=>a+b,0) / values.length);
+    return Math.round(values.reduce((a,b)=>a+b,0) / values.length) || 0;
   }
   function getSkillCost(unit, skill) {
     const base = Object.assign({ mp:0, sp:0 }, (skill && skill.costs) || {});
