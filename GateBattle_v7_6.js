@@ -2429,7 +2429,8 @@ function buildDefaultState() {
       onHitTurns: Number(meta.onHitTurns || 0),
       onHitStatus2: normStatus(meta.onHitStatus2 || ''),
       onHitChance2: Number(meta.onHitChance2 || 0),
-      onHitTurns2: Number(meta.onHitTurns2 || 0)
+      onHitTurns2: Number(meta.onHitTurns2 || 0),
+      inventory: isMonster ? null : deepClone((entry && entry.inventory) || null)
     };
     applyPassiveInitialization(unit);
     // 장비 특성 전투 적용: 장착 장비 traits → 전투 보너스
@@ -3991,7 +3992,8 @@ function serializeUnitState(unit) {
     onHitTurns: Number(unit.onHitTurns || 0),
     onHitStatus2: unit.onHitStatus2 || '',
     onHitChance2: Number(unit.onHitChance2 || 0),
-    onHitTurns2: Number(unit.onHitTurns2 || 0)
+    onHitTurns2: Number(unit.onHitTurns2 || 0),
+    inventory: unit.inventory ? deepClone(unit.inventory) : null
   };
 }
 function createDefaultGateRun(gate) {
