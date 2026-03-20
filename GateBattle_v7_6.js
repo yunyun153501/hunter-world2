@@ -1947,6 +1947,51 @@ const RARE_FAMILY_PRESETS = {
     };
   }
 
+  // ── DB 마이그레이션: JSON 불러오기 시 누락된 NPC/스킬/필드 자동 보충 ──
+  function migrateDb() {
+    const defaults = buildDefaultDb();
+
+    // 1) 누락된 최상위 필드 보충 (Object.assign이 처리하지만, 배열/객체 내부는 직접 확인)
+    for (const key of Object.keys(defaults)) {
+      if (model.db[key] === undefined || model.db[key] === null) {
+        model.db[key] = deepClone(defaults[key]);
+      }
+    }
+
+    // 2) NPC 캐릭터 보충 — char_yuna, char_haneul이 없으면 추가
+    if (!Array.isArray(model.db.characters)) model.db.characters = [];
+    const defaultChars = defaults.characters.filter(c => c.id && c.id.startsWith('char_') && c.id !== 'char_guide');
+    for (const defChar of defaultChars) {
+      if (!model.db.characters.find(c => c.id === defChar.id)) {
+        model.db.characters.push(deepClone(defChar));
+      }
+    }
+
+    // 3) NPC 전용 스킬 보충 — skill_yuna_*, skill_haneul_*이 없으면 추가
+    if (!Array.isArray(model.db.customSkills)) model.db.customSkills = [];
+    const npcSkillPrefixes = ['skill_yuna_', 'skill_haneul_'];
+    const defaultNpcSkills = (defaults.customSkills || []).filter(s =>
+      s.id && npcSkillPrefixes.some(p => s.id.startsWith(p))
+    );
+    for (const defSkill of defaultNpcSkills) {
+      if (!model.db.customSkills.find(s => s.id === defSkill.id)) {
+        model.db.customSkills.push(deepClone(defSkill));
+      }
+    }
+
+    // 4) 객체 필드 기본값 보충
+    if (!model.db.assocEquipClaimed || typeof model.db.assocEquipClaimed !== 'object') model.db.assocEquipClaimed = {};
+    if (!model.db.gateClearHistory || typeof model.db.gateClearHistory !== 'object') model.db.gateClearHistory = {};
+    if (!model.db.rankUpHistory || typeof model.db.rankUpHistory !== 'object') model.db.rankUpHistory = {};
+    if (!model.db.ownedHomes || typeof model.db.ownedHomes !== 'object') model.db.ownedHomes = {};
+    if (!Array.isArray(model.db.activityLog)) model.db.activityLog = [];
+    if (!Array.isArray(model.db.homeRegions)) model.db.homeRegions = [];
+    if (!model.db.gameDate || typeof model.db.gameDate !== 'object') model.db.gameDate = { year:2026, month:1, day:1 };
+    if (!model.db.battleSetup || typeof model.db.battleSetup !== 'object') {
+      model.db.battleSetup = { partySlots: Array(MAX_PARTY).fill(''), enemySlots: Array(10).fill('') };
+    }
+  }
+
 function buildDefaultRuntime() {
   return {
     started:false, finished:false, outcome:'', round:0,
@@ -6639,6 +6684,7 @@ function getBuffedStat(unit, statKey) {
       try { model.db = Object.assign(buildDefaultDb(), JSON.parse(rawDb)); }
       catch (e) { console.warn(PLUGIN_NAME, 'db parse error', e); model.db = buildDefaultDb(); }
     }
+    migrateDb();
     if (rawState) {
       try {
         const parsed = JSON.parse(rawState);
@@ -12051,6 +12097,7 @@ async function saveMaterialTraitFromForm() {
         }
         if (!confirm('⚠️ 현재 데이터를 불러온 데이터로 덮어씁니다.\n기존 데이터가 모두 교체됩니다.\n\n계속하시겠습니까?')) return;
         model.db = Object.assign(buildDefaultDb(), imported.db);
+        migrateDb();
         if (imported.state && typeof imported.state === 'object') {
           const next = buildDefaultState();
           model.state = Object.assign(next, imported.state);
