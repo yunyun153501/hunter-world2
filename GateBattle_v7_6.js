@@ -540,8 +540,8 @@ const EQUIP_NAME_SUFFIXES = {
 function generateEquipName(rank, part, armorSubtypeKey, traitLabel, forcedSuffix) {
   const prefixes = EQUIP_RANK_PREFIX[rank] || EQUIP_RANK_PREFIX.E;
   let prefix;
-  if (part === 'weapon' && rank === 'E') {
-    prefix = '협회지급';
+  if (false) {
+    prefix = '협회지급'; // 협회지급 장비는 상점에서만 판매, 드랍 장비는 정상 이름 사용
   } else {
     prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
   }
@@ -1893,15 +1893,16 @@ const RARE_FAMILY_PRESETS = {
           growth: true, skillUsage: 'position',
           costs:{ mp:0, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:0,
           passiveBonuses:{ pdef:3 },
+          anvilStack:{ pctPerHit:10, maxPct:50 },
           byRank:{
-            E:{ passiveBonuses:{ pdef:3 }, desc:'[E] 물리방어력 +3 (패시브). 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            D:{ passiveBonuses:{ pdef:8 }, desc:'[D] 물리방어력 +8 (패시브). 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            C:{ passiveBonuses:{ pdef:20 }, desc:'[C] 물리방어력 +20 (패시브). 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            B:{ passiveBonuses:{ pdef:35 }, desc:'[B] 물리방어력 +35 (패시브). 타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            A:{ name:'백금모루', rarity:'Unique', passiveBonuses:{ pdef:60 }, desc:'[A] 유니크 승급! 물리방어력 +60 (패시브, +20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' },
-            S:{ name:'백금모루', rarity:'Unique', passiveBonuses:{ pdef:84 }, desc:'[S] 유니크! 물리방어력 +84 (패시브, +20% 추가). 타격 1회마다 자신 방어력의 5% 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' }
+            E:{ passiveBonuses:{ pdef:3 }, anvilStack:{ pctPerHit:10, maxPct:50 }, desc:'[E] 물리방어력 +3 (패시브). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            D:{ passiveBonuses:{ pdef:8 }, anvilStack:{ pctPerHit:10, maxPct:50 }, desc:'[D] 물리방어력 +8 (패시브). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            C:{ passiveBonuses:{ pdef:20 }, anvilStack:{ pctPerHit:10, maxPct:50 }, desc:'[C] 물리방어력 +20 (패시브). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            B:{ passiveBonuses:{ pdef:35 }, anvilStack:{ pctPerHit:10, maxPct:50 }, desc:'[B] 물리방어력 +35 (패시브). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+            A:{ name:'백금모루', rarity:'Unique', passiveBonuses:{ pdef:60 }, anvilStack:{ pctPerHit:10, maxPct:70 }, desc:'[A] 유니크 승급! 물리방어력 +60 (패시브, +20% 추가). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' },
+            S:{ name:'백금모루', rarity:'Unique', passiveBonuses:{ pdef:84 }, anvilStack:{ pctPerHit:10, maxPct:70 }, desc:'[S] 유니크! 물리방어력 +84 (패시브, +20% 추가). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' }
           },
-          desc:'[성장형/포지션/패시브] 등급별로 물리방어력 상승 (defenseFlat 스케일). 전투 시 자동 적용.\n타격 1회마다 자신 방어력의 5% 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.\n★ A급 달성 시 백금모루(유니크)로 승급: 물방 +20% 추가 / 최대 70% / HP 40% 이하 시 회복.' },
+          desc:'[성장형/포지션/패시브] 등급별로 물리방어력 상승 (defenseFlat 스케일). 전투 시 자동 적용.\n피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.\n★ A급 달성 시 백금모루(유니크)로 승급: 물방 +20% 추가 / 최대 70% / HP 40% 이하 시 회복.' },
         { id:'skill_yuna_shield', name:'방패숙련', grade:'E', rarity:'Normal', category:'passive', target:'self',
           skillUsage: 'general',
           costs:{ mp:0, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:0,
@@ -2260,6 +2261,8 @@ function buildDefaultState() {
   function applyPassiveInitialization(unit) {
     unit.passiveBonuses = { str:0, con:0, int:0, agi:0, sense:0, pdef:0, mdef:0 };
     unit.passiveMods = { shieldSpMul:1, daggerSpMul:1 };
+    unit._anvilPdef = 0; unit._anvilMaxPct = 0; unit._anvilPctPerHit = 0; unit._anvilCurrentPct = 0;
+    unit._anvilHpThreshold = 0; unit._anvilRegenPct = 0;
     (unit.skills || []).forEach(skillId => {
       const skill = resolveSkillForUnit(unit, skillId);
       if (!skill || skill.category !== 'passive') return;
@@ -2273,6 +2276,16 @@ function buildDefaultState() {
           const cur = unit.passiveMods[key] == null ? 1 : unit.passiveMods[key];
           unit.passiveMods[key] = round3(cur * Number(skill.passiveMods[key]));
         });
+      }
+      // 강철모루: 피격 스택 방어력 초기화
+      if (skill.anvilStack) {
+        unit._anvilPdef = Number(skill.passiveBonuses && skill.passiveBonuses.pdef || 0);
+        unit._anvilMaxPct = Number(skill.anvilStack.maxPct || 50);
+        unit._anvilPctPerHit = Number(skill.anvilStack.pctPerHit || 10);
+        // HP 회복 임계점: A급 이상 40%, 나머지 30%
+        const isUpgraded = (skill.name || '').includes('백금');
+        unit._anvilHpThreshold = isUpgraded ? 0.40 : 0.30;
+        unit._anvilRegenPct = 0.05;
       }
     });
   }
@@ -4756,7 +4769,14 @@ function resolveGateBattleAftermath(victory) {
     model.state.runtime = buildDefaultRuntime();
     return;
   }
-  run.partyState = getAlive(rt.party).map(serializeUnitState);
+  // 승리: 생존 유닛 + 리타이어(사망) 유닛 모두 저장. 사망 유닛은 HP/MP/SP=1로 설정
+  const aliveUnits = getAlive(rt.party).map(serializeUnitState);
+  const deadUnits = (rt.party || []).filter(u => u.dead).map(u => {
+    const s = serializeUnitState(u);
+    s.currentHp = 1; s.currentMp = 1; s.currentSp = 1;
+    return s;
+  });
+  run.partyState = aliveUnits.concat(deadUnits);
   room.discovered = true;
   room.cleared = true;
   // resolveCombatRoomRewards가 rt.logs에 드랍 라인을 처치 직후에 삽입하므로
@@ -5435,7 +5455,12 @@ function getBuffedStat(unit, statKey) {
     let buffFlat = 0;
     const buffKey = kind === 'magic' ? 'mdefFlat' : 'pdefFlat';
     (unit.buffs || []).forEach(b => { if (b && b[buffKey]) buffFlat += Number(b[buffKey]); });
-    return Math.max(0, base + passive + traitFlat + buffFlat);
+    // 강철모루 피격 스택 보너스 (물리방어만)
+    let anvilBonus = 0;
+    if (kind !== 'magic' && unit._anvilPdef > 0 && (unit._anvilCurrentPct || 0) > 0) {
+      anvilBonus = Math.floor(unit._anvilPdef * unit._anvilCurrentPct / 100);
+    }
+    return Math.max(0, base + passive + traitFlat + buffFlat + anvilBonus);
   }
   function getStatPower(unit, skill) {
     const types = (skill && skill.statTypes && skill.statTypes.length > 0) ? skill.statTypes : [unit.attackStat || 'str'];
@@ -5751,6 +5776,12 @@ function getBuffedStat(unit, statKey) {
       target.hp = Math.max(0, target.hp - remaining);
     }
     if (target.hp <= 0) target.dead = true;
+    // 강철모루 피격 시 방어력 스택 증가
+    if (remaining > 0 && !target.dead && target._anvilPdef > 0) {
+      const maxPct = target._anvilMaxPct || 50;
+      const pctPerHit = target._anvilPctPerHit || 10;
+      target._anvilCurrentPct = Math.min(maxPct, (target._anvilCurrentPct || 0) + pctPerHit);
+    }
   }
 
   // ── 내구도 소모 헬퍼 ──
@@ -6153,6 +6184,8 @@ function getBuffedStat(unit, statKey) {
   }
 
   function chooseEnemyAction(unit, allies, foes, isPartyAuto) {
+    // SP=0이면 행동 불가 — 대기 (파티 자동 모드)
+    if (isPartyAuto && !unit.isMonster && (unit.sp || 0) < 1) return { type:'wait' };
     const aliveAllies = getAlive(allies);
     const aliveFoes = getAlive(foes);
     const skillPool = listKnownSkillDefs(unit).filter(sk => sk.category !== 'passive' && canUseSkill(unit, sk));
@@ -6242,6 +6275,13 @@ function getBuffedStat(unit, statKey) {
     }
 
     if (action.type === 'basic') {
+      // SP=0이면 기본공격 불가 (파티 유닛만)
+      if (!actor.isMonster && (actor.sp || 0) < 1) {
+        actor.lastAction = '체력 소진 — 행동 불가';
+        addRoundHighlight(summary, `${actor.name} SP 부족으로 행동 불가`);
+        pushBattleLog(runtime, `${actor.name} SP가 부족하여 행동할 수 없다`);
+        return;
+      }
       const skill = { id:'basicAttack', name:'기본 공격', category:'singleAttack', target:'singleEnemy', coef:1.0, statTypes:[actor.attackStat || 'str'], damageType:actor.damageType || 'physical', element:'none', costs:{ mp:0, sp:0 } };
       const target = chooseWeightedTarget(actor, foes, skill, action.target);
       if (!target) return;
@@ -6528,6 +6568,15 @@ function getBuffedStat(unit, statKey) {
       if (!unit.dead && !unit.isMonster && unit.passiveMods && Number(unit.passiveMods.spRegenPct || 0) > 0) {
         const spRegen = Math.max(1, Math.round(unit.maxSp * unit.passiveMods.spRegenPct));
         unit.sp = Math.min(unit.maxSp, unit.sp + spRegen);
+      }
+      // 강철모루: HP 임계점 이하 시 매턴 체력 5% 회복
+      if (!unit.dead && unit._anvilPdef > 0 && unit._anvilRegenPct > 0) {
+        const threshold = unit._anvilHpThreshold || 0.30;
+        if (unit.hp / unit.maxHp <= threshold) {
+          const heal = Math.max(1, Math.round(unit.maxHp * unit._anvilRegenPct));
+          const actual = applyHeal(unit, heal);
+          if (actual > 0) { addRoundHighlight(summary, `${unit.name} 강철모루 회복 ${actual}`); pushBattleLog(runtime, `${unit.name} 강철모루 체력 회복 ${actual} (HP ${Math.round(threshold*100)}% 이하)`); }
+        }
       }
 
       // 상태이상 턴 감소
@@ -9589,11 +9638,17 @@ function optionHtml(value, label, selected) {
       // 전탄회수: 첫 턴(축적 0)에는 사용 불가
       const isReloadFirstTurn = sk.id === 'skill_haneul_reload' && (Number(unit._reloadStacks || 0) === 0);
       const disabled = cdLeft > 0 || isReloadFirstTurn || !canUseSkill(unit, sk);
+      const cost = getSkillCost(unit, sk);
+      const costParts = [];
+      if (cost.mp > 0) costParts.push(`MP${cost.mp}`);
+      const totalSp = cost.sp + SKILL_ADDITIONAL_SP_COST;
+      if (totalSp > 0) costParts.push(`SP${totalSp}`);
+      const costLabel = costParts.length > 0 ? ` (${costParts.join('/')})` : '';
       if (disabled) {
         const reason = cdLeft > 0 ? `쿨타임 ${cdLeft}턴` : isReloadFirstTurn ? '축적 없음' : 'MP/SP 부족';
-        out.push(`<option value="${escapeHtml(sk.id)}" disabled style="color:#ef4444;">${escapeHtml(sk.name)} [${reason}]</option>`);
+        out.push(`<option value="${escapeHtml(sk.id)}" disabled style="color:#ef4444;">${escapeHtml(sk.name)}${costLabel} [${reason}]</option>`);
       } else {
-        out.push(optionHtml(sk.id, `${sk.name} [${sk.category}]`, selected === sk.id));
+        out.push(optionHtml(sk.id, `${sk.name}${costLabel}`, selected === sk.id));
       }
     });
     return out.join('');
@@ -12648,7 +12703,7 @@ async function saveMaterialTraitFromForm() {
           const inv = getInventory();
           inv.gold = (Number(inv.gold || 0)) + goldGain;
         }
-        // Write income log entry (페르소나/캐릭터 모두 기록)
+        // Write income log entries (팀 기준: 파티원별 분배 비율에 따라 개별 기록, 공용 제외)
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
         const isGuildSettle = (st.settleType || 'association') === 'guild';
         const guildName = isGuildSettle
@@ -12659,8 +12714,42 @@ async function saveMaterialTraitFromForm() {
         const _settleActiveId = model.state.activeCharId || '';
         const _settleChar = getActiveCharacter();
         const _settleCharName = _settleChar ? (_settleChar.name || _settleActiveId) : '공용';
-        // 소득기록: 공용(캐릭터 미선택)은 공동비용으로 처리 — 소득기록 제외
-        if (_settleActiveId) {
+        const team = Array.isArray(model.db.team) ? model.db.team : [];
+        const allChars = model.db.characters || [];
+        const allPersonas = model.db.personas || [];
+        // 팀이 있으면 파티원별로 분배 비율에 따라 개별 소득 기록 (공용 제외)
+        if (team.length > 0 && result) {
+          const totalRatio = team.reduce((s, m) => s + Number(m.ratio || 10), 0);
+          team.forEach(m => {
+            if (m.charId === '__shared__') return; // 공용은 공동비용 — 소득기록 제외
+            const charEntry = allChars.find(c => c.id === m.charId) || allPersonas.find(p => p.id === m.charId);
+            const charName = charEntry ? (charEntry.name || m.charId) : m.charId;
+            const ratio = Number(m.ratio || 10);
+            const memberNet = Math.floor(result.net * ratio / totalRatio);
+            const memberGuildShare = isGuildSettle ? Math.floor(memberNet * (result.guildPct / 100)) : 0;
+            const memberFinal = memberNet - memberGuildShare;
+            const charKey = m.charId.startsWith('persona:') || m.charId.startsWith('char:')
+              ? m.charId
+              : (allPersonas.find(p => p.id === m.charId) ? 'persona:' + m.charId : 'char:' + m.charId);
+            model.db.incomeLog.push({
+              date:       dateVal || '날짜 미입력',
+              charKey:    charKey,
+              runTitle:   runTitle,
+              gross:      result.subtotal,
+              fee:        result.fee,
+              corpTax:    isGuildSettle ? result.fee : 0,
+              net:        result.net,
+              perPerson:  memberNet,
+              guildShare: memberGuildShare,
+              final:      memberFinal,
+              type:       isGuildSettle ? 'guild' : 'association',
+              guildName:  guildName,
+              participant: charName,
+              ratio:      ratio,
+            });
+          });
+        } else if (_settleActiveId) {
+          // 팀 없을 때: 기존 방식 — 선택된 캐릭터에게만 기록
           model.db.incomeLog.push({
             date:       dateVal || '날짜 미입력',
             charKey:    _settleActiveId,
@@ -12876,13 +12965,22 @@ async function saveMaterialTraitFromForm() {
           }
           lines.push(`${charName}: +${fmtS(share)}`);
         }
-        // 소득 기록: 공용(캐릭터 미선택)은 공동비용으로 처리 — 소득기록 제외
+        // 소득 기록: 팀원별 분배 기록 (공용 제외)
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
         const _teamSellActiveId = model.state.activeCharId || '';
         const _tsChar = getActiveCharacter();
         const _firstPersonaName = _tsChar ? (_tsChar.name || _teamSellActiveId) : '공용';
-        if (_teamSellActiveId) {
-          model.db.incomeLog.push({ date: dateVal||'날짜 미입력', charKey: _teamSellActiveId, runTitle: '직접 판매 (팀 분배)', gross: total, fee, net: netTotal, perPerson: netTotal, final: netTotal, type: isGuild?'guild':'association', participant: _firstPersonaName });
+        const totalRatioSell = team.reduce((s, m) => s + Number(m.ratio || 10), 0);
+        for (const m of team) {
+          if (m.charId === '__shared__') continue; // 공용은 공동비용 — 소득기록 제외
+          const charEntry = (model.db.characters||[]).find(c=>c.id===m.charId) || (model.db.personas||[]).find(p=>p.id===m.charId);
+          const charName = charEntry ? (charEntry.name || m.charId) : m.charId;
+          const ratio = Number(m.ratio || 10);
+          const memberShare = Math.floor(netTotal * ratio / totalRatioSell);
+          const charKey = m.charId.startsWith('persona:') || m.charId.startsWith('char:')
+            ? m.charId
+            : ((model.db.personas||[]).find(p=>p.id===m.charId) ? 'persona:' + m.charId : 'char:' + m.charId);
+          model.db.incomeLog.push({ date: dateVal||'날짜 미입력', charKey: charKey, runTitle: '직접 판매 (팀 분배)', gross: total, fee, net: netTotal, perPerson: memberShare, final: memberShare, type: isGuild?'guild':'association', participant: charName, ratio: ratio });
         }
         pushActivityLog(_firstPersonaName, '직접 판매 (팀 분배)', `${isGuild ? '길드' : '협회'} 정산 / 세전 ₩${formatWon(total)} → 5% 차감 → ₩${formatWon(netTotal)} / 분배: ${lines.join(', ')}`);
         model.state.settleItemSel = {};
