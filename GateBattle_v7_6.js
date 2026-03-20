@@ -8758,7 +8758,7 @@ function renderHunterMarketHtml() {
       if (Number(it.atk||0) > 0)  statParts.push(`⚔️ ATK +${it.atk}`);
       if (Number(it.pdef||0) > 0) statParts.push(`🛡️ 물리방어 +${it.pdef}`);
       if (Number(it.mdef||0) > 0) statParts.push(`✨ 마법방어 +${it.mdef}`);
-      if (it.mainStat)             statParts.push(`주스탯: ${it.mainStat.toUpperCase()}`);
+      if (it.mainStat && it.part === 'accessory') statParts.push(`주스탯: ${it.mainStat.toUpperCase()}`);
       if ((it.traits||[]).length)  statParts.push(`특성: ${(it.traits||[]).map(t=>equipTraitDisplay(t, it.rank)).join(', ')}`);
       const statsLine = statParts.length
         ? `<div class="gb-sub" style="color:#93c5fd;margin-top:2px;">${escapeHtml(statParts.join('  ·  '))}</div>`
@@ -8807,15 +8807,14 @@ function renderHunterMarketHtml() {
       const _sub = ARMOR_SUBTYPES[e.armorSubtype];
       const _defPct = `방어${Math.round(_sub.defMul[0]*100)}~${Math.round(_sub.defMul[1]*100)}%`;
       const _atkPct = _sub.atkMul ? ` / ATK${Math.round(_sub.atkMul*100)}%` : '';
-      const _statBonus = _sub.statBonusMul ? ` / 주스탯+${Math.round(_sub.statBonusMul*100)}%` : '';
-      const _pool = _sub.statPool.map(s=>s.toUpperCase()).join('/');
-      lines.push(`종류: ${_sub.label} (${_defPct}${_atkPct}${_statBonus} / 스탯풀: ${_pool})`);
+      const _statBonus = _sub.statBonusMul ? ` / 스탯+${Math.round(_sub.statBonusMul*100)}%` : '';
+      lines.push(`종류: ${_sub.label} (${_defPct}${_atkPct}${_statBonus})`);
     }
     if (e.enhance > 0) lines.push(`강화: +${e.enhance}`);
     if (Number(e.atk||0) > 0) lines.push(`ATK: +${e.atk}`);
     if (Number(e.pdef||0) > 0) lines.push(`물리방어: +${e.pdef}`);
     if (Number(e.mdef||0) > 0) lines.push(`마법방어: +${e.mdef}`);
-    if (e.mainStat) lines.push(`주 스탯: ${e.mainStat.toUpperCase()}`);
+    if (e.mainStat && e.part === 'accessory') lines.push(`주 스탯: ${e.mainStat.toUpperCase()}`);
     if (Array.isArray(e.traits) && e.traits.length) lines.push(`특성: ${e.traits.map(t=>equipTraitDisplay(t, e.rank)).join(', ')}`);
     if (e.resistType && e.resistPct) lines.push(`${EQUIP_TRAIT_LABELS[e.resistType]||e.resistType} 저항 ${e.resistPct}%`);
     if (e.maxInfuse) lines.push(`주입 최대 ${e.maxInfuse}회 (현재 ${e.infuse||0}회)`);
@@ -8838,7 +8837,7 @@ function renderHunterMarketHtml() {
         if (Number(e.atk||0) > 0)  statParts.push(`⚔️ ATK +${e.atk}`);
         if (Number(e.pdef||0) > 0) statParts.push(`🛡️ 물리방어 +${e.pdef}`);
         if (Number(e.mdef||0) > 0) statParts.push(`✨ 마법방어 +${e.mdef}`);
-        if (e.mainStat)             statParts.push(`주스탯: ${e.mainStat.toUpperCase()}`);
+        if (e.mainStat && e.part === 'accessory') statParts.push(`주스탯: ${e.mainStat.toUpperCase()}`);
         if (e.enhance > 0)          statParts.push(`강화: +${e.enhance}`);
         if (e.maxInfuse)            statParts.push(`주입: ${e.infuse||0}/${e.maxInfuse}회`);
         const statsLine = statParts.length
@@ -9948,9 +9947,8 @@ function renderInventoryView() {
       const _sub = ARMOR_SUBTYPES[it.armorSubtype];
       const _defPct = `방어${Math.round(_sub.defMul[0]*100)}~${Math.round(_sub.defMul[1]*100)}%`;
       const _atkPct = _sub.atkMul ? ` / ATK${Math.round(_sub.atkMul*100)}%` : '';
-      const _statBonus = _sub.statBonusMul ? ` / 주스탯+${Math.round(_sub.statBonusMul*100)}%` : '';
-      const _pool = _sub.statPool.map(s=>s.toUpperCase()).join('/');
-      lines.push(`갑옷 종류: ${_sub.label} (${_defPct}${_atkPct}${_statBonus} / 스탯풀: ${_pool})`);
+      const _statBonus = _sub.statBonusMul ? ` / 스탯+${Math.round(_sub.statBonusMul*100)}%` : '';
+      lines.push(`갑옷 종류: ${_sub.label} (${_defPct}${_atkPct}${_statBonus})`);
     }
     if (it.enhance > 0) lines.push(`강화: +${it.enhance}`);
     if (it.durability != null) lines.push(`내구도: ${fmtDur(it.durability)}/${fmtDur(it.maxDurability||it.durability)}`);
@@ -9964,7 +9962,7 @@ function renderInventoryView() {
       if (it.part === 'armor') { combatLines.push(`물리방어: +${pdefVal}`); combatLines.push(`마법방어: +${mdefVal}`); }
       if (it.part === 'accessory') combatLines.push(it.traits && it.traits.length ? `특성: ${it.traits.map(t=>equipTraitDisplay(t, it.rank)).join(', ')}` : '특성 없음');
       if (combatLines.length) lines.push(combatLines.join(' / '));
-      if (it.mainStat) lines.push(`주 스탯: ${it.mainStat.toUpperCase()}`);
+      if (it.mainStat && it.part === 'accessory') lines.push(`주 스탯: ${it.mainStat.toUpperCase()}`);
       if (it.resistType && it.resistPct) lines.push(`${EQUIP_TRAIT_LABELS[it.resistType]||it.resistType} 저항 ${it.resistPct}%`);
     }
     if (it.stats && typeof it.stats === 'object') {
@@ -10008,7 +10006,7 @@ function renderInventoryView() {
       if (it.part === 'armor') { parts.push(`물방+${it.pdef||0}`); parts.push(`마방+${it.mdef||0}`); }
       if (it.part === 'subweapon') parts.push(`물방+${it.pdef||0}`);
       if (it.part === 'accessory' && it.traits && it.traits.length) parts.push(it.traits.map(t=>equipTraitDisplay(t, it.rank)).join(', '));
-      if (it.mainStat) parts.push(it.mainStat.toUpperCase());
+      if (it.mainStat && it.part === 'accessory') parts.push(it.mainStat.toUpperCase());
       if (it.enhance > 0) parts.push(`+${it.enhance}`);
       return parts.join(' / ');
     }
@@ -10928,7 +10926,7 @@ function renderCommandPanel(runtime) {
           const atkVal = Number(eq.atk || 0);
           const pdefVal = Number(eq.pdef || 0);
           const mdefVal = Number(eq.mdef || 0);
-          const mainStatLabel = eq.mainStat ? `주스탯: ${(eq.mainStat||'').toUpperCase()}` : '';
+          const mainStatLabel = eq.mainStat && part === 'accessory' ? `주스탯: ${(eq.mainStat||'').toUpperCase()}` : '';
           const infuseInfo = eq.maxInfuse > 0 ? `주입: ${eq.infuse||0}/${eq.maxInfuse}` : '';
           const statsLine = [
             atkVal > 0 ? `ATK ${atkVal}` : '',
@@ -11011,7 +11009,7 @@ function renderCommandPanel(runtime) {
             if (it.part === 'weapon') _parts.push(`ATK+${it.atk||0}`);
             if (it.part === 'armor') { _parts.push(`물방+${it.pdef||0}`); _parts.push(`마방+${it.mdef||0}`); }
             if (it.part === 'subweapon') _parts.push(`물방+${it.pdef||0}`);
-            if (it.mainStat) _parts.push(it.mainStat.toUpperCase());
+            if (it.mainStat && it.part === 'accessory') _parts.push(it.mainStat.toUpperCase());
             descLine = _parts.join(' / ');
           } else if (it.effect) {
             descLine = it.effect;
@@ -11047,7 +11045,7 @@ function renderCommandPanel(runtime) {
           const isSB = it.category === 'skillbook';
           let briefDesc = '';
           if (isSB) { const _sk = it.skillId && BUILTIN_SKILLS ? BUILTIN_SKILLS[it.skillId] : null; briefDesc = _sk ? (_sk.desc||it.effect||'') : (it.effect||''); }
-          else if (isEq) { const _p=[]; if(it.part==='weapon')_p.push(`ATK+${it.atk||0}`); if(it.part==='armor'){_p.push(`물방+${it.pdef||0}`);_p.push(`마방+${it.mdef||0}`);} if(it.mainStat)_p.push(it.mainStat.toUpperCase()); briefDesc=_p.join(' / '); }
+          else if (isEq) { const _p=[]; if(it.part==='weapon')_p.push(`ATK+${it.atk||0}`); if(it.part==='armor'){_p.push(`물방+${it.pdef||0}`);_p.push(`마방+${it.mdef||0}`);} if(it.mainStat && it.part==='accessory')_p.push(it.mainStat.toUpperCase()); briefDesc=_p.join(' / '); }
           else if (it.effect) { briefDesc = it.effect; }
           return `<div class="gb-unit"><div class="gb-unit-top">
             <div>
@@ -11616,8 +11614,8 @@ function renderCommandPanel(runtime) {
           ${part === 'armor' ? `
           <details open style="margin-top:6px;border:1px solid rgba(148,163,184,0.12);border-radius:6px;padding:6px;">
           <summary style="cursor:pointer;font-weight:bold;padding:2px 4px;">🛡 방어구 스탯</summary>
-          <div class="gb-sub">방어구: 물리방어/마법방어 ${armorStat.defRange?armorStat.defRange[0]+'~'+armorStat.defRange[1]:''} | 총 스탯합 ${armorStat.totalStatSum||0} | 강화당 주스탯 +${armorStat.enhanceStat||0}</div>
-          <div class="gb-sub">🛡 방어구 종류: 중갑(방어90~100%,STR/CON,ATK-10%) · 경갑(방어70~80%,STR/CON/AGI) · 가죽(방어50~60%,STR/AGI/INT/SEN,스탯+10%) · 로브(방어40~50%,AGI/INT/SEN,스탯+20%)</div>
+          <div class="gb-sub">방어구: 물리방어/마법방어 ${armorStat.defRange?armorStat.defRange[0]+'~'+armorStat.defRange[1]:''} | 총 스탯합 ${armorStat.totalStatSum||0} | 강화당 캐릭터 주스탯 +${armorStat.enhanceStat||0}</div>
+          <div class="gb-sub">🛡 방어구 종류: 중갑(방어90~100%,ATK-10%) · 경갑(방어70~80%) · 가죽(방어50~60%,스탯+10%) · 로브(방어40~50%,스탯+20%) — 캐릭터 주스탯 자동 적용</div>
           <div class="gb-sub" style="color:#94a3b8;">⚗️ 저항은 희귀재료 인퓨즈로 부여 (DB에서 직접 수정 가능). 기본 저항 없음.</div>
           <div class="gb-grid two">
             <label>방어구 종류<select class="gb-input" id="gb-eq-armor-subtype">
@@ -11630,9 +11628,6 @@ function renderCommandPanel(runtime) {
               ${['physical','magic','fire','ice','lightning','dark','light'].map(t => `<option value="${t}" ${item.resistType===t?'selected':''}>${t}</option>`).join('')}
             </select></label>
             <label>저항 %<input class="gb-input" id="gb-eq-resist-pct" type="number" min="0" max="100" value="${Number(item.resistPct||0)}" /></label>
-            <label>총 스탯합 적용 주스탯<select class="gb-input" id="gb-eq-main-stat">
-              ${['str','con','int','agi','sense'].map(s => `<option value="${s}" ${item.mainStat===s?'selected':''}>${s}</option>`).join('')}
-            </select></label>
           </div>
           </details>` : ''}
 
