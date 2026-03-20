@@ -31,6 +31,10 @@ try {
     singleHeal:   { E:1.3, D:1.5, C:1.7, B:2.0, A:2.3, S:2.6 },
     aoeHeal:      { E:0.754, D:0.87, C:0.986, B:1.16, A:1.334, S:1.508 }
   };
+  // 일반 스킬 계수 하한값 (등급별 단일 대상 기준)
+  const SKILL_COEF_LOWER = { E:1.2, D:1.92, C:2.88, B:4.8, A:7.68, S:11.52 };
+  // 버프 수치 0일 때 등급별 기본값
+  const BUFF_DEFAULT_BY_GRADE = { E:2, D:4, C:6, B:8, A:11, S:14 };
   function getGrowthCoef(category, rank) {
     const catMap = SKILL_COEF_UPPER[category];
     if (!catMap) return null;
@@ -1856,6 +1860,7 @@ const RARE_FAMILY_PRESETS = {
       customGuildDesc: '',
       incomeLog: [],
       guildTaxLog: [],
+      assocEquipClaimed: {},  // { [activeCharId]: true } — 협회지급 장비 무료 구매 기록
       gateClearHistory: {},  // { [characterId/personaId]: { "E_small":count, "E_medium":count, ... } }
       rankUpHistory: {},     // { [characterId/personaId]: { lastAttempt: timestamp, result: 'success'|'fail', targetRank } }
       homeRegions: [],   // [{id, name, homes:[{id, name, area, houseType, deposit, monthlyRent, maintenanceFee, purchasePrice, brokerFee, desc, features:[], storages:[{id,name,type,maxSlots,maxWeightKg,items:[]}]}]}]
@@ -2000,7 +2005,6 @@ function buildDefaultState() {
         const upperCoef = getGrowthCoef(skill.category, rank);
         if (upperCoef != null) skill.coef = upperCoef;
       } else {
-        const SKILL_COEF_LOWER = { E:1.2, D:1.92, C:2.88, B:4.8, A:7.68, S:11.52 };
         const grade = String(skill.grade || rank || 'E').toUpperCase();
         const baseCoef = SKILL_COEF_LOWER[grade] || 1.2;
         const target = skill.target || '';
@@ -2023,7 +2027,6 @@ function buildDefaultState() {
     }
     // ── 버프수치 0 자동처리: 등급기본값 (E:2, D:4, C:6, B:8, A:11, S:14) ──
     if (skill.buff && skill.buff.stats) {
-      const BUFF_DEFAULT_BY_GRADE = { E:2, D:4, C:6, B:8, A:11, S:14 };
       const grade = String(skill.grade || rank || 'E').toUpperCase();
       const defaultVal = BUFF_DEFAULT_BY_GRADE[grade] || 2;
       Object.keys(skill.buff.stats).forEach(k => {
@@ -7715,7 +7718,7 @@ function renderAssociationView() {
         <div class="gb-section-title" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" id="gb-income-log-toggle">
           📜 소득 기록 (세금 신고용) <span style="font-size:12px;">${st.incomeLogOpen ? '▲ 접기' : '▼ 펼치기'} (${incomeLog.length}건)</span>
         </div>
-        <div class="gb-sub" style="margin-bottom:6px;">협회 및 길드 정산 이력. 개인 소득세 신고 참고용. 블랙마켓 거래는 기록되지 않는다.</div>
+        <div class="gb-sub" style="margin-bottom:6px;">협회 및 길드 정산 이력 (페르소나 전용). 개인 소득세 신고 참고용. 블랙마켓 거래는 기록되지 않는다.</div>
         ${st.incomeLogOpen ? incomeLogHtml : ''}
       </div>`;
 
@@ -7746,6 +7749,8 @@ function renderAssociationView() {
     const totalDue = prevMonthTax + overdueInterest;
 
     // 납부 상태 표시
+    const isPersonaActive = (model.state.activeCharId || '').startsWith('persona:');
+    const personaGold = isPersonaActive ? Number(getActiveInventory().gold || 0) : 0;
     let payStatusHtml = '';
     if (prevMonthRecords.length === 0) {
       payStatusHtml = `<div class="gb-sub" style="color:#22c55e;margin-top:6px;">✅ ${prevMonthStr} 소득 기록 없음 — 납부 불필요</div>`;
@@ -7754,7 +7759,10 @@ function renderAssociationView() {
         <div class="gb-sub" style="color:#fbbf24;font-weight:700;margin-top:6px;">⏳ 납부 기한 내 (${curMonthStr} 1~10일)</div>
         <div class="gb-sub">${prevMonthStr} 소득 ${prevMonthRecords.length}건 / 총 지급액 ₩${formatWon(prevMonthTotal)}</div>
         <div class="gb-sub" style="font-weight:700;">납부할 소득세: ₩${formatWon(prevMonthTax)}</div>
-        <button class="gb-btn primary" id="gb-tax-pay-confirm" style="margin-top:6px;">✅ ${prevMonthStr} 소득세 납부 완료</button>`;
+        ${isPersonaActive
+          ? `<div class="gb-sub">💰 ${getActiveLabel()} 소지금: ₩${formatWon(personaGold)}${personaGold < prevMonthTax ? ' <span style="color:#ef4444;">(부족!)</span>' : ''}</div>
+             <button class="gb-btn primary" id="gb-tax-pay-confirm" style="margin-top:6px;">✅ ${prevMonthStr} 소득세 납부 (₩${formatWon(prevMonthTax)} 차감)</button>`
+          : `<div class="gb-sub" style="color:#ef4444;">⚠️ 세금은 페르소나만 납부 가능 — 페르소나를 선택하세요</div>`}`;
     } else if (isOverdue && prevMonthRecords.length > 0) {
       payStatusHtml = `
         <div class="gb-sub" style="color:#ef4444;font-weight:700;margin-top:6px;">🚨 연체! 납부 기한 초과 (${overdueDays}일 경과)</div>
@@ -7762,7 +7770,10 @@ function renderAssociationView() {
         <div class="gb-sub" style="font-weight:700;">원래 소득세: ₩${formatWon(prevMonthTax)}</div>
         <div class="gb-sub" style="color:#ef4444;font-weight:700;">연체 이자 (연 9.9%, ${overdueDays}일): ₩${formatWon(overdueInterest)}</div>
         <div class="gb-sub" style="color:#ef4444;font-weight:900;font-size:15px;">총 납부액: ₩${formatWon(totalDue)}</div>
-        <button class="gb-btn danger" id="gb-tax-pay-confirm" style="margin-top:6px;">💸 ${prevMonthStr} 연체 소득세 납부</button>`;
+        ${isPersonaActive
+          ? `<div class="gb-sub">💰 ${getActiveLabel()} 소지금: ₩${formatWon(personaGold)}${personaGold < totalDue ? ' <span style="color:#ef4444;">(부족!)</span>' : ''}</div>
+             <button class="gb-btn danger" id="gb-tax-pay-confirm" style="margin-top:6px;">💸 ${prevMonthStr} 연체 소득세 납부 (₩${formatWon(totalDue)} 차감)</button>`
+          : `<div class="gb-sub" style="color:#ef4444;">⚠️ 세금은 페르소나만 납부 가능 — 페르소나를 선택하세요</div>`}`;
     }
     // 현재달 기록은 납부 불가 안내
     const curMonthRecords = incomeLogAll.filter(r => (r.date || '').startsWith(curMonthStr));
@@ -12324,7 +12335,7 @@ async function saveMaterialTraitFromForm() {
           const inv = getInventory();
           inv.gold = (Number(inv.gold || 0)) + goldGain;
         }
-        // Write income log entry
+        // Write income log entry (페르소나 전용 — 페르소나 선택 시에만 소득 기록)
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
         const isGuildSettle = (st.settleType || 'association') === 'guild';
         const guildName = isGuildSettle
@@ -12332,19 +12343,24 @@ async function saveMaterialTraitFromForm() {
               ? (model.db.customGuildName || '내 길드')
               : ((PRESET_GUILDS.find(g => g.id === model.db.guildId) || {}).name || '길드'))
           : '';
-        model.db.incomeLog.push({
-          date:       dateVal || '날짜 미입력',
-          runTitle:   runTitle,
-          gross:      result ? result.subtotal : 0,
-          fee:        result ? result.fee : 0,
-          corpTax:    isGuildSettle ? (result ? result.fee : 0) : 0,
-          net:        result ? result.net : 0,
-          perPerson:  result ? result.perPerson : 0,
-          guildShare: result ? (result.guildShare || 0) : 0,
-          final:      goldGain,
-          type:       isGuildSettle ? 'guild' : 'association',
-          guildName:  guildName,
-        });
+        const _settleActiveId = model.state.activeCharId || '';
+        if (_settleActiveId.startsWith('persona:')) {
+          const _settlePersona = (model.db.personas || []).find(p => p.id === _settleActiveId.substring(8));
+          model.db.incomeLog.push({
+            date:       dateVal || '날짜 미입력',
+            runTitle:   runTitle,
+            gross:      result ? result.subtotal : 0,
+            fee:        result ? result.fee : 0,
+            corpTax:    isGuildSettle ? (result ? result.fee : 0) : 0,
+            net:        result ? result.net : 0,
+            perPerson:  result ? result.perPerson : 0,
+            guildShare: result ? (result.guildShare || 0) : 0,
+            final:      goldGain,
+            type:       isGuildSettle ? 'guild' : 'association',
+            guildName:  guildName,
+            participant: _settlePersona ? (_settlePersona.name || _settlePersona.id) : '페르소나',
+          });
+        }
         // Write guild tax log for guild settlements
         if (isGuildSettle) {
           if (!Array.isArray(model.db.guildTaxLog)) model.db.guildTaxLog = [];
@@ -12463,11 +12479,14 @@ async function saveMaterialTraitFromForm() {
         const net = total - fee;
         inv.gold = Number(inv.gold||0) + net;
         model.state.settleItemSel = {};
-        // 소득 기록 — 첫 번째 페르소나 이름으로 기록
+        // 소득 기록 — 페르소나 전용 (페르소나 선택 시에만 기록)
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
-        const _firstP = (model.db.personas || [])[0];
-        const _participantName = _firstP ? (_firstP.name || _firstP.id) : '공용 인벤';
-        model.db.incomeLog.push({ date: dateVal||'날짜 미입력', runTitle: '직접 판매', gross: total, fee, net, perPerson: net, final: net, type: isGuild ? 'guild' : 'association', participant: _participantName });
+        const _directSellActiveId = model.state.activeCharId || '';
+        if (_directSellActiveId.startsWith('persona:')) {
+          const _dsPersona = (model.db.personas || []).find(p => p.id === _directSellActiveId.substring(8));
+          const _participantName = _dsPersona ? (_dsPersona.name || _dsPersona.id) : '페르소나';
+          model.db.incomeLog.push({ date: dateVal||'날짜 미입력', runTitle: '직접 판매', gross: total, fee, net, perPerson: net, final: net, type: isGuild ? 'guild' : 'association', participant: _participantName });
+        }
         await saveDb(); await saveState(); renderApp();
         toast(`💰 ${toRemove.length}개 아이템 판매 완료 (세전 ${fmtS(total)} → 수수료 5% 차감 후 ${fmtS(net)})`);
       } catch(e) { toast(e.message || String(e), true); }
@@ -12538,11 +12557,14 @@ async function saveMaterialTraitFromForm() {
           }
           lines.push(`${charName}: +${fmtS(share)}`);
         }
-        // 소득 기록 — 페르소나 목록 첫 번째 1명만 기록 (팀 전체 분배 합산)
+        // 소득 기록 — 페르소나 전용 (페르소나 선택 시에만 기록)
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
-        const _firstPersona = (model.db.personas || [])[0];
-        const _firstPersonaName = _firstPersona ? (_firstPersona.name || _firstPersona.id) : '공용 인벤';
-        model.db.incomeLog.push({ date: dateVal||'날짜 미입력', runTitle: '직접 판매 (팀 분배)', gross: total, fee, net: netTotal, perPerson: netTotal, final: netTotal, type: isGuild?'guild':'association', participant: _firstPersonaName });
+        const _teamSellActiveId = model.state.activeCharId || '';
+        if (_teamSellActiveId.startsWith('persona:')) {
+          const _tsPersona = (model.db.personas || []).find(p => p.id === _teamSellActiveId.substring(8));
+          const _firstPersonaName = _tsPersona ? (_tsPersona.name || _tsPersona.id) : '페르소나';
+          model.db.incomeLog.push({ date: dateVal||'날짜 미입력', runTitle: '직접 판매 (팀 분배)', gross: total, fee, net: netTotal, perPerson: netTotal, final: netTotal, type: isGuild?'guild':'association', participant: _firstPersonaName });
+        }
         model.state.settleItemSel = {};
         await saveDb(); await saveState(); renderApp();
         toast(`💰 팀 분배 완료 (세전 ${fmtS(total)} → 5% 차감 후 ${fmtS(netTotal)})\n${lines.join(' / ')}`);
@@ -12560,9 +12582,14 @@ async function saveMaterialTraitFromForm() {
       model.state.incomeLogOpen = !model.state.incomeLogOpen;
       await saveState(); renderApp();
     });
-    // 자동 납부 완료 처리 (전월 소득 기록 삭제)
+    // 자동 납부 완료 처리 (전월 소득 기록 삭제 + 골드 차감)
     on('#gb-tax-pay-confirm', 'click', async () => {
       try {
+        // 세금은 페르소나만 납부 가능
+        const activeId = model.state.activeCharId || '';
+        if (!activeId.startsWith('persona:')) {
+          toast('세금은 페르소나만 납부할 수 있다. 페르소나를 선택하라.', true); return;
+        }
         const gd = model.db.gameDate || { year:2026, month:1, day:1 };
         const prevYear = gd.month === 1 ? gd.year - 1 : gd.year;
         const prevMonth = gd.month === 1 ? 12 : gd.month - 1;
@@ -12570,17 +12597,34 @@ async function saveMaterialTraitFromForm() {
         const curMonthStr = `${gd.year}-${String(gd.month).padStart(2,'0')}`;
         // 현재달 기록은 납부 불가
         if (!Array.isArray(model.db.incomeLog)) model.db.incomeLog = [];
-        const before = model.db.incomeLog.length;
+        // 전월 소득 계산
+        const prevMonthRecords = model.db.incomeLog.filter(r => (r.date || '').startsWith(prevMonthStr));
+        if (prevMonthRecords.length === 0) { toast(`${prevMonthStr}에 해당하는 소득 기록이 없다.`, true); return; }
+        const prevMonthTotal = prevMonthRecords.reduce((s, r) => s + Number(r.final || 0), 0);
+        const prevMonthTax = prevMonthTotal > 0 ? calcMonthlyIncomeTax(prevMonthTotal) : 0;
+        // 연체 이자 계산
+        const curDay = gd.day;
+        const isOverdue = curDay > 10;
+        const overdueDays = isOverdue ? curDay - 10 : 0;
+        const overdueInterest = isOverdue && prevMonthTax > 0 ? Math.floor(prevMonthTax * 0.099 * overdueDays / 365) : 0;
+        const totalDue = prevMonthTax + overdueInterest;
+        // 페르소나 인벤토리에서 골드 차감
+        const inv = getActiveInventory();
+        const curGold = Number(inv.gold || 0);
+        if (curGold < totalDue) {
+          toast(`소지금 부족 (${getActiveLabel()}: ₩${formatWon(curGold)} / 필요 ₩${formatWon(totalDue)})`, true); return;
+        }
+        inv.gold = curGold - totalDue;
         // 전월 기록만 삭제 (현재달 기록은 유지)
+        const before = model.db.incomeLog.length;
         model.db.incomeLog = model.db.incomeLog.filter(r => {
           const d = (r.date || '');
           if (d.startsWith(prevMonthStr)) return false; // 전월 삭제
           return true; // 나머지 유지
         });
         const removed = before - model.db.incomeLog.length;
-        if (!removed) { toast(`${prevMonthStr}에 해당하는 소득 기록이 없다.`, true); return; }
         await saveDb(); await saveState(); renderApp();
-        toast(`✅ ${prevMonthStr} 소득세 납부 완료 — ${removed}건 기록 삭제됨`);
+        toast(`✅ ${prevMonthStr} 소득세 납부 완료 — ₩${formatWon(totalDue)} 차감 (${removed}건 기록 삭제)`);
       } catch (e) { toast(e.message || String(e), true); }
     });
     // ── Shop handlers ─────────────────────────────────────────────────────────
@@ -12733,6 +12777,7 @@ async function saveMaterialTraitFromForm() {
         const isAssocFree = (price === 0 && (eq.name || '').includes('협회지급'));
         const activeId = model.state.activeCharId || '';
         if (isAssocFree) {
+          if (!activeId) throw new Error('캐릭터/페르소나를 선택해야 협회지급 장비를 구매할 수 있다.');
           if (!model.db.assocEquipClaimed) model.db.assocEquipClaimed = {};
           if (model.db.assocEquipClaimed[activeId]) {
             price = ASSOC_EQUIP_REPURCHASE_PRICE; // 재구매 시 75만원
