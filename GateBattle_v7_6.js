@@ -2605,9 +2605,38 @@ function buildDefaultState() {
     if (model.db.activityLog.length > 500) model.db.activityLog = model.db.activityLog.slice(-500);
   }
   // ── LLM용 전투 상세 활동 로그 ──────────────────────────────────────────────
+  function buildGateNodeProgressText() {
+    const run = getGateRun();
+    if (!run || !run.stages) return '';
+    const tokens = (run.stages || []).map((stage, idx) => {
+      const isCurrent = !run.sideRoomActive && idx === run.currentStage;
+      if (stage.kind === 'choice' && !stage.chosen && !stage.cleared) {
+        return `[${stage.options.map(o => o.key).join('/')}]`;
+      }
+      const room = stage.kind === 'room' ? stage.room : ((stage.options || []).find(o => o.key === stage.chosen) || {}).room;
+      if (!room) return '?';
+      return (stage.cleared || room.discovered || isCurrent) ? roomDisplayLabel(room, true) : '?';
+    });
+    const current = Math.min(run.currentStage + 1, run.stages.length);
+    return `노드 진행: ${tokens.join('→')} (${current}/${run.stages.length})`;
+  }
+  function monsterSkillLabel(unit, allSkillMap) {
+    const kind = String(unit.kind || 'Normal');
+    if (kind === 'Normal') return '';
+    const skills = (unit.skills || []).map(sid => { const sk = allSkillMap[sid]; return sk || null; }).filter(Boolean);
+    if (!skills.length) return '';
+    const single = skills.find(sk => sk.category === 'singleAttack');
+    const aoe = skills.find(sk => sk.category === 'aoeAttack');
+    const parts = [];
+    if (single) parts.push('단일스킬');
+    if (aoe) parts.push('광역스킬');
+    return parts.length ? parts.join('/') : '';
+  }
   function logBattleEncounter(runtime, context) {
     const allSkillMap = getAllSkillMap();
     const lines = [];
+    const nodeProgress = buildGateNodeProgressText();
+    if (nodeProgress) { lines.push(nodeProgress); lines.push(''); }
     lines.push(`[전투 조우] ${context || ''}`);
     lines.push('');
     lines.push('▸ 아군');
@@ -2621,12 +2650,16 @@ function buildDefaultState() {
     lines.push('');
     lines.push('▸ 적군');
     (runtime.enemies || []).forEach(u => {
-      const skillNames = (u.skills || []).map(sid => { const sk = allSkillMap[sid]; return sk ? sk.name : sid; }).join(', ');
+      const kind = String(u.kind || 'Normal');
       const elemStr = u.baseElement && u.baseElement !== 'none' ? ` 속성:${u.baseElement}` : '';
       const speciesStr = u.speciesLabel ? ` 종족:${u.speciesLabel}` : '';
-      lines.push(`  ${u.name} [${u.rank||'?'}급 Lv${u.level||'?'}] (${rowLabel(u.row)})${speciesStr}${elemStr}`);
+      const kindLabel = kind !== 'Normal' ? ` ${kind}` : '';
+      lines.push(`  ${u.name} [${u.rank||'?'}급${kindLabel}] (${rowLabel(u.row)})${speciesStr}${elemStr}`);
       lines.push(`    HP ${u.hp}/${u.maxHp} | ATK ${u.atk||0}`);
-      if (skillNames) lines.push(`    스킬: ${skillNames}`);
+      if (kind !== 'Normal') {
+        const sklLabel = monsterSkillLabel(u, allSkillMap);
+        if (sklLabel) lines.push(`    보유: ${sklLabel}`);
+      }
     });
     pushActivityLog((runtime.party||[]).map(u=>u.name).join(', ')||'파티', '전투 조우', lines.join('\n'));
   }
@@ -2907,6 +2940,7 @@ function buildDefaultState() {
       role: entry.role || '',
       row,
       kind: entry.kind || (side === 'party' ? 'Hunter' : 'Normal'),
+      level: entry.level || null,
       rank,
       stats,
       hp: Math.min(baseHp, Number(entry.currentHp != null ? entry.currentHp : baseHp)), maxHp: baseHp,
@@ -7095,6 +7129,11 @@ function getBuffedStat(unit, statKey) {
     const skill = resolveSkillForUnit(actor, action.skillId);
     if (!skill || !canUseSkill(actor, skill)) return resolveSkillOrBasic(runtime, actor, { type:'basic', target:action.target || null }, summary);
     const cost = paySkillCost(actor, skill);
+    // 몬스터 스킬 표시명: Elite/Boss는 "스킬"/"광역스킬", Normal은 원래 이름 유지
+    if (actor.isMonster && String(actor.kind || 'Normal') !== 'Normal') {
+      if (skill.category === 'aoeAttack' || skill.category === 'aoeCC') skill.name = '광역스킬';
+      else skill.name = '스킬';
+    }
 
     // ── 전탄회수 특수 처리: 축적된 스택으로 계수 계산 ──
     if (skill.id === 'skill_haneul_reload') {
@@ -7574,12 +7613,16 @@ function getBuffedStat(unit, statKey) {
     lines.push('[Enemy Units]');
     runtime.enemies.forEach(u => {
       const dead = u.dead ? ' (사망)' : '';
-      const skillNames = (u.skills || []).map(sid => { const sk = allSkillMap[sid]; return sk ? sk.name : sid; }).join(', ');
+      const kind = String(u.kind || 'Normal');
       const elemStr = u.baseElement && u.baseElement !== 'none' ? ` 속성:${u.baseElement}` : '';
       const speciesStr = u.speciesLabel ? ` 종족:${u.speciesLabel}` : '';
-      lines.push(`- ${u.name}${dead} [${u.rank || '?'}급/Lv${u.level || '?'}] (${rowLabel(u.row)})${speciesStr}${elemStr}`);
+      const kindLabel = kind !== 'Normal' ? `/${kind}` : '';
+      lines.push(`- ${u.name}${dead} [${u.rank || '?'}급${kindLabel}] (${rowLabel(u.row)})${speciesStr}${elemStr}`);
       lines.push(`  MaxHP ${u.maxHp} MaxMP ${u.maxMp} MaxSP ${u.maxSp} | ATK ${u.atk||0}`);
-      if (skillNames) lines.push(`  스킬: ${skillNames}`);
+      if (kind !== 'Normal') {
+        const sklLabel = monsterSkillLabel(u, allSkillMap);
+        if (sklLabel) lines.push(`  보유: ${sklLabel}`);
+      }
     });
     lines.push('');
     lines.push('[Round Summaries]');
