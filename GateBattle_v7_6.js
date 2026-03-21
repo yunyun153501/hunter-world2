@@ -5695,7 +5695,8 @@ function renderGateRunPanel(run) {
                 const sk = resolveSkillForUnit(u, sId);
                 if (!sk) return '<div class="gb-sub" style="padding:1px 0;font-size:11px;">• ' + escapeHtml(sId) + '</div>';
                 const costStr = sk.costs ? [sk.costs.mp ? 'MP:'+sk.costs.mp : '', sk.costs.sp ? 'SP:'+sk.costs.sp : ''].filter(Boolean).join('/') : '';
-                const coefStr = sk.coef != null ? (sk.growth && Number(sk.coef) === 0 ? '계수:자동(성장형)' : '계수:' + sk.coef) : '';                const cat = catLabel[sk.category] || sk.category;
+                const coefStr = sk.coef != null ? (sk.growth && Number(sk.coef) === 0 ? '계수:자동(성장형)' : '계수:' + sk.coef) : '';
+                const cat = catLabel[sk.category] || sk.category;
                 const _nameStyle = rarityStyle(sk.rarity);
                 return '<div class="gb-sub" style="padding:1px 0;font-size:11px;">• <strong style="' + _nameStyle + '">' + escapeHtml(sk.name) + '</strong>' + (sk.rarity && sk.rarity !== 'Normal' ? ' <span class="gb-badge" style="background:'+rarityColor(sk.rarity)+';color:#000;font-size:9px;">'+escapeHtml(sk.rarity)+'</span>' : '') + ' <span class="gb-badge" style="font-size:9px;">' + cat + '</span>' + (coefStr ? ' <span class="gb-badge" style="font-size:9px;">'+coefStr+'</span>' : '') + (costStr ? ' <span style="font-size:10px;color:#94a3b8;">['+costStr+']</span>' : '') + (sk.desc ? ' — '+escapeHtml(sk.desc) : '') + '</div>';
               }).join('') || '<div class="gb-sub" style="font-size:11px;">스킬 없음</div>'}
