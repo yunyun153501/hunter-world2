@@ -2604,6 +2604,64 @@ function buildDefaultState() {
     // 최대 500건 유지
     if (model.db.activityLog.length > 500) model.db.activityLog = model.db.activityLog.slice(-500);
   }
+  // ── LLM용 전투 상세 활동 로그 ──────────────────────────────────────────────
+  function logBattleEncounter(runtime, context) {
+    const allSkillMap = getAllSkillMap();
+    const lines = [];
+    lines.push(`[전투 조우] ${context || ''}`);
+    lines.push('');
+    lines.push('▸ 아군');
+    (runtime.party || []).forEach(u => {
+      const st = u.stats || {};
+      const skillNames = (u.skills || []).map(sid => { const sk = allSkillMap[sid]; return sk ? sk.name : sid; }).join(', ');
+      lines.push(`  ${u.name} [${u.rank||'?'}급 Lv${u.level||'?'}] ${u.job||''} ${u.position||''} (${rowLabel(u.row)})`);
+      lines.push(`    HP ${u.hp}/${u.maxHp} MP ${u.mp}/${u.maxMp} SP ${u.sp}/${u.maxSp} | ATK ${u.atk||0} 물방 ${u.pdef||0} 마방 ${u.mdef||0}`);
+      if (skillNames) lines.push(`    스킬: ${skillNames}`);
+    });
+    lines.push('');
+    lines.push('▸ 적군');
+    (runtime.enemies || []).forEach(u => {
+      const skillNames = (u.skills || []).map(sid => { const sk = allSkillMap[sid]; return sk ? sk.name : sid; }).join(', ');
+      const elemStr = u.baseElement && u.baseElement !== 'none' ? ` 속성:${u.baseElement}` : '';
+      const speciesStr = u.speciesLabel ? ` 종족:${u.speciesLabel}` : '';
+      lines.push(`  ${u.name} [${u.rank||'?'}급 Lv${u.level||'?'}] (${rowLabel(u.row)})${speciesStr}${elemStr}`);
+      lines.push(`    HP ${u.hp}/${u.maxHp} | ATK ${u.atk||0}`);
+      if (skillNames) lines.push(`    스킬: ${skillNames}`);
+    });
+    pushActivityLog((runtime.party||[]).map(u=>u.name).join(', ')||'파티', '전투 조우', lines.join('\n'));
+  }
+  function logBattleRoundSummary(runtime) {
+    const round = runtime.round;
+    const partyLines = (runtime.party || []).map(u => {
+      if (u.dead) return `${u.name}(사망)`;
+      return `${u.name} HP${u.hp}/${u.maxHp} MP${u.mp}/${u.maxMp} SP${u.sp}/${u.maxSp}`;
+    });
+    const enemyLines = (runtime.enemies || []).map(u => {
+      if (u.dead) return `${u.name}(처치됨)`;
+      return `${u.name} HP${u.hp}/${u.maxHp}`;
+    });
+    const roundLogs = (runtime.logs || []).slice(runtime._roundLogStart || 0);
+    const detail = `[${round}라운드 결과]\n아군: ${partyLines.join(' / ')}\n적: ${enemyLines.join(' / ')}\n행동: ${roundLogs.join(' / ')}`;
+    pushActivityLog('전투', `${round}라운드`, detail);
+  }
+  function logBattleOutcome(runtime, context) {
+    const alive = getAlive(runtime.party);
+    const dead = (runtime.party||[]).filter(u=>u.dead);
+    const lines = [];
+    lines.push(`[전투 종료] ${runtime.outcome || '?'} — ${context || ''}`);
+    lines.push(`라운드: ${runtime.round}`);
+    if (alive.length) {
+      lines.push('생존:');
+      alive.forEach(u => lines.push(`  ${u.name} HP${u.hp}/${u.maxHp} MP${u.mp}/${u.maxMp} SP${u.sp}/${u.maxSp}`));
+    }
+    if (dead.length) lines.push(`사망: ${dead.map(u=>u.name).join(', ')}`);
+    const enemyAlive = getAlive(runtime.enemies);
+    if (enemyAlive.length) {
+      lines.push('잔존 적:');
+      enemyAlive.forEach(u => lines.push(`  ${u.name} HP${u.hp}/${u.maxHp}`));
+    }
+    pushActivityLog(alive[0]?.name || '파티', '전투 종료', lines.join('\n'));
+  }
   function activeGoldLabel() {
     const inv = getActiveInventory();
     return `잔액 ₩${formatWon(inv.gold || 0)}`;
@@ -4843,6 +4901,7 @@ function enterGateRoom(run) {
     run.pendingBattleRoomId = room.id;
     model.state.view = 'battle';
     pushGateLog(run, `${roomDisplayLabel(room, true)} 방에 진입했다.`);
+    logBattleEncounter(model.state.runtime, `${run.title || '게이트'} ${roomDisplayLabel(room, true)}`);
   }
 }
 function randomAlivePartyIndices(run) {
@@ -7586,6 +7645,7 @@ function getBuffedStat(unit, statKey) {
     const text = buildRoundSummaryText(summary, runtime);
     runtime.roundSummaries.push({ round:summary.round, text, raw:summary });
     pushBattleLog(runtime, `[라운드요약] ${text}`);
+    logBattleRoundSummary(runtime);
     runtime.totals.partyDamage += summary.partyDamage;
     runtime.totals.enemyDamage += summary.enemyDamage;
     runtime.totals.partyHealing += summary.partyHealing;
@@ -7600,6 +7660,7 @@ function getBuffedStat(unit, statKey) {
     }
     if (runtime.finished) {
       runtime.llmBlock = buildLlmBlock();
+      logBattleOutcome(runtime, '');
       // Award EXP to DB characters on Victory (only once, guarded by expFlushed flag)
       if (runtime.outcome === 'Victory' && !runtime.expFlushed) {
         runtime.expFlushed = true;
@@ -7742,6 +7803,24 @@ function getBuffedStat(unit, statKey) {
     bar.classList.toggle('err', !!isErr);
     bar.classList.add('show');
     setTimeout(() => { if (bar) bar.classList.remove('show'); }, 2200);
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(() => true).catch(() => copyFallback(text));
+    }
+    return Promise.resolve(copyFallback(text));
+  }
+  function copyFallback(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) {}
+    document.body.removeChild(ta);
+    return ok;
   }
 
   function fieldValue(id) {
@@ -12524,7 +12603,10 @@ function renderLogView() {
   });
   const reversed = filtered.slice().reverse();
   const logRows = reversed.length
-    ? reversed.map(l => `<div style="padding:4px 0;border-bottom:1px solid rgba(148,163,184,0.08);font-size:12px;"><span style="color:#64748b;">[${escapeHtml(l.ts)}]</span> <strong>${escapeHtml(l.actor)}</strong> — <span style="color:#fbbf24;">${escapeHtml(l.action)}</span>${l.detail ? ` — ${escapeHtml(l.detail)}` : ''}</div>`).join('')
+    ? reversed.map(l => {
+        const detailHtml = l.detail ? escapeHtml(l.detail).replace(/\n/g, '<br>') : '';
+        return `<div style="padding:4px 0;border-bottom:1px solid rgba(148,163,184,0.08);font-size:12px;"><span style="color:#64748b;">[${escapeHtml(l.ts)}]</span> <strong>${escapeHtml(l.actor)}</strong> — <span style="color:#fbbf24;">${escapeHtml(l.action)}</span>${detailHtml ? ` — ${detailHtml}` : ''}</div>`;
+      }).join('')
     : '<div class="gb-sub">— 아직 기록된 활동 로그가 없다. —</div>';
   // 복사용 텍스트 생성
   const copyText = reversed.map(l => `[${l.ts}] ${l.actor} — ${l.action}${l.detail ? ' — ' + l.detail : ''}`).join('\n');
@@ -14040,8 +14122,9 @@ async function saveMaterialTraitFromForm() {
     on('#gb-log-copy-party', 'click', async () => {
       try {
         const text = buildPartyInfoBlock();
-        await navigator.clipboard.writeText(text);
-        toast('👥 파티원 상세 정보가 클립보드에 복사되었다.');
+        const ok = await copyToClipboard(text);
+        if (ok) toast('👥 파티원 상세 정보가 클립보드에 복사되었다.');
+        else toast('클립보드 복사 실패', true);
       } catch (e) { toast('클립보드 복사 실패', true); }
     });
     on('#gb-log-clear', 'click', async () => {
@@ -15499,6 +15582,7 @@ async function saveMaterialTraitFromForm() {
         await saveDb(); await saveState();
         renderApp();
         { const _ps = (model.state.runtime && model.state.runtime.party) || []; const _es = (model.state.runtime && model.state.runtime.enemies) || []; pushActivityLog(_ps.map(u=>u.name||'?').join(', ') || '파티', '전투 시작', `파티원: ${_ps.map(u => `${u.name||'?'}(Lv${u.level||'?'})`).join(', ') || '?'} vs 적: ${_es.map(u => `${u.name||'?'}(Lv${u.level||'?'})`).join(', ') || '?'}`); }
+        if (model.state.runtime) logBattleEncounter(model.state.runtime, '수동 전투');
       } catch (e) { toast(e.message || String(e), true); }
     });
 
@@ -15617,14 +15701,14 @@ async function saveMaterialTraitFromForm() {
     on('#gb-copy-llm', 'click', async () => {
       const text = model.state.runtime.llmBlock || '';
       if (!text) return toast('복사할 결과 블록이 아직 없다.', true);
-      try { await navigator.clipboard.writeText(text); toast('결과 블록 복사 완료'); }
+      try { const ok = await copyToClipboard(text); if (ok) toast('결과 블록 복사 완료'); else toast('클립보드 복사 실패', true); }
       catch (e) { toast('클립보드 복사 실패', true); }
     });
     on('#gb-postbattle-copy-llm', 'click', async () => {
       const run = getGateRun();
       const text = run && run.postBattle ? String(run.postBattle.llmBlock || '') : '';
       if (!text) return toast('복사할 결과 블록이 없다.', true);
-      try { await navigator.clipboard.writeText(text); toast('결과 블록 복사 완료'); }
+      try { const ok = await copyToClipboard(text); if (ok) toast('결과 블록 복사 완료'); else toast('클립보드 복사 실패', true); }
       catch (e) { toast('클립보드 복사 실패', true); }
     });
     on('#gb-postbattle-next', 'click', async () => {
@@ -15842,8 +15926,8 @@ async function saveMaterialTraitFromForm() {
     on('#gb-mon-copy-json', 'click', async () => {
       try {
         const text = fieldValue('#gb-mon-json') || exportMonstersJsonText();
-        await navigator.clipboard.writeText(text);
-        toast('JSON 복사 완료');
+        const ok = await copyToClipboard(text);
+        if (ok) toast('JSON 복사 완료'); else toast('복사 실패', true);
       } catch (e) { toast('복사 실패', true); }
     });
 
@@ -16077,8 +16161,8 @@ async function saveMaterialTraitFromForm() {
     on('#gb-mat-copy-json', 'click', async () => {
       try {
         const text = fieldValue('#gb-mat-json') || exportRareTraitsJsonText();
-        await navigator.clipboard.writeText(text);
-        toast('희귀재료 특성 JSON 복사 완료');
+        const ok = await copyToClipboard(text);
+        if (ok) toast('희귀재료 특성 JSON 복사 완료'); else toast('복사 실패', true);
       } catch (e) { toast('복사 실패', true); }
     });
 
@@ -16156,8 +16240,8 @@ async function saveMaterialTraitFromForm() {
     on('#gb-skill-copy-json', 'click', async () => {
       try {
         const text = fieldValue('#gb-skill-json') || exportSkillsJsonText();
-        await navigator.clipboard.writeText(text);
-        toast('스킬 JSON 복사 완료');
+        const ok = await copyToClipboard(text);
+        if (ok) toast('스킬 JSON 복사 완료'); else toast('복사 실패', true);
       } catch (e) { toast('복사 실패', true); }
     });
     // 내장 스킬 카테고리 아코디언 토글
@@ -16259,7 +16343,7 @@ async function saveMaterialTraitFromForm() {
       const text = JSON.stringify({ equipments: model.db.equipments || [] }, null, 2);
       const el = model.root && model.root.querySelector('#gb-eq-json');
       if (el) el.value = text;
-      try { await navigator.clipboard.writeText(text); toast('장비 JSON 복사 완료'); } catch { toast('JSON 내보내기 완료 (클립보드 실패)'); }
+      try { const ok = await copyToClipboard(text); if (ok) toast('장비 JSON 복사 완료'); else toast('JSON 내보내기 완료 (클립보드 실패)'); } catch { toast('JSON 내보내기 완료 (클립보드 실패)'); }
     });
     on('#gb-eq-import-json', 'click', async () => {
       try {
