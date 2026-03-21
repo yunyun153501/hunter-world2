@@ -1964,12 +1964,25 @@ const RARE_FAMILY_PRESETS = {
           skills:['skill_haeun_prayer','skill_haeun_purify'],
           threatBase:1,
           inventory:{ gold:0, items:[], equipped:{
-            weapon:{ id:'eq_npc_haeun_weapon', name:'협회지급 지팡이', category:'equipment', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'int', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 지팡이.' },
+            weapon:{ id:'eq_npc_haeun_weapon', name:'D급 평범한 지팡이', category:'equipment', part:'weapon', rank:'D', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:15, pdef:0, mdef:0, mainStat:'int', resistType:'', resistPct:0, price:500000, note:'D급 표준 지팡이.' },
             subweapon:null,
-            armor:{ id:'eq_npc_haeun_armor', name:'E급 투박한 로브', category:'equipment', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'robe', armorStatBonusMul:0.15, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:0, mdef:3, mainStat:'', resistType:'', resistPct:0, price:400000, note:'E급 표준 로브.' },
+            armor:{ id:'eq_npc_haeun_armor', name:'D급 평범한 로브', category:'equipment', part:'armor', rank:'D', rarity:'Normal', armorSubtype:'robe', armorStatBonusMul:0.20, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:0, mdef:8, mainStat:'', resistType:'', resistPct:0, price:600000, note:'D급 표준 로브.' },
             accessory:null, bag:null
           }},
-          note:'고유 NPC. D급 클레릭/힐러. 기도(성장형 직업스킬/단일힐)/정화(성장형 직업스킬/상태이상 해제) 보유.\n장비: 협회지급 지팡이, E급 투박한 로브.' }
+          note:'고유 NPC. D급 클레릭/힐러. 기도(D급 일반 직업스킬/단일힐)/정화(성장형 직업스킬/상태이상 해제) 보유.\n장비: D급 평범한 지팡이, D급 평범한 로브.' },
+        { id:'char_isabel', name:'이사벨 헤이즈', job:'크루세이더', position:'탱커', row:'front', rank:'D', level:15,
+          stats:{ str:10, con:34, int:22, agi:10, sense:14 },
+          hp:0, mp:0, sp:0, atk:0, pdef:0, mdef:0,
+          damageType:'hybrid', attackStat:'con',
+          skills:['skill_isabel_bulwark','skill_isabel_lightcall','skill_isabel_lightguard','skill_isabel_athena'],
+          threatBase:5,
+          inventory:{ gold:0, items:[], equipped:{
+            weapon:{ id:'eq_npc_isabel_weapon', name:'협회지급 검', category:'equipment', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'str', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 검.' },
+            subweapon:{ id:'eq_npc_isabel_sub', name:'D급 평범한 방패', category:'equipment', part:'subweapon', rank:'D', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['magic_defense'], durability:100, maxDurability:100, atk:0, pdef:1, mdef:0, mainStat:'con', resistType:'', resistPct:0, price:500000, note:'D급 표준 방패. 마법피해감소.' },
+            armor:{ id:'eq_npc_isabel_armor', name:'D급 실용적인 판금갑옷', category:'equipment', part:'armor', rank:'D', rarity:'Normal', armorSubtype:'heavy', armorStatBonusMul:0, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:8, mdef:0, mainStat:'', resistType:'', resistPct:0, price:600000, note:'D급 표준 중갑.' },
+            accessory:null, bag:null
+          }},
+          note:'고유 NPC. D급 크루세이더/탱커. 복합 피해타입(기본공격=물리/스킬=마법).\n방어선유지(성장형 직업스킬/CC면역)/빛부름(D급 직업스킬/위협도 버프)/빛의보호(D급 직업스킬/보호막)/아테나의 조각(성장형 유니크 직업 패시브) 보유.\n장비: 협회지급 검, D급 평범한 방패(마방+), D급 실용적인 판금갑옷.' }
       ],
       monsters: buildSampleMonsters(),
       personas: [
@@ -2084,11 +2097,11 @@ const RARE_FAMILY_PRESETS = {
           },
           desc:'[성장형/포지션/버프] 자신의 등급에 따라 위협도가 증가한다. 3턴 지속. MP 비용은 등급별 하한값.' },
         // ── 이하은 전용 스킬 ──
-        { id:'skill_haeun_prayer', name:'기도', grade:'D', rarity:'Rare', category:'singleHeal', target:'singleAlly',
+        { id:'skill_haeun_prayer', name:'기도', grade:'D', rarity:'Normal', category:'singleHeal', target:'singleAlly',
           skillUsage: 'job',
           costs:{ mp:25, sp:0 }, coef:1.5, damageType:'magic', element:'none', statTypes:['int'], duration:0,
           desc:'[D/직업/단일힐] D급 힐 상한값 계수로 아군 1명을 회복한다. MP 25.' },
-        { id:'skill_haeun_purify', name:'정화', grade:'D', rarity:'Rare', category:'buff', target:'allAllies',
+        { id:'skill_haeun_purify', name:'정화', grade:'D', rarity:'Normal', category:'buff', target:'allAllies',
           growth: true, skillUsage: 'job',
           costs:{ mp:50, sp:0 }, coef:0, damageType:'magic', element:'none', statTypes:['int'], duration:0,
           purify: true,
@@ -2100,7 +2113,45 @@ const RARE_FAMILY_PRESETS = {
             A:{ costs:{ mp:95, sp:0 }, purify:{ maxRank:'A' }, desc:'[A] 정화: 팀원 전원의 A급 이하 상태이상을 해제. MP 95.' },
             S:{ costs:{ mp:120, sp:0 }, purify:{ maxRank:'S' }, desc:'[S] 정화: 팀원 전원의 S급 이하 상태이상을 해제. MP 120.' }
           },
-          desc:'[성장형/직업/버프] 팀원 전원의 자신과 동급 이하의 상태이상을 해제한다. 등급에 따라 해제 가능한 상태이상 등급이 상승한다.' }
+          desc:'[성장형/직업/버프] 팀원 전원의 자신과 동급 이하의 상태이상을 해제한다. 등급에 따라 해제 가능한 상태이상 등급이 상승한다.' },
+        // ── 이사벨 헤이즈 전용 스킬 ──
+        { id:'skill_isabel_bulwark', name:'방어선유지', grade:'E', rarity:'Normal', category:'buff', target:'self',
+          growth: true, skillUsage: 'job',
+          costs:{ mp:20, sp:0 }, coef:0, damageType:'magic', element:'none', statTypes:['con'], duration:3,
+          buff:{ stats:{}, ccImmunity:true },
+          byRank:{
+            E:{ costs:{ mp:20, sp:0 }, buff:{ stats:{}, ccImmunity:true, ccImmunityMaxRank:'E' }, desc:'[E] 방어선유지: 3턴간 E급 이하 하드CC 면역. MP 20.' },
+            D:{ costs:{ mp:25, sp:0 }, buff:{ stats:{}, ccImmunity:true, ccImmunityMaxRank:'D' }, desc:'[D] 방어선유지: 3턴간 D급 이하 하드CC 면역. MP 25.' },
+            C:{ costs:{ mp:30, sp:0 }, buff:{ stats:{}, ccImmunity:true, ccImmunityMaxRank:'C' }, desc:'[C] 방어선유지: 3턴간 C급 이하 하드CC 면역. MP 30.' },
+            B:{ costs:{ mp:40, sp:0 }, buff:{ stats:{}, ccImmunity:true, ccImmunityMaxRank:'B' }, desc:'[B] 방어선유지: 3턴간 B급 이하 하드CC 면역. MP 40.' },
+            A:{ costs:{ mp:55, sp:0 }, buff:{ stats:{}, ccImmunity:true, ccImmunityMaxRank:'A' }, desc:'[A] 방어선유지: 3턴간 A급 이하 하드CC 면역. MP 55.' },
+            S:{ costs:{ mp:70, sp:0 }, buff:{ stats:{}, ccImmunity:true, ccImmunityMaxRank:'S' }, desc:'[S] 방어선유지: 3턴간 S급 이하 하드CC 면역. MP 70.' }
+          },
+          desc:'[성장형/직업/버프] 3턴간 자신의 등급 이하의 하드CC를 무시한다. 등급에 따라 면역 가능한 CC 등급이 상승한다.' },
+        { id:'skill_isabel_lightcall', name:'빛부름', grade:'D', rarity:'Normal', category:'buff', target:'self',
+          skillUsage: 'job',
+          costs:{ mp:30, sp:0 }, coef:0, damageType:'magic', element:'none', statTypes:['con'], duration:3,
+          buff:{ stats:{}, threatBonus:5 },
+          desc:'[D/직업/버프] 3턴간 위협도 +5. MP 30.' },
+        { id:'skill_isabel_lightguard', name:'빛의보호', grade:'D', rarity:'Normal', category:'singleHeal', target:'singleAlly',
+          skillUsage: 'job',
+          costs:{ mp:30, sp:0 }, coef:1.5, damageType:'magic', element:'none', statTypes:['con'], duration:3,
+          shield: true,
+          desc:'[D/직업/단일힐] 아군 1명에게 D급 힐 계수와 동일한 보호막을 3턴간 씌운다. 턴 종료 시 보호막이 남아있으면 남은 양만큼 대상을 치유한다. MP 30.' },
+        { id:'skill_isabel_athena', name:'아테나의 조각', grade:'E', rarity:'Unique', category:'passive', target:'self',
+          growth: true, skillUsage: 'job',
+          costs:{ mp:0, sp:0 }, coef:0, damageType:'magic', element:'none', statTypes:['con'], duration:0,
+          passiveBonuses:{},
+          athenaPassive: true,
+          byRank:{
+            E:{ passiveBonuses:{}, desc:'[E] 아테나의 조각: 아직 각성되지 않은 유물. 현재 능력 없음.' },
+            D:{ passiveBonuses:{}, desc:'[D] 아테나의 조각: 아직 각성되지 않은 유물. 현재 능력 없음.' },
+            C:{ passiveBonuses:{}, desc:'[C] 아테나의 조각: 아직 각성되지 않은 유물. 현재 능력 없음.' },
+            B:{ passiveBonuses:{}, desc:'[B] 아테나의 조각: 아직 각성되지 않은 유물. 현재 능력 없음.' },
+            A:{ name:'아테나의 후계자', passiveBonuses:{}, athenaPassive:{ hpThreshold:0.30, recoveryPct:0.30, lightTurns:3, usesPerDay:1 }, desc:'[A] 아테나의 후계자: 하루 1번, HP 30% 이하 시 모든 아군 HP/SP/MP 30% 회복 + 3턴간 빛속성 추가부여.' },
+            S:{ name:'아테나의 화신', passiveBonuses:{}, athenaPassive:{ hpThreshold:0.30, recoveryPct:0.50, lightTurns:5, usesPerDay:1 }, desc:'[S] 아테나의 화신: 하루 1번, HP 30% 이하 시 모든 아군 HP/SP/MP 50% 회복 + 5턴간 빛속성 추가부여.' }
+          },
+          desc:'[성장형/직업/유니크/패시브] 아직 각성되지 않은 유물. A급 이상 달성 시 강력한 효과가 발현된다.' },
       ],
       rareMaterialPack: deepClone(DEFAULT_RARE_MATERIAL_PACK),
       rareMaterialCatalog: [],
@@ -2137,7 +2188,7 @@ const RARE_FAMILY_PRESETS = {
   //   3) run() 안에서 model.db 를 직접 수정 (예: 새 필드 추가, 값 보정 등)
   // 저장 데이터의 dbVersion 이 현재보다 낮으면 해당 마이그레이션만 순차 실행됨.
   // 20시간 세이브든 100시간 세이브든 초기화 없이 자동 패치.
-  const DB_SCHEMA_VERSION = 5;
+  const DB_SCHEMA_VERSION = 6;
 
   function migrateDb() {
     const defaults = buildDefaultDb();
@@ -2176,7 +2227,7 @@ const RARE_FAMILY_PRESETS = {
     const builtinSkills = (defaults.customSkills || []).filter(s => {
       if (!s.id) return false;
       if (s.id === 'skill_guide') return true;
-      if (s.id.startsWith('skill_yuna_') || s.id.startsWith('skill_haneul_') || s.id.startsWith('skill_ohana_') || s.id.startsWith('skill_minsu_') || s.id.startsWith('skill_haeun_')) return true;
+      if (s.id.startsWith('skill_yuna_') || s.id.startsWith('skill_haneul_') || s.id.startsWith('skill_ohana_') || s.id.startsWith('skill_minsu_') || s.id.startsWith('skill_haeun_') || s.id.startsWith('skill_isabel_')) return true;
       return false;
     });
     for (const defSkill of builtinSkills) {
@@ -2370,6 +2421,20 @@ const RARE_FAMILY_PRESETS = {
           if (!model.db.assocEquipClaimed) model.db.assocEquipClaimed = {};
           if (!model.db.assocEquipClaimed['char_haeun']) {
             model.db.assocEquipClaimed['char_haeun'] = true;
+          }
+        }
+      },
+      {
+        version: 6,
+        name: '이사벨 헤이즈 NPC 추가 + 게이트클리어 기록',
+        run() {
+          if (!model.db.gateClearHistory) model.db.gateClearHistory = {};
+          if (!model.db.gateClearHistory['char_isabel']) {
+            model.db.gateClearHistory['char_isabel'] = { 'E_small': 3, 'E_medium': 2, 'E_large': 1, 'D_small': 3, 'D_medium': 1, 'D_large': 1 };
+          }
+          if (!model.db.assocEquipClaimed) model.db.assocEquipClaimed = {};
+          if (!model.db.assocEquipClaimed['char_isabel']) {
+            model.db.assocEquipClaimed['char_isabel'] = true;
           }
         }
       },
@@ -6089,7 +6154,11 @@ function getBuffedStat(unit, statKey) {
     // 장비 특성: 치명타 피해 증가
     const critDmgTraitBonus = Number((attacker.traitBonuses && attacker.traitBonuses.crit_damage) || 0) / 100;
     const critMult = crit ? (1.5 + critDmgTraitBonus) : 1.0;
-    const element = normElement((skill && skill.element && skill.element !== 'none') ? skill.element : (attacker.baseElement || 'none'));
+    let element = normElement((skill && skill.element && skill.element !== 'none') ? skill.element : (attacker.baseElement || 'none'));
+    // 빛속성 추가부여 버프 체크
+    if (element === 'none' && (attacker.buffs || []).some(b => b.lightElement && b.turns > 0)) {
+      element = 'light';
+    }
     const resistMult = element !== 'none' ? Number((target.resists || {})[element] || 1) : 1;
     const elementMul = getElementAdvantageMult(element, target.baseElement || 'none');
     const typeMul = Number((target.damageTakenMods || {})[damageType] || 1);
@@ -6151,6 +6220,31 @@ function getBuffedStat(unit, statKey) {
     // 장비 특성: 치유량 증가
     const healDoneBonus = 1 + Number((caster.traitBonuses && caster.traitBonuses.healing_done) || 0) / 100;
     return Math.max(1, Math.round(ss * coef * healDoneBonus));
+  }
+  function checkAthenaPassive(runtime, unit, summary) {
+    if (!unit || unit.dead || unit.side !== 'party') return;
+    if (unit._athenaTriggered) return;
+    const passiveSkill = (unit.skills || []).map(sid => resolveSkillForUnit(unit, sid)).find(sk => sk && sk.athenaPassive && sk.athenaPassive.hpThreshold);
+    if (!passiveSkill || !passiveSkill.athenaPassive) return;
+    const ap = passiveSkill.athenaPassive;
+    const threshold = Number(ap.hpThreshold || 0.30);
+    if (unit.hp / unit.maxHp > threshold) return;
+    unit._athenaTriggered = true;
+    const recoveryPct = Number(ap.recoveryPct || 0.30);
+    const lightTurns = Number(ap.lightTurns || 3);
+    const allies = runtime.party.filter(u => !u.dead);
+    allies.forEach(ally => {
+      const hpRecover = Math.round(ally.maxHp * recoveryPct);
+      const mpRecover = Math.round(ally.maxMp * recoveryPct);
+      const spRecover = Math.round(ally.maxSp * recoveryPct);
+      ally.hp = Math.min(ally.maxHp, ally.hp + hpRecover);
+      ally.mp = Math.min(ally.maxMp, ally.mp + mpRecover);
+      ally.sp = Math.min(ally.maxSp, ally.sp + spRecover);
+      ally.buffs = ally.buffs || [];
+      ally.buffs.push({ sourceSkill:passiveSkill.id, name:passiveSkill.name + ' — 빛속성', turns:lightTurns, stats:{}, lightElement:true, source:unit.uid });
+    });
+    addRoundHighlight(summary, `✨ ${unit.name}의 ${passiveSkill.name} 발동! 전원 HP/MP/SP ${Math.round(recoveryPct*100)}% 회복 + ${lightTurns}턴 빛속성 부여`);
+    pushBattleLog(runtime, `${unit.name}의 ${passiveSkill.name} 발동! 모든 아군 HP/MP/SP ${Math.round(recoveryPct*100)}% 회복, ${lightTurns}턴간 빛속성 추가`);
   }
   function getAlive(units) { return units.filter(u => !u.dead && u.hp > 0); }
   function findUnitByUid(runtime, uid) {
@@ -6243,6 +6337,16 @@ function getBuffedStat(unit, statKey) {
   }
   function applyDamage(target, dmg) {
     let remaining = dmg;
+    // 보호막(shield) 흡수
+    if (target.buffs && target.buffs.length) {
+      for (const buff of target.buffs) {
+        if (buff.shield && buff.shield > 0 && remaining > 0) {
+          const absorbed = Math.min(remaining, buff.shield);
+          buff.shield -= absorbed;
+          remaining -= absorbed;
+        }
+      }
+    }
     if (remaining > 0) {
       target.hp = Math.max(0, target.hp - remaining);
     }
@@ -6338,7 +6442,10 @@ function getBuffedStat(unit, statKey) {
         source:sourceUnit.uid
       };
       // 특수 버프 속성 복사
-      if (skill.buff.ccImmunity) buffEntry.ccImmunity = true;
+      if (skill.buff.ccImmunity) {
+        buffEntry.ccImmunity = true;
+        if (skill.buff.ccImmunityMaxRank) buffEntry.ccImmunityMaxRank = skill.buff.ccImmunityMaxRank;
+      }
       if (skill.buff.forcedTaunt) buffEntry.forcedTaunt = true;
       if (skill.buff.evasionNext) buffEntry.evasionNext = Number(skill.buff.evasionNext);
       if (skill.buff.summon) buffEntry.summon = skill.buff.summon;
@@ -6355,7 +6462,7 @@ function getBuffedStat(unit, statKey) {
     });
     return changed;
   }
-  function removeExpiredBuffEffects(unit, expired) {
+  function removeExpiredBuffEffects(unit, expired, runtime, summary) {
     expired.forEach(buff => {
       if (buff.threatBonus) unit.threatBonus = Math.max(0, unit.threatBonus - Number(buff.threatBonus || 0));
       // 도발 해제 시 3턴 면역 부여
@@ -6363,14 +6470,24 @@ function getBuffedStat(unit, statKey) {
         unit.statuses = unit.statuses || {};
         unit.statuses.tauntResistTimer = 3;
       }
+      // 보호막 만료 시 잔여량 회복
+      if (buff.shield && buff.shield > 0) {
+        const healAmt = Math.min(buff.shield, unit.maxHp - unit.hp);
+        if (healAmt > 0) {
+          unit.hp = Math.min(unit.maxHp, unit.hp + healAmt);
+          if (runtime) pushBattleLog(runtime, `${unit.name}의 ${buff.name || '보호막'} 만료 → 잔여 보호막 ${healAmt} 회복`);
+          if (summary) addRoundHighlight(summary, `${unit.name}의 ${buff.name || '보호막'} 만료 → 잔여 보호막 ${healAmt} 회복`);
+        }
+      }
     });
   }
-  function applyCc(targets, skill, summary, sourceName, runtime) {
+  function applyCc(targets, skill, summary, sourceName, runtime, sourceUnit) {
     if (!skill.cc) return;
     targets.forEach(target => {
       if (target.dead) return;
-      // CC 면역 버프 확인
-      if ((target.buffs || []).some(b => b && b.ccImmunity && b.turns > 0)) {
+      // CC 면역 버프 확인 (등급 비교 포함)
+      const sourceRank = GRADE_ORDER.indexOf(String(sourceUnit && sourceUnit.rank || 'E').toUpperCase());
+      if ((target.buffs || []).some(b => b && b.ccImmunity && b.turns > 0 && (!b.ccImmunityMaxRank || sourceRank <= GRADE_ORDER.indexOf(String(b.ccImmunityMaxRank).toUpperCase())))) {
         addRoundHighlight(summary, `${target.name}은(는) CC 면역 상태`);
         pushBattleLog(runtime, `${target.name}은(는) CC 면역 상태`);
         return;
@@ -6435,8 +6552,9 @@ function getBuffedStat(unit, statKey) {
     if (!srcStatus || !srcStatus.type || target.dead) return false;
     const type = normStatus(srcStatus.type);
     if (!type) return false;
-    // CC 면역 버프 확인
-    if ((target.buffs || []).some(b => b && b.ccImmunity && b.turns > 0)) {
+    // CC 면역 버프 확인 (등급 비교 포함)
+    const sourceRank = GRADE_ORDER.indexOf(String(sourceUnit && sourceUnit.rank || 'E').toUpperCase());
+    if ((target.buffs || []).some(b => b && b.ccImmunity && b.turns > 0 && (!b.ccImmunityMaxRank || sourceRank <= GRADE_ORDER.indexOf(String(b.ccImmunityMaxRank).toUpperCase())))) {
       addRoundHighlight(summary, `${target.name}은(는) CC 면역 상태`);
       pushBattleLog(runtime, `${target.name}은(는) CC 면역 상태`);
       return false;
@@ -6796,7 +6914,7 @@ function getBuffedStat(unit, statKey) {
         pushBattleLog(runtime, `${actor.name} 투척단검이 모두 소진되어 행동할 수 없다`);
         return;
       }
-      const skill = { id:'basicAttack', name:'기본 공격', category:'singleAttack', target:'singleEnemy', coef:1.0, statTypes:[actor.attackStat || 'str'], damageType:actor.damageType || 'physical', element:'none', costs:{ mp:0, sp:0 } };
+      const skill = { id:'basicAttack', name:'기본 공격', category:'singleAttack', target:'singleEnemy', coef:1.0, statTypes:[actor.attackStat || 'str'], damageType:actor.damageType === 'hybrid' ? 'physical' : (actor.damageType || 'physical'), element:'none', costs:{ mp:0, sp:0 } };
       const target = chooseWeightedTarget(actor, foes, skill, action.target);
       if (!target) return;
       const hit = performHit(actor, target, skill);
@@ -6967,6 +7085,17 @@ function getBuffedStat(unit, statKey) {
       const target = targets[0];
       if (!target) { refundSkillCost(actor, cost); return; }
       const heal = computeHeal(actor, skill);
+      // ── 보호막 (shield) 스킬 분기 ──
+      if (skill.shield) {
+        const shieldAmt = heal;
+        const turns = Number(skill.duration || 3);
+        target.buffs = target.buffs || [];
+        target.buffs.push({ sourceSkill:skill.id, name:skill.name, turns, stats:{}, shield:shieldAmt, shieldMax:shieldAmt, source:actor.uid });
+        addRoundHighlight(summary, `${actor.name}의 ${skill.name} → ${target.name} 보호막 ${shieldAmt}`);
+        pushBattleLog(runtime, `${actor.name}의 ${skill.name}: ${target.name}에게 보호막 ${shieldAmt} 부여 (${turns}턴)`);
+        actor.lastAction = `${skill.name} (MP-${cost.mp} / SP-${cost.sp})`;
+        return;
+      }
       const hpBefore = Number(target.hp || 0);
       const actual = applyHeal(target, heal);
       if (actor.side === 'party') summary.partyHealing += actual; else summary.enemyHealing += actual;
@@ -7102,7 +7231,7 @@ function getBuffedStat(unit, statKey) {
       pushBattleLog(runtime, `${actor.name}의 ${skill.name}이(가) 빗나감`);
       return;
     }
-    applyCc(ccTargets, skill, summary, actor.name, runtime);
+    applyCc(ccTargets, skill, summary, actor.name, runtime, actor);
     // CC/공격 스킬에 버프 속성이 있으면 적용 (시간 감속 등: 적에게 CC + 아군에게 버프)
     if (skill.buff && skill.duration) {
       if (skill.buff.stats) {
@@ -7132,6 +7261,8 @@ function getBuffedStat(unit, statKey) {
       pushBattleLog(runtime, `  └ 투척단검 잔여: ${actor._throwingDaggers}/${actor._throwingDaggersMax || 10}`);
     }
     actor.lastAction = `${skill.name} (MP-${cost.mp} / SP-${cost.sp})`;
+    // 아테나 패시브 체크 (모든 전투 행동 후)
+    runtime.party.filter(u => !u.dead).forEach(u => checkAthenaPassive(runtime, u, summary));
   }
 
   function endRoundMaintenance(runtime, units, summary) {
@@ -7143,7 +7274,7 @@ function getBuffedStat(unit, statKey) {
         if (!alive) expired.push(buff);
         return alive;
       });
-      removeExpiredBuffEffects(unit, expired);
+      removeExpiredBuffEffects(unit, expired, runtime, summary);
 
       // 독: 방어무시 절대데미지, 스택당 poisonPower 피해
       if (!unit.dead && Number(unit.statuses.poison || 0) > 0) {
@@ -11159,7 +11290,7 @@ function renderCommandPanel(runtime) {
             <label>INT<input class="gb-input" id="gb-char-int" type="number" value="${escapeHtml(item.stats.int)}" /></label>
             <label>AGI<input class="gb-input" id="gb-char-agi" type="number" value="${escapeHtml(item.stats.agi)}" /></label>
             <label>SENSE<input class="gb-input" id="gb-char-sense" type="number" value="${escapeHtml(item.stats.sense)}" /></label>
-            <label>피해 타입<select class="gb-input" id="gb-char-dmgtype">${optionHtml('physical','physical',item.damageType==='physical')}${optionHtml('magic','magic',item.damageType==='magic')}</select></label>
+            <label>피해 타입<select class="gb-input" id="gb-char-dmgtype">${optionHtml('physical','physical',item.damageType==='physical')}${optionHtml('magic','magic',item.damageType==='magic')}${optionHtml('hybrid','복합(물리+마법)',item.damageType==='hybrid')}</select></label>
             <label>공격 스탯<select class="gb-input" id="gb-char-atkstat">${['str','con','int','agi','sense'].map(s=>optionHtml(s,s,item.attackStat===s)).join('')}</select></label>
             <label>기본 위협값<input class="gb-input" id="gb-char-threat" type="number" value="${escapeHtml(item.threatBase != null ? item.threatBase : inferThreatBase(item.position,item.row))}" /></label>
             <label>스킬 ID(쉼표구분)<input class="gb-input" id="gb-char-skills" value="${escapeHtml((item.skills||[]).join(', '))}" /></label>
