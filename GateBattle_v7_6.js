@@ -11029,6 +11029,15 @@ function renderBattleSetup() {
 function renderCommandPanel(runtime) {
     const rows = getAlive(runtime.party).map(unit => {
       const pending = (runtime.pendingActions && runtime.pendingActions[unit.uid]) || {};
+      const potionUsed = pending.type === 'potion';
+      if (potionUsed) {
+        return `
+        <div class="gb-command-row" style="opacity:0.6;">
+          <div><strong>${escapeHtml(unit.name)}</strong><div class="gb-sub">${escapeHtml(rowLabel(unit.row))} / ${escapeHtml(unit.position || '')}</div></div>
+          <div class="gb-sub" style="color:#4caf50;font-weight:bold;">🧪 물약 사용 완료 (방어 태세)</div>
+        </div>
+        `;
+      }
       return `
         <div class="gb-command-row">
           <div><strong>${escapeHtml(unit.name)}</strong><div class="gb-sub">${escapeHtml(rowLabel(unit.row))} / ${escapeHtml(unit.position || '')}</div></div>
@@ -12509,8 +12518,14 @@ function readPartySlotsFromUI() {
   }
   function collectPendingActions() {
     const runtime = model.state.runtime;
+    const existing = runtime.pendingActions || {};
     const pending = {};
     getAlive(runtime.party).forEach(unit => {
+      // 물약 사용으로 행동이 이미 소모된 유닛은 보존
+      if (existing[unit.uid] && existing[unit.uid].type === 'potion') {
+        pending[unit.uid] = existing[unit.uid];
+        return;
+      }
       let mode = fieldValue(`#gb-act-mode-${unit.uid}`) || 'basic';
       const skillId = fieldValue(`#gb-act-skill-${unit.uid}`) || '';
       const target = fieldValue(`#gb-act-target-${unit.uid}`) || '';
