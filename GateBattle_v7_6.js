@@ -7849,17 +7849,24 @@ function getBuffedStat(unit, statKey) {
   }
 
   function copyToClipboard(text) {
+    // 동기 execCommand를 먼저 시도 (유저 제스처 컨텍스트에서 가장 안정적)
+    const syncOk = copyFallback(text);
+    if (syncOk) return Promise.resolve(true);
+    // 실패 시 Clipboard API 시도
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(text).then(() => true).catch(() => copyFallback(text));
+      return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
     }
-    return Promise.resolve(copyFallback(text));
+    return Promise.resolve(false);
   }
   function copyFallback(text) {
     const ta = document.createElement('textarea');
     ta.value = text;
-    ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0;';
+    ta.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;'; // opacity:0은 일부 브라우저에서 선택 불가
+    ta.setAttribute('readonly', '');
     document.body.appendChild(ta);
+    ta.focus();
     ta.select();
+    try { ta.setSelectionRange(0, text.length); } catch (_) {}
     let ok = false;
     try { ok = document.execCommand('copy'); } catch (_) {}
     document.body.removeChild(ta);
@@ -14167,8 +14174,13 @@ async function saveMaterialTraitFromForm() {
         const text = buildPartyInfoBlock();
         const ok = await copyToClipboard(text);
         if (ok) toast('👥 파티원 상세 정보가 클립보드에 복사되었다.');
-        else toast('클립보드 복사 실패', true);
-      } catch (e) { toast('클립보드 복사 실패', true); }
+        else {
+          // 클립보드 실패 시 텍스트를 선택 가능한 영역에 표시
+          const area = document.getElementById('gb-log-copy-area');
+          if (area) { area.value = text; area.select(); try { document.execCommand('copy'); toast('👥 파티원 정보가 클립보드에 복사되었다.'); } catch (_) { toast('아래 텍스트 영역에 파티원 정보가 표시되었다. 직접 선택하여 복사하세요.'); } }
+          else toast('클립보드 복사 실패', true);
+        }
+      } catch (e) { toast('클립보드 복사 실패: ' + (e.message || ''), true); }
     });
     on('#gb-log-clear', 'click', async () => {
       if (!confirm('활동 로그를 전부 삭제하시겠습니까?')) return;
