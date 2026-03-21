@@ -1982,7 +1982,7 @@ const RARE_FAMILY_PRESETS = {
             armor:{ id:'eq_npc_isabel_armor', name:'D급 실용적인 판금갑옷', category:'equipment', part:'armor', rank:'D', rarity:'Normal', armorSubtype:'heavy', armorStatBonusMul:0, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:8, mdef:0, mainStat:'', resistType:'', resistPct:0, price:600000, note:'D급 표준 중갑.' },
             accessory:null, bag:null
           }},
-          note:'고유 NPC. D급 크루세이더/탱커. 복합 피해타입(기본공격=물리/스킬=마법).\n방어선유지(성장형 직업스킬/CC면역)/빛부름(D급 직업스킬/위협도 버프)/빛의보호(D급 직업스킬/보호막)/홀리라이트(D급 직업스킬/빛속성 단일CC/실명)/아테나의 조각(성장형 유니크 직업 패시브) 보유.\n장비: 협회지급 검, D급 평범한 방패(마방+), D급 실용적인 판금갑옷.' }
+          note:'고유 NPC. D급 크루세이더/탱커. 복합 피해타입(기본공격=물리/스킬=마법).\n방어선유지(성장형 직업스킬/CC면역)/빛부름(D급 직업스킬/위협도 버프)/빛의보호(D급 직업스킬/보호막)/홀리라이트(D급 직업스킬/빛속성 단일CC/실명/원거리)/아테나의 조각(성장형 유니크 직업 패시브) 보유.\n장비: 협회지급 검, D급 평범한 방패(마방+), D급 실용적인 판금갑옷.' }
       ],
       monsters: buildSampleMonsters(),
       personas: [
