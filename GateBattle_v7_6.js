@@ -1974,7 +1974,7 @@ const RARE_FAMILY_PRESETS = {
           stats:{ str:10, con:34, int:22, agi:10, sense:14 },
           hp:0, mp:0, sp:0, atk:0, pdef:0, mdef:0,
           damageType:'hybrid', attackStat:'con',
-          skills:['skill_isabel_bulwark','skill_isabel_lightcall','skill_isabel_lightguard','skill_isabel_athena'],
+          skills:['skill_isabel_bulwark','skill_isabel_lightcall','skill_isabel_lightguard','skill_isabel_holylight','skill_isabel_athena'],
           threatBase:5,
           inventory:{ gold:0, items:[], equipped:{
             weapon:{ id:'eq_npc_isabel_weapon', name:'협회지급 검', category:'equipment', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'str', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 검.' },
@@ -1982,7 +1982,7 @@ const RARE_FAMILY_PRESETS = {
             armor:{ id:'eq_npc_isabel_armor', name:'D급 실용적인 판금갑옷', category:'equipment', part:'armor', rank:'D', rarity:'Normal', armorSubtype:'heavy', armorStatBonusMul:0, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:8, mdef:0, mainStat:'', resistType:'', resistPct:0, price:600000, note:'D급 표준 중갑.' },
             accessory:null, bag:null
           }},
-          note:'고유 NPC. D급 크루세이더/탱커. 복합 피해타입(기본공격=물리/스킬=마법).\n방어선유지(성장형 직업스킬/CC면역)/빛부름(D급 직업스킬/위협도 버프)/빛의보호(D급 직업스킬/보호막)/아테나의 조각(성장형 유니크 직업 패시브) 보유.\n장비: 협회지급 검, D급 평범한 방패(마방+), D급 실용적인 판금갑옷.' }
+          note:'고유 NPC. D급 크루세이더/탱커. 복합 피해타입(기본공격=물리/스킬=마법).\n방어선유지(성장형 직업스킬/CC면역)/빛부름(D급 직업스킬/위협도 버프)/빛의보호(D급 직업스킬/보호막)/홀리라이트(D급 직업스킬/빛속성 단일CC/실명)/아테나의 조각(성장형 유니크 직업 패시브) 보유.\n장비: 협회지급 검, D급 평범한 방패(마방+), D급 실용적인 판금갑옷.' }
       ],
       monsters: buildSampleMonsters(),
       personas: [
@@ -2101,7 +2101,7 @@ const RARE_FAMILY_PRESETS = {
           skillUsage: 'job',
           costs:{ mp:25, sp:0 }, coef:1.5, damageType:'magic', element:'none', statTypes:['int'], duration:0,
           desc:'[D/직업/단일힐] D급 힐 상한값 계수로 아군 1명을 회복한다. MP 25.' },
-        { id:'skill_haeun_purify', name:'정화', grade:'D', rarity:'Normal', category:'buff', target:'allAllies',
+        { id:'skill_haeun_purify', name:'정화', grade:'D', rarity:'Rare', category:'buff', target:'allAllies',
           growth: true, skillUsage: 'job',
           costs:{ mp:50, sp:0 }, coef:0, damageType:'magic', element:'none', statTypes:['int'], duration:0,
           purify: true,
@@ -2115,7 +2115,7 @@ const RARE_FAMILY_PRESETS = {
           },
           desc:'[성장형/직업/버프] 팀원 전원의 자신과 동급 이하의 상태이상을 해제한다. 등급에 따라 해제 가능한 상태이상 등급이 상승한다.' },
         // ── 이사벨 헤이즈 전용 스킬 ──
-        { id:'skill_isabel_bulwark', name:'방어선유지', grade:'E', rarity:'Normal', category:'buff', target:'self',
+        { id:'skill_isabel_bulwark', name:'방어선유지', grade:'E', rarity:'Rare', category:'buff', target:'self',
           growth: true, skillUsage: 'job',
           costs:{ mp:20, sp:0 }, coef:0, damageType:'magic', element:'none', statTypes:['con'], duration:3,
           buff:{ stats:{}, ccImmunity:true },
@@ -2138,6 +2138,11 @@ const RARE_FAMILY_PRESETS = {
           costs:{ mp:30, sp:0 }, coef:1.5, damageType:'magic', element:'none', statTypes:['con'], duration:3,
           shield: true,
           desc:'[D/직업/단일힐] 아군 1명에게 D급 힐 계수와 동일한 보호막을 3턴간 씌운다. 턴 종료 시 보호막이 남아있으면 남은 양만큼 대상을 치유한다. MP 30.' },
+        { id:'skill_isabel_holylight', name:'홀리라이트', grade:'D', rarity:'Normal', category:'singleCC', target:'singleEnemy',
+          skillUsage: 'job',
+          costs:{ mp:30, sp:0 }, coef:1.54, damageType:'magic', element:'light', statTypes:['con'], duration:0,
+          cc:{ type:'blind', turns:3, chance:0.20 },
+          desc:'[D/직업/단일CC] 적에게 빛속성의 마법 피해를 입히며 실명(3턴, 20%)을 부여한다. MP 30.' },
         { id:'skill_isabel_athena', name:'아테나의 조각', grade:'E', rarity:'Unique', category:'passive', target:'self',
           growth: true, skillUsage: 'job',
           costs:{ mp:0, sp:0 }, coef:0, damageType:'magic', element:'none', statTypes:['con'], duration:0,
