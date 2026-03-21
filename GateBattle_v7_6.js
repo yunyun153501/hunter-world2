@@ -2139,10 +2139,10 @@ const RARE_FAMILY_PRESETS = {
           shield: true,
           desc:'[D/직업/단일힐] 아군 1명에게 D급 힐 계수와 동일한 보호막을 3턴간 씌운다. 턴 종료 시 보호막이 남아있으면 남은 양만큼 대상을 치유한다. MP 30.' },
         { id:'skill_isabel_holylight', name:'홀리라이트', grade:'D', rarity:'Normal', category:'singleCC', target:'singleEnemy',
-          skillUsage: 'job',
+          skillUsage: 'job', ranged: true,
           costs:{ mp:30, sp:0 }, coef:1.54, damageType:'magic', element:'light', statTypes:['con'], duration:0,
           cc:{ type:'blind', turns:3, chance:0.20 },
-          desc:'[D/직업/단일CC] 적에게 빛속성의 마법 피해를 입히며 실명(3턴, 20%)을 부여한다. MP 30.' },
+          desc:'[D/직업/단일CC/원거리] 적에게 빛속성의 마법 피해를 입히며 실명(3턴, 20%)을 부여한다. MP 30.' },
         { id:'skill_isabel_athena', name:'아테나의 조각', grade:'E', rarity:'Unique', category:'passive', target:'self',
           growth: true, skillUsage: 'job',
           costs:{ mp:0, sp:0 }, coef:0, damageType:'magic', element:'none', statTypes:['con'], duration:0,
@@ -6266,7 +6266,7 @@ function getBuffedStat(unit, statKey) {
     if (!anyAlive.length) return [];
     if (skill && (skill.target === 'allEnemies' || skill.category === 'aoeAttack' || skill.category === 'aoeCC')) return anyAlive;
     const t = ((attacker.position || '') + ' ' + (attacker.job || '')).toLowerCase();
-    const ranged = t.includes('원거리') || t.includes('궁수') || t.includes('투척') || t.includes('마법') || t.includes('법사') || t.includes('정령') || t.includes('클레릭') || t.includes('힐러') || t.includes('서포터') || (skill && skill.damageType === 'magic');
+    const ranged = t.includes('원거리') || t.includes('궁수') || t.includes('투척') || t.includes('마법') || t.includes('법사') || t.includes('정령') || t.includes('클레릭') || t.includes('힐러') || t.includes('서포터') || (skill && (skill.damageType === 'magic' || skill.ranged));
     if (ranged) return anyAlive;
     if (aliveRows.front.length) return ['front'];
     if (aliveRows.mid.length) return ['mid'];
@@ -10376,10 +10376,10 @@ function optionHtml(value, label, selected) {
     (model.db.monsters || []).forEach(c => opts.push(optionHtml(c.id, `${c.name} [${c.kind || 'Normal'}]`, selected === c.id)));
     return opts.join('');
   }
-  function targetOptions(runtime, actor, selected) {
+  function targetOptions(runtime, actor, selected, skillDef) {
     const foes = actor.side === 'party' ? getAlive(runtime.enemies) : getAlive(runtime.party);
     const allies = actor.side === 'party' ? getAlive(runtime.party) : getAlive(runtime.enemies);
-    const reachableRows = getAccessibleRows(actor, null, foes);
+    const reachableRows = getAccessibleRows(actor, skillDef || null, foes);
     const out = ['<option value="">(자동/기본)</option>'];
     out.push('<optgroup label="적">');
     foes.forEach(u => {
@@ -11040,7 +11040,7 @@ function renderCommandPanel(runtime) {
             ${skillOptions(unit, pending.skillId || '')}
           </select>
           <select class="gb-input" id="gb-act-target-${unit.uid}">
-            ${targetOptions(runtime, unit, pending.target || '')}
+            ${targetOptions(runtime, unit, pending.target || '', pending.skillId ? (getAllSkillMap()[pending.skillId] || null) : null)}
           </select>
         </div>
       `;
@@ -15362,6 +15362,8 @@ async function saveMaterialTraitFromForm() {
 
     on('#gb-run-round', 'click', async () => {
       try {
+        // 먼저 현재 UI 값을 수집
+        collectPendingActions();
         // 사거리 검증: 선택한 타겟이 사거리 밖이면 경고
         const rt = model.state.runtime;
         if (rt && rt.party) {
@@ -15372,14 +15374,13 @@ async function saveMaterialTraitFromForm() {
             if (!pa || !pa.target) continue;
             const targetUnit = (foes || []).find(u => u.uid === pa.target);
             if (!targetUnit || targetUnit.dead) continue;
-            const reachable = getAccessibleRows(unit, pa.skill ? getAllSkillMap()[pa.skill] : null, foes);
+            const reachable = getAccessibleRows(unit, pa.skillId ? getAllSkillMap()[pa.skillId] : null, foes);
             if (!reachable.includes(targetUnit.row)) {
               toast(`⛔ ${unit.name}의 사거리가 ${targetUnit.name}에게 닿지 않습니다! 대상을 변경하세요.`, true);
               return;
             }
           }
         }
-        collectPendingActions();
         resolveOneRound();
         autoHandleFinishedGateBattle();
         await saveState();
@@ -15405,6 +15406,22 @@ async function saveMaterialTraitFromForm() {
         await saveState();
         renderApp();
       } catch (e) { toast(e.message || String(e), true); }
+    });
+    // 스킬 드롭다운 변경 시 타겟 드롭다운의 사거리 표시 갱신
+    root.querySelectorAll('select[id^="gb-act-skill-"]').forEach(skillSel => {
+      skillSel.addEventListener('change', () => {
+        const uid = skillSel.id.replace('gb-act-skill-', '');
+        const targetSel = root.querySelector(`#gb-act-target-${uid}`);
+        if (!targetSel) return;
+        const runtime = model.state.runtime;
+        if (!runtime) return;
+        const unit = (runtime.party || []).find(u => u.uid === uid);
+        if (!unit) return;
+        const skillId = skillSel.value;
+        const skillDef = skillId ? (getAllSkillMap()[skillId] || null) : null;
+        const prevVal = targetSel.value;
+        targetSel.innerHTML = targetOptions(runtime, unit, prevVal, skillDef);
+      });
     });
     on('#gb-battle-potion', 'click', () => {
       const rt = model.state.runtime;
