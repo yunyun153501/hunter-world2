@@ -1971,7 +1971,7 @@ const RARE_FAMILY_PRESETS = {
           }},
           note:'고유 NPC. D급 클레릭/힐러. 기도(D급 일반 직업스킬/단일힐)/정화(성장형 직업스킬/상태이상 해제) 보유.\n장비: D급 평범한 지팡이, D급 평범한 로브.' },
         { id:'char_isabel', name:'이사벨 헤이즈', job:'크루세이더', position:'탱커', row:'front', rank:'D', level:15,
-          stats:{ str:10, con:34, int:22, agi:10, sense:14 },
+          stats:{ str:10, con:32, int:20, agi:10, sense:14 },
           hp:0, mp:0, sp:0, atk:0, pdef:0, mdef:0,
           damageType:'hybrid', attackStat:'con',
           skills:['skill_isabel_bulwark','skill_isabel_lightcall','skill_isabel_lightguard','skill_isabel_holylight','skill_isabel_athena'],
@@ -11059,7 +11059,7 @@ function renderCommandPanel(runtime) {
         </div>
         ${(() => {
           const rt = model.state.runtime;
-          const recentLogs = (rt.logs || []).slice(-8);
+          const recentLogs = (rt.logs || []).filter(row => !/(전열로 전진|중열로 전진|후열로 전진)/.test(row)).slice(-8);
           if (!recentLogs.length) return '';
           return `<div class="gb-panel" style="margin-top:8px;max-height:150px;overflow:auto;">
             <div class="gb-section-title" style="font-size:11px;">📜 최근 전투 요약</div>
@@ -11116,20 +11116,29 @@ function renderCommandPanel(runtime) {
       return icons;
     }
 
+    // ── 보호막 총합 계산 ──
+    function getUnitShieldTotal(u) {
+      let total = 0;
+      (u.buffs || []).forEach(b => { if (b && b.shield && b.shield > 0) total += b.shield; });
+      return Math.floor(total);
+    }
     // ── 몰입형 유닛 카드 (파티) ──
     function immersivePartyCard(u) {
       const hpPct = u.maxHp > 0 ? Math.round(u.hp / u.maxHp * 100) : 0;
       const mpPct = u.maxMp > 0 ? Math.round(u.mp / u.maxMp * 100) : 0;
       const spPct = u.maxSp > 0 ? Math.round(u.sp / u.maxSp * 100) : 0;
+      const shieldTotal = getUnitShieldTotal(u);
+      const shieldPct = (shieldTotal > 0 && u.maxHp > 0) ? Math.min(100, Math.round(shieldTotal / u.maxHp * 100)) : 0;
       const hpColor = hpPct > 50 ? '#22c55e' : hpPct > 25 ? '#f59e0b' : '#ef4444';
       const statusIcons = getStatusIcons(u.statuses, true);
       const daggerLine = (u._throwingDaggers != null) ? `<div style="font-size:10px;margin-top:1px;">🗡️ 단검 ${u._throwingDaggers}/${u._throwingDaggersMax || 10}</div>` : '';
+      const shieldInfo = shieldTotal > 0 ? ` <span style="font-size:9px;color:#a78bfa;">🛡️${shieldTotal}</span>` : '';
       return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:3px 6px;border-left:3px solid ${hpColor};margin-bottom:1px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div><strong style="font-size:12px;">${escapeHtml(u.name)}</strong> <span class="gb-badge" style="font-size:9px;padding:1px 4px;">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="font-size:8px;padding:1px 3px;">${escapeHtml(rowLabel(u.row))}</span>${statusIcons.length ? ` ${statusIcons.join('')}` : ''}</div>
           <div style="font-size:9px;color:#94a3b8;">${escapeHtml(u.job||'')} / ${escapeHtml(u.position||'')}</div>
         </div>
-        <div class="gb-bar-wrap" style="margin-top:2px;"><span style="font-size:10px;color:${hpColor};">❤️ ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
+        <div class="gb-bar-wrap" style="margin-top:2px;"><span style="font-size:10px;color:${hpColor};">❤️ ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}${shieldInfo}</span><div class="gb-bar" style="position:relative;"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div>${shieldPct > 0 ? `<div style="position:absolute;top:0;left:${hpPct}%;width:${Math.min(shieldPct, 100 - hpPct)}%;height:100%;background:#a78bfa;opacity:0.7;border-radius:0 999px 999px 0;"></div>` : ''}</div></div>
         <div style="display:flex;gap:6px;">
           <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:9px;color:#60a5fa;">💧 ${Math.floor(u.mp)}/${Math.floor(u.maxMp)}</span><div class="gb-bar"><div class="gb-bar-fill mp" style="width:${mpPct}%"></div></div></div>
           <div class="gb-bar-wrap" style="flex:1;"><span style="font-size:9px;color:#fbbf24;">⚡ ${Math.floor(u.sp)}/${Math.floor(u.maxSp)}</span><div class="gb-bar"><div class="gb-bar-fill sp" style="width:${spPct}%"></div></div></div>
@@ -11142,14 +11151,17 @@ function renderCommandPanel(runtime) {
     // ── 몰입형 유닛 카드 (적) ──
     function immersiveEnemyCard(u) {
       const hpPct = u.maxHp > 0 ? Math.round(u.hp / u.maxHp * 100) : 0;
+      const shieldTotal = getUnitShieldTotal(u);
+      const shieldPct = (shieldTotal > 0 && u.maxHp > 0) ? Math.min(100, Math.round(shieldTotal / u.maxHp * 100)) : 0;
       const kindColor = u.kind === 'Boss' ? '#dc2626' : u.kind === 'Elite' ? '#d97706' : '#64748b';
       const statusIcons = getStatusIcons(u.statuses, false);
+      const shieldInfo = shieldTotal > 0 ? ` <span style="font-size:9px;color:#a78bfa;">🛡️${shieldTotal}</span>` : '';
       return `<div class="gb-unit${u.dead ? ' is-dead' : ''}" style="padding:3px 6px;border-left:3px solid ${kindColor};margin-bottom:1px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div><strong style="font-size:12px;">${escapeHtml(u.name)}</strong> <span class="gb-badge" style="font-size:9px;padding:1px 4px;">${escapeHtml(u.rank||'')}</span> <span class="gb-badge" style="background:rgba(239,68,68,0.18);color:#fca5a5;font-size:8px;padding:1px 3px;">${escapeHtml(u.kind||'')}</span>${statusIcons.length ? ` ${statusIcons.join('')}` : ''}</div>
           <span style="font-size:9px;color:#94a3b8;">${escapeHtml(rowLabel(u.row))}</span>
         </div>
-        <div class="gb-bar-wrap" style="margin-top:2px;"><span style="font-size:10px;">HP ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}</span><div class="gb-bar"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div></div></div>
+        <div class="gb-bar-wrap" style="margin-top:2px;"><span style="font-size:10px;">HP ${Math.floor(u.hp)}/${Math.floor(u.maxHp)}${shieldInfo}</span><div class="gb-bar" style="position:relative;"><div class="gb-bar-fill hp" style="width:${hpPct}%"></div>${shieldPct > 0 ? `<div style="position:absolute;top:0;left:${hpPct}%;width:${Math.min(shieldPct, 100 - hpPct)}%;height:100%;background:#a78bfa;opacity:0.7;border-radius:0 999px 999px 0;"></div>` : ''}</div></div>
         ${u.lastAction ? `<div style="font-size:9px;color:#94a3b8;margin-top:1px;font-style:italic;">↳ ${escapeHtml(u.lastAction)}</div>` : ''}
       </div>`;
     }
