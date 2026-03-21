@@ -14943,7 +14943,7 @@ async function saveMaterialTraitFromForm() {
         if (!skill) throw new Error(`스킬 "${skillId}"을 찾을 수 없다.`);
         const charRank = (entry.rank || 'E').toUpperCase();
         const skillRank = (skill.grade || item.rank || 'E').toUpperCase();
-        if (!skill.growth && charRank !== skillRank) throw new Error(`등급이 맞지 않음! ${entry.name}: ${charRank}급 / 스킬: ${skillRank}급. 같은 등급만 배울 수 있다.`);
+        if (!skill.growth && rankIndex(charRank) < rankIndex(skillRank)) throw new Error(`등급이 부족함! ${entry.name}: ${charRank}급 / 스킬: ${skillRank}급. 자신 등급 이하의 스킬만 배울 수 있다.`);
         const skillStats = skill.statTypes || [];
         const charMainStat = (entry.attackStat || (entry.damageType === 'magic' ? 'int' : 'str'));
         if (skillStats.length > 0 && !skillStats.includes(charMainStat)) {
@@ -15915,7 +15915,7 @@ async function saveMaterialTraitFromForm() {
         if (!skill) throw new Error(`스킬 "${skillId}"을 찾을 수 없다.`);
         const charRank = (entry.rank || 'E').toUpperCase();
         const skillRank = (skill.grade || item.rank || 'E').toUpperCase();
-        if (!skill.growth && charRank !== skillRank) throw new Error(`등급이 맞지 않음! 캐릭터: ${charRank}급 / 스킬: ${skillRank}급. 같은 등급만 배울 수 있다.`);
+        if (!skill.growth && rankIndex(charRank) < rankIndex(skillRank)) throw new Error(`등급이 부족함! 캐릭터: ${charRank}급 / 스킬: ${skillRank}급. 자신 등급 이하의 스킬만 배울 수 있다.`);
         const skillStats = skill.statTypes || [];
         const charMainStat = (entry.attackStat || (entry.damageType === 'magic' ? 'int' : 'str'));
         if (skillStats.length > 0 && !skillStats.includes(charMainStat)) {
