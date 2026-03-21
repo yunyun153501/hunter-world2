@@ -567,7 +567,7 @@ const EQUIP_RANK_PREFIX = {
 };
 const EQUIP_NAME_SUFFIXES = {
   weapon: ['검','대검','창','활','대궁','석궁','완드','지팡이','로드','도끼','쌍검','단검','레이피어','총','저격총','권갑','스파이크','투창','투척단검','숏소드'],
-  subweapon: ['방패','예비검','예비대검','예비단검','예비지팡이','예비활'],
+  subweapon: ['방패','예비검','예비대검','예비창','예비활','예비대궁','예비석궁','예비완드','예비지팡이','예비로드','예비도끼','예비쌍검','예비단검','예비레이피어','예비총','예비저격총','예비권갑','예비스파이크','예비투창','예비투척단검','예비숏소드'],
   accessory: ['귀걸이','반지','목걸이','벨트','표식','장갑','보호대','수정구','화살','신발'],
   armor_heavy: ['강철갑옷','판금갑옷','백은중갑','중갑'],
   armor_light: ['사슬갑옷','전술경갑','백은경갑','경갑'],
@@ -2145,7 +2145,7 @@ const RARE_FAMILY_PRESETS = {
     const builtinSkills = (defaults.customSkills || []).filter(s => {
       if (!s.id) return false;
       if (s.id === 'skill_guide') return true;
-      if (s.id.startsWith('skill_yuna_') || s.id.startsWith('skill_haneul_') || s.id.startsWith('skill_ohana_')) return true;
+      if (s.id.startsWith('skill_yuna_') || s.id.startsWith('skill_haneul_') || s.id.startsWith('skill_ohana_') || s.id.startsWith('skill_minsu_')) return true;
       return false;
     });
     for (const defSkill of builtinSkills) {
@@ -5620,7 +5620,6 @@ function renderGateRunPanel(run) {
   if (gateTab === 'party') {
     // 파티 관리 탭: 클릭 시 장비/스킬/인벤 상세 보기
     const detailId = model.state.gatePartyDetailId || '';
-    const skillMap = getAllSkillMap();
     const catLabel = { singleAttack:'단일공격', aoeAttack:'광역공격', singleCC:'단일CC', aoeCC:'광역CC', buff:'버프', singleHeal:'힐', aoeHeal:'광역힐', passive:'패시브', utility:'유틸' };
     tabContent = `
       <div class="gb-panel">
