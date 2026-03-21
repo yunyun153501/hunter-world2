@@ -566,7 +566,7 @@ const EQUIP_RANK_PREFIX = {
   S: ['전설의','신화의','초월한','불멸의','천상의']
 };
 const EQUIP_NAME_SUFFIXES = {
-  weapon: ['검','대검','창','활','대궁','석궁','완드','지팡이','로드','도끼','쌍검','단검','레이피어','총','저격총','권갑','스파이크','투창','투척단검'],
+  weapon: ['검','대검','창','활','대궁','석궁','완드','지팡이','로드','도끼','쌍검','단검','레이피어','총','저격총','권갑','스파이크','투창','투척단검','숏소드'],
   subweapon: ['방패','예비검','예비대검','예비단검','예비지팡이','예비활'],
   accessory: ['귀걸이','반지','목걸이','벨트','표식','장갑','보호대','수정구','화살','신발'],
   armor_heavy: ['강철갑옷','판금갑옷','백은중갑','중갑'],
@@ -728,8 +728,8 @@ function equipTraitDisplay(traitId, rank) {
     const scaleTable = (pack.valueScales || {})[traitDef.scale];
     const val = scaleTable && scaleTable[String(rank || 'E').toUpperCase()];
     if (val != null) {
-      // defenseFlat은 고정값이므로 % 대신 + 표시
-      if (traitDef.scale === 'defenseFlat') return `${label} +${val}`;
+      // defenseFlat/statFlat은 고정값이므로 % 대신 + 표시
+      if (traitDef.scale === 'defenseFlat' || traitDef.scale === 'statFlat') return `${label} +${val}`;
       return `${label} +${val}%`;
     }
   }
@@ -1900,7 +1900,7 @@ const RARE_FAMILY_PRESETS = {
             armor:{ id:'eq_npc_yuna_armor', name:'E급 조악한 판금갑옷', category:'equipment', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'heavy', armorStatBonusMul:0, enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:0, pdef:3, mdef:0, mainStat:'', resistType:'', resistPct:0, price:400000, note:'E급 표준 중갑.' },
             accessory:null, bag:null
           }},
-          note:'고유 NPC. E급 탱커. 강철모루(성장형 포지션스킬) 보유 — A급 달성 시 백금모루(유니크)로 승급.\n장비: 협회지급 단검, E급 조악한 방패, E급 조악한 판금갑옷.' },
+          note:'고유 NPC. E급 탱커. 강철모루(성장형 포지션스킬) 보유.\n장비: 협회지급 단검, E급 조악한 방패, E급 조악한 판금갑옷.' },
         // ── NPC: 송하늘 ──
         { id:'char_haneul', name:'송하늘', job:'궁수', position:'원거리', row:'back', rank:'E', level:7,
           stats:{ str:10, con:14, int:10, agi:24, sense:15 },
@@ -1942,7 +1942,21 @@ const RARE_FAMILY_PRESETS = {
             weapon:null, subweapon:null, armor:null, accessory:null,
             bag:{ id:'eq_npc_dohyun_bag', name:'E급 기본가방', category:'equipment', part:'bag', rank:'E', bagId:'bag_E', slotBonus:8, maxWeightBonusG:7000, weightMul:1.00, durability:100, maxDurability:100, note:'짐꾼 전용 가방.' }
           }},
-          note:'고유 NPC. 비전투/리페어/짐꾼. 레벨8.\n패시브: 탁월한 손재주 — 수리속도·통찰력 상승 (메모)\n현장정비&응급처치 — 휴식효과 +1% 고정값 상승 (파티 참가 시 자동)\n빠른수리 — 전투 중 내구도 감소 50% (파티 참가 시 자동)\n장비: E급 가방, E급 곡괭이\n※ 승급 불가. 게이트클리어기록: E급소형6회, E급중형2회, E급대형1회(비전투)' }
+          note:'고유 NPC. 비전투/리페어/짐꾼. 레벨8.\n패시브: 탁월한 손재주 — 수리속도·통찰력 상승\n현장정비&응급처치 — 휴식효과 +1% 고정값 상승 (파티 참가 시 자동)\n빠른수리 — 전투 중 내구도 감소 50% (파티 참가 시 자동)\n장비: E급 가방, E급 곡괭이\n게이트클리어기록: E급소형6회, E급중형2회, E급대형1회(비전투)' },
+        // ── NPC: 김민수 ──
+        { id:'char_minsu', name:'김민수', job:'없음', position:'탱커', row:'front', rank:'E', level:5,
+          stats:{ str:12, con:16, int:10, agi:10, sense:12 },
+          hp:0, mp:0, sp:0, atk:0, pdef:0, mdef:0,
+          damageType:'physical', attackStat:'str',
+          skills:['skill_minsu_taunt'],
+          threatBase:5,
+          inventory:{ gold:0, items:[], equipped:{
+            weapon:{ id:'eq_npc_minsu_weapon', name:'협회지급 숏소드', category:'equipment', part:'weapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:[], durability:100, maxDurability:100, atk:5, pdef:0, mdef:0, mainStat:'str', resistType:'', resistPct:0, price:0, note:'협회에서 신규 헌터에게 지급하는 표준 규격 숏소드.' },
+            subweapon:{ id:'eq_npc_minsu_sub', name:'E급 낡은 방패', category:'equipment', part:'subweapon', rank:'E', rarity:'Normal', enhance:0, infuse:0, maxInfuse:2, traits:['magic_defense'], durability:100, maxDurability:100, atk:0, pdef:1, mdef:0, mainStat:'con', resistType:'', resistPct:0, price:300000, note:'E급 낡은 방패. 마법피해감소.' },
+            armor:{ id:'eq_npc_minsu_armor', name:'E급 낡은 강철갑옷', category:'equipment', part:'armor', rank:'E', rarity:'Normal', armorSubtype:'heavy', armorStatBonusMul:0, enhance:0, infuse:0, maxInfuse:2, traits:['physical_defense'], durability:100, maxDurability:100, atk:0, pdef:3, mdef:0, mainStat:'', resistType:'', resistPct:0, price:400000, note:'E급 낡은 강철갑옷. 물리피해감소.' },
+            accessory:null, bag:null
+          }},
+          note:'고유 NPC. E급 탱커. 이목집중(성장형 포지션스킬) 보유.\n장비: 협회지급 숏소드, E급 낡은 방패(마법피해감소), E급 낡은 강철갑옷(물리피해감소).' }
       ],
       monsters: buildSampleMonsters(),
       personas: [
@@ -1966,7 +1980,7 @@ const RARE_FAMILY_PRESETS = {
             A:{ name:'백금모루', rarity:'Unique', passiveBonuses:{ pdef:60 }, anvilStack:{ pctPerHit:10, maxPct:70 }, desc:'[A] 유니크 승급! 물리방어력 +60 (패시브, +20% 추가). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' },
             S:{ name:'백금모루', rarity:'Unique', passiveBonuses:{ pdef:84 }, anvilStack:{ pctPerHit:10, maxPct:70 }, desc:'[S] 유니크! 물리방어력 +84 (패시브, +20% 추가). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' }
           },
-          desc:'[성장형/포지션/패시브] 등급별로 물리방어력 상승 (defenseFlat 스케일). 전투 시 자동 적용.\n피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.\n★ A급 달성 시 백금모루(유니크)로 승급: 물방 +20% 추가 / 최대 70% / HP 40% 이하 시 회복.' },
+          desc:'[성장형/포지션/패시브] 등급별로 물리방어력 상승 (defenseFlat 스케일). 전투 시 자동 적용.\n피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
         { id:'skill_yuna_shield', name:'방패숙련', grade:'E', rarity:'Normal', category:'passive', target:'self',
           skillUsage: 'general',
           costs:{ mp:0, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:0,
@@ -2041,7 +2055,21 @@ const RARE_FAMILY_PRESETS = {
             A:{ grade:'A', knifeRecall:{ recoverChance:0.90, hitChance:0.70 }, desc:'[A] 투척단검 회수 시도. 회수확률 90%, 회수 시 적에게 명중확률 70%.' },
             S:{ grade:'S', knifeRecall:{ recoverChance:1.00, hitChance:0.80 }, desc:'[S] 투척단검 회수 시도. 회수확률 100%, 회수 시 적에게 명중확률 80%.' }
           },
-          desc:'[성장형/직업] 사용한 투척단검을 회수. 회수확률·명중확률이 등급에 따라 상승. 회수된 단검이 적에게 맞으면 등급별 단일 상한 계수 피해.' }
+          desc:'[성장형/직업] 사용한 투척단검을 회수. 회수확률·명중확률이 등급에 따라 상승. 회수된 단검이 적에게 맞으면 등급별 단일 상한 계수 피해.' },
+        // ── 김민수 전용 스킬 ──
+        { id:'skill_minsu_taunt', name:'이목집중', grade:'E', rarity:'Rare', category:'buff', target:'self',
+          growth: true, skillUsage: 'position',
+          costs:{ mp:20, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:3,
+          buff:{ stats:{}, threatBonus:3 },
+          byRank:{
+            E:{ costs:{ mp:20, sp:0 }, buff:{ stats:{}, threatBonus:3 }, desc:'[E] 이목집중: 3턴간 위협도 +3. MP 20.' },
+            D:{ costs:{ mp:25, sp:0 }, buff:{ stats:{}, threatBonus:5 }, desc:'[D] 이목집중: 3턴간 위협도 +5. MP 25.' },
+            C:{ costs:{ mp:30, sp:0 }, buff:{ stats:{}, threatBonus:7 }, desc:'[C] 이목집중: 3턴간 위협도 +7. MP 30.' },
+            B:{ costs:{ mp:40, sp:0 }, buff:{ stats:{}, threatBonus:10 }, desc:'[B] 이목집중: 3턴간 위협도 +10. MP 40.' },
+            A:{ costs:{ mp:55, sp:0 }, buff:{ stats:{}, threatBonus:13 }, desc:'[A] 이목집중: 3턴간 위협도 +13. MP 55.' },
+            S:{ costs:{ mp:70, sp:0 }, buff:{ stats:{}, threatBonus:16 }, desc:'[S] 이목집중: 3턴간 위협도 +16. MP 70.' }
+          },
+          desc:'[성장형/포지션/버프] 자신의 등급에 따라 위협도가 증가한다. 3턴 지속. MP 비용은 등급별 하한값.' }
       ],
       rareMaterialPack: deepClone(DEFAULT_RARE_MATERIAL_PACK),
       rareMaterialCatalog: [],
@@ -2056,7 +2084,7 @@ const RARE_FAMILY_PRESETS = {
       incomeLog: [],
       activityLog: [],    // [{ ts, actor, action, detail }] LLM 전달용 활동 로그
       guildTaxLog: [],
-      assocEquipClaimed: { 'char_yuna': true, 'char_haneul': true, 'char_ohana': true },  // { [activeCharId]: true } — 협회지급 장비 무료 구매 기록
+      assocEquipClaimed: { 'char_yuna': true, 'char_haneul': true, 'char_ohana': true, 'char_minsu': true },  // { [activeCharId]: true } — 협회지급 장비 무료 구매 기록
       gateClearHistory: { 'char_yuna': { 'E_small': 3 }, 'char_haneul': { 'E_small': 4 }, 'char_ohana': { 'E_small': 2 }, 'char_dohyun': { 'E_small': 6, 'E_medium': 2, 'E_large': 1 } },  // { [characterId/personaId]: { "E_small":count, "E_medium":count, ... } }
       rankUpHistory: {},     // { [characterId/personaId]: { lastAttempt: timestamp, result: 'success'|'fail', targetRank } }
       homeRegions: [],   // [{id, name, homes:[{id, name, area, houseType, deposit, monthlyRent, maintenanceFee, purchasePrice, brokerFee, desc, features:[], storages:[{id,name,type,maxSlots,maxWeightKg,items:[]}]}]}]
@@ -2078,7 +2106,7 @@ const RARE_FAMILY_PRESETS = {
   //   3) run() 안에서 model.db 를 직접 수정 (예: 새 필드 추가, 값 보정 등)
   // 저장 데이터의 dbVersion 이 현재보다 낮으면 해당 마이그레이션만 순차 실행됨.
   // 20시간 세이브든 100시간 세이브든 초기화 없이 자동 패치.
-  const DB_SCHEMA_VERSION = 3;
+  const DB_SCHEMA_VERSION = 4;
 
   function migrateDb() {
     const defaults = buildDefaultDb();
@@ -2287,6 +2315,16 @@ const RARE_FAMILY_PRESETS = {
           if (!model.db.gateClearHistory) model.db.gateClearHistory = {};
           if (!model.db.gateClearHistory['char_dohyun']) {
             model.db.gateClearHistory['char_dohyun'] = { 'E_small': 6, 'E_medium': 2, 'E_large': 1 };
+          }
+        }
+      },
+      {
+        version: 4,
+        name: '김민수 NPC 추가 + 협회지급 장비 기록',
+        run() {
+          if (!model.db.assocEquipClaimed) model.db.assocEquipClaimed = {};
+          if (!model.db.assocEquipClaimed['char_minsu']) {
+            model.db.assocEquipClaimed['char_minsu'] = true;
           }
         }
       },
@@ -5634,12 +5672,13 @@ function renderGateRunPanel(run) {
             }
             // 스킬 상세
             const skillDetails = (u.skills || []).map(sId => {
-              const sk = skillMap[sId];
+              const sk = resolveSkillForUnit(u, sId);
               if (!sk) return `<div class="gb-sub" style="padding:1px 0;font-size:11px;">• ${escapeHtml(sId)}</div>`;
               const costStr = sk.costs ? [sk.costs.mp ? 'MP:'+sk.costs.mp : '', sk.costs.sp ? 'SP:'+sk.costs.sp : ''].filter(Boolean).join('/') : '';
               const coefStr = sk.coef != null ? (sk.growth && Number(sk.coef) === 0 ? '계수:자동(성장형)' : '계수:' + sk.coef) : '';
               const cat = catLabel[sk.category] || sk.category;
-              return `<div class="gb-sub" style="padding:1px 0;font-size:11px;">• <strong>${escapeHtml(sk.name)}</strong> <span class="gb-badge" style="font-size:9px;">${cat}</span>${coefStr ? ' <span class="gb-badge" style="font-size:9px;">'+coefStr+'</span>' : ''}${costStr ? ' <span style="font-size:10px;color:#94a3b8;">['+costStr+']</span>' : ''}${sk.desc ? ' — '+escapeHtml(sk.desc) : ''}</div>`;
+              const nameStyle = rarityStyle(sk.rarity);
+              return `<div class="gb-sub" style="padding:1px 0;font-size:11px;">• <strong style="${nameStyle}">${escapeHtml(sk.name)}</strong>${sk.rarity && sk.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(sk.rarity)};color:#000;font-size:9px;">${escapeHtml(sk.rarity)}</span>` : ''} <span class="gb-badge" style="font-size:9px;">${cat}</span>${coefStr ? ' <span class="gb-badge" style="font-size:9px;">'+coefStr+'</span>' : ''}${costStr ? ' <span style="font-size:10px;color:#94a3b8;">['+costStr+']</span>' : ''}${sk.desc ? ' — '+escapeHtml(sk.desc) : ''}</div>`;
             }).join('') || '<div class="gb-sub" style="font-size:11px;">스킬 없음</div>';
           }
           return `<div class="gb-unit${isDead ? ' is-dead' : ''}" data-gate-party-detail="${escapeHtml(uid)}" style="cursor:pointer;">
@@ -5654,15 +5693,16 @@ function renderGateRunPanel(run) {
             ${isOpen ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(148,163,184,0.2);">
               <div style="font-weight:600;font-size:12px;margin-bottom:4px;">📜 스킬 상세</div>
               ${(u.skills || []).map(sId => {
-                const sk = skillMap[sId];
+                const sk = resolveSkillForUnit(u, sId);
                 if (!sk) return '<div class="gb-sub" style="padding:1px 0;font-size:11px;">• ' + escapeHtml(sId) + '</div>';
                 const costStr = sk.costs ? [sk.costs.mp ? 'MP:'+sk.costs.mp : '', sk.costs.sp ? 'SP:'+sk.costs.sp : ''].filter(Boolean).join('/') : '';
                 const coefStr = sk.coef != null ? (sk.growth && Number(sk.coef) === 0 ? '계수:자동(성장형)' : '계수:' + sk.coef) : '';                const cat = catLabel[sk.category] || sk.category;
-                return '<div class="gb-sub" style="padding:1px 0;font-size:11px;">• <strong>' + escapeHtml(sk.name) + '</strong> <span class="gb-badge" style="font-size:9px;">' + cat + '</span>' + (coefStr ? ' <span class="gb-badge" style="font-size:9px;">'+coefStr+'</span>' : '') + (costStr ? ' <span style="font-size:10px;color:#94a3b8;">['+costStr+']</span>' : '') + (sk.desc ? ' — '+escapeHtml(sk.desc) : '') + '</div>';
+                const _nameStyle = rarityStyle(sk.rarity);
+                return '<div class="gb-sub" style="padding:1px 0;font-size:11px;">• <strong style="' + _nameStyle + '">' + escapeHtml(sk.name) + '</strong>' + (sk.rarity && sk.rarity !== 'Normal' ? ' <span class="gb-badge" style="background:'+rarityColor(sk.rarity)+';color:#000;font-size:9px;">'+escapeHtml(sk.rarity)+'</span>' : '') + ' <span class="gb-badge" style="font-size:9px;">' + cat + '</span>' + (coefStr ? ' <span class="gb-badge" style="font-size:9px;">'+coefStr+'</span>' : '') + (costStr ? ' <span style="font-size:10px;color:#94a3b8;">['+costStr+']</span>' : '') + (sk.desc ? ' — '+escapeHtml(sk.desc) : '') + '</div>';
               }).join('') || '<div class="gb-sub" style="font-size:11px;">스킬 없음</div>'}
               ${equipHtml}
               ${invHtml}
-            </div>` : `<div class="gb-sub">스킬: ${(u.skills||[]).length ? (u.skills||[]).map(s => { const sk = skillMap[s]; return sk ? escapeHtml(sk.name) : escapeHtml(s); }).join(', ') : '없음'}</div>`}
+            </div>` : `<div class="gb-sub">스킬: ${(u.skills||[]).length ? (u.skills||[]).map(s => { const sk = resolveSkillForUnit(u, s); return sk ? escapeHtml(sk.name) : escapeHtml(s); }).join(', ') : '없음'}</div>`}
           </div>`;
         }).join('')}
       </div>`;
@@ -10585,9 +10625,8 @@ function renderCharacterView() {
       </div>`;
     }).join('');
 
-    const skillMap = getAllSkillMap();
     const skillList = (u.skills || []).map(sId => {
-      const sk = skillMap[sId];
+      const sk = resolveSkillForUnit(u, sId);
       if (!sk) return `<div class="gb-sub" style="padding:2px 0;">• ${escapeHtml(sId)}</div>`;
       const costStr = sk.costs ? [sk.costs.mp ? `MP:${sk.costs.mp}` : '', sk.costs.sp ? `SP:${sk.costs.sp}` : ''].filter(Boolean).join(' / ') : '비용 없음';
       const coefStr = sk.coef != null ? (sk.growth && Number(sk.coef) === 0 ? `계수: 자동(성장형)` : `계수: ${sk.coef}`) : '';
@@ -10601,7 +10640,8 @@ function renderCharacterView() {
       const passiveStr = sk.passiveBonuses ? `패시브:${Object.entries(sk.passiveBonuses).map(([k,v])=>`${k}+${v}`).join(',')}` : '';
       const byRankStr = sk.byRank ? '(등급별 성장)' : '';
       const details = [catLabel, coefStr, costStr, dmgTypeStr, elemStr, statTypeStr, durationStr, ccStr, buffStr, passiveStr, byRankStr].filter(Boolean).join(' | ');
-      return `<div class="gb-sub" style="padding:2px 0;cursor:help;" title="${escapeHtml(details)}">• <strong>${escapeHtml(sk.name)}</strong> <span class="gb-badge">${escapeHtml(catLabel)}</span> ${coefStr ? `<span class="gb-badge">${coefStr}</span>` : ''} ${costStr ? `<span class="gb-sub" style="font-size:10px;">[${escapeHtml(costStr)}]</span>` : ''} ${sk.desc ? '— ' + escapeHtml(sk.desc) : ''}</div>`;
+      const nameStyle = rarityStyle(sk.rarity);
+      return `<div class="gb-sub" style="padding:2px 0;cursor:help;" title="${escapeHtml(details)}">• <strong style="${nameStyle}">${escapeHtml(sk.name)}</strong>${sk.rarity && sk.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(sk.rarity)};color:#000;font-size:9px;">${escapeHtml(sk.rarity)}</span>` : ''} <span class="gb-badge">${escapeHtml(catLabel)}</span> ${coefStr ? `<span class="gb-badge">${coefStr}</span>` : ''} ${costStr ? `<span class="gb-sub" style="font-size:10px;">[${escapeHtml(costStr)}]</span>` : ''} ${sk.desc ? '— ' + escapeHtml(sk.desc) : ''}</div>`;
     }).join('') || '<div class="gb-sub">스킬 없음</div>';
 
     detailHtml = `
@@ -11127,7 +11167,8 @@ function renderCommandPanel(runtime) {
       const maxInfuse = eq.maxInfuse ?? (typeof EQUIP_MAX_INFUSE !== 'undefined' ? EQUIP_MAX_INFUSE[p] : 1) ?? 1;
       const curInfuse = eq.infuse || 0;
       const traitTxt = (eq.traits||[]).length ? (eq.traits||[]).map(t=>equipTraitDisplay(t, eq.rank)).join(', ') : '';
-      return `<div style="margin:2px 0;font-size:11px;">${EQUIP_PART_LABELS[p]}: <strong style="${rarityStyle(eq.rarity)}">${escapeHtml(eq.name||eq.id)}${enhTxt}</strong>${eq.rarity && eq.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(eq.rarity)};color:#000;font-size:9px;">${escapeHtml(eq.rarity)}</span>` : ''} <span class="gb-sub">${escapeHtml(eq.rank||'E')}등급${p === 'armor' && eq.armorSubtype && ARMOR_SUBTYPES[eq.armorSubtype] ? ' '+escapeHtml(ARMOR_SUBTYPES[eq.armorSubtype].label)+(ARMOR_SUBTYPES[eq.armorSubtype].atkMul ? ' ATK'+Math.round(ARMOR_SUBTYPES[eq.armorSubtype].atkMul*100)+'%' : '')+(ARMOR_SUBTYPES[eq.armorSubtype].statBonusMul ? ' 스탯+'+Math.round(ARMOR_SUBTYPES[eq.armorSubtype].statBonusMul*100)+'%' : '') : ''}</span>${statParts.length ? ` <span style="color:#94a3b8;">[${statParts.join('/')}]</span>` : ''} <span class="gb-sub">강화 ${eq.enhance||0}/${maxEnhance} | 주입 ${curInfuse}/${maxInfuse} | 내구 ${Math.floor(dur)}/${Math.floor(maxDur)}</span>${traitTxt ? ` <span style="color:#a78bfa;font-size:10px;">(${escapeHtml(traitTxt)})</span>` : ''}</div>`;
+      const smeTag = eq.specialEffect && eq.specialEffect.effectId ? ' <span style="color:#a78bfa;font-size:10px;">✨특수효과</span>' : '';
+      return `<div style="margin:2px 0;font-size:11px;">${EQUIP_PART_LABELS[p]}: <strong style="${rarityStyle(eq.rarity)}">${escapeHtml(eq.name||eq.id)}${enhTxt}</strong>${eq.rarity && eq.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(eq.rarity)};color:#000;font-size:9px;">${escapeHtml(eq.rarity)}</span>` : ''} <span class="gb-sub">${escapeHtml(eq.rank||'E')}등급${p === 'armor' && eq.armorSubtype && ARMOR_SUBTYPES[eq.armorSubtype] ? ' '+escapeHtml(ARMOR_SUBTYPES[eq.armorSubtype].label)+(ARMOR_SUBTYPES[eq.armorSubtype].atkMul ? ' ATK'+Math.round(ARMOR_SUBTYPES[eq.armorSubtype].atkMul*100)+'%' : '')+(ARMOR_SUBTYPES[eq.armorSubtype].statBonusMul ? ' 스탯+'+Math.round(ARMOR_SUBTYPES[eq.armorSubtype].statBonusMul*100)+'%' : '') : ''}</span>${statParts.length ? ` <span style="color:#94a3b8;">[${statParts.join('/')}]</span>` : ''} <span class="gb-sub">강화 ${eq.enhance||0}/${maxEnhance} | 주입 ${curInfuse}/${maxInfuse} | 내구 ${Math.floor(dur)}/${Math.floor(maxDur)}</span>${traitTxt ? ` <span style="color:#a78bfa;font-size:10px;">(${escapeHtml(traitTxt)})</span>` : ''}${smeTag}</div>`;
     }).filter(Boolean);
 
     // 기본값: 스탯 기반 (장비 제외) — PDEF/MDEF는 기본 0, ATK는 스탯 보너스만
@@ -11203,6 +11244,7 @@ function renderCommandPanel(runtime) {
             mainStatLabel,
             infuseInfo
           ].filter(Boolean).join(' | ');
+           const smeInfo = eq.specialEffect && eq.specialEffect.effectId ? (() => { const eff = typeof getSpecialMaterialEffectById === 'function' ? getSpecialMaterialEffectById(eq.specialEffect.effectId) : null; const desc = eff ? ((eq.specialEffect.type === 'debuff' && eff.canDebuff) ? eff.debuffDesc : eff.buffDesc) : eq.specialEffect.effectId; return `<div class="gb-sub" style="color:#a78bfa;">✨특수효과: ${escapeHtml((desc||'').replace(/N/g, String(eq.specialEffect.value||0)))} (${eq.specialEffect.chance||0}%)</div>`; })() : '';
           return `<div class="gb-unit"><div class="gb-unit-top">
             <div>
               <span class="gb-sub" style="font-size:0.8em;">${label}</span>
@@ -11210,6 +11252,7 @@ function renderCommandPanel(runtime) {
               <div class="gb-sub">내구도 ${fmtDur(dur)}/${fmtDur(maxDur)} | ${escapeHtml(eq.rank||'E')}등급${eq.part === 'armor' && eq.armorSubtype && ARMOR_SUBTYPES[eq.armorSubtype] ? ` | ${escapeHtml(ARMOR_SUBTYPES[eq.armorSubtype].label)}${ARMOR_SUBTYPES[eq.armorSubtype].atkMul ? ' ATK'+Math.round(ARMOR_SUBTYPES[eq.armorSubtype].atkMul*100)+'%' : ''}${ARMOR_SUBTYPES[eq.armorSubtype].statBonusMul ? ' 스탯+'+Math.round(ARMOR_SUBTYPES[eq.armorSubtype].statBonusMul*100)+'%' : ''}` : ''}</div>
               ${statsLine ? `<div class="gb-sub" style="color:#60a5fa;">${escapeHtml(statsLine)}</div>` : ''}
               ${traitTxt ? `<div class="gb-sub" style="color:#a78bfa;">특성: ${escapeHtml(traitTxt)}</div>` : ''}
+              ${smeInfo}
             </div>
             <button class="gb-btn tiny" data-personal-unequip="${type}:${entityId}:${part}">해제</button>
           </div></div>`;
@@ -11268,6 +11311,7 @@ function renderCommandPanel(runtime) {
           const isBag = it.category === 'bag';
           const isSB = it.category === 'skillbook';
           const traitTxt = isEq && (it.traits||[]).length ? ` [${(it.traits||[]).map(t=>equipTraitDisplay(t, it.rank)).join(',')}]` : '';
+          const smeTag = isEq && it.specialEffect && it.specialEffect.effectId ? ' · ✨특수효과' : '';
           let descLine = '';
           if (isSB) {
             const _sk = it.skillId && BUILTIN_SKILLS ? BUILTIN_SKILLS[it.skillId] : null;
@@ -11289,7 +11333,7 @@ function renderCommandPanel(runtime) {
               ${isEq ? `<span class="gb-badge">${escapeHtml(EQUIP_PART_LABELS[it.part]||it.part||'')}</span>` : ''}
               ${isSB ? `<span class="gb-badge" style="background:#d97706;">📖 T${it.skillTier||'?'}</span>` : ''}
               ${isBag ? `<span class="gb-badge">가방</span>` : ''}
-              ${traitTxt ? `<span class="gb-sub">${escapeHtml(traitTxt)}</span>` : ''}
+              ${traitTxt ? `<span class="gb-sub">${escapeHtml(traitTxt)}</span>` : ''}${smeTag ? `<span class="gb-sub" style="color:#a78bfa;">${smeTag}</span>` : ''}
               ${isEq ? `<div class="gb-sub">내구도 ${fmtDur(it.durability)}/${fmtDur(it.maxDurability)}</div>` : ''}
               ${descLine ? `<div class="gb-sub">${escapeHtml(descLine)}</div>` : ''}
               ${isBag && it.note ? `<div class="gb-sub">${escapeHtml(it.note)}</div>` : ''}
