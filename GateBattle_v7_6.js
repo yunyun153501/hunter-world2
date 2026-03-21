@@ -1999,14 +1999,14 @@ const RARE_FAMILY_PRESETS = {
           passiveBonuses:{ pdef:3 },
           anvilStack:{ pctPerHit:10, maxPct:50 },
           byRank:{
-            E:{ passiveBonuses:{ pdef:3 }, anvilStack:{ pctPerHit:10, maxPct:50 }, desc:'[E] 물리방어력 +3 (패시브). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            D:{ passiveBonuses:{ pdef:8 }, anvilStack:{ pctPerHit:10, maxPct:50 }, desc:'[D] 물리방어력 +8 (패시브). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            C:{ passiveBonuses:{ pdef:20 }, anvilStack:{ pctPerHit:10, maxPct:50 }, desc:'[C] 물리방어력 +20 (패시브). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            B:{ passiveBonuses:{ pdef:35 }, anvilStack:{ pctPerHit:10, maxPct:50 }, desc:'[B] 물리방어력 +35 (패시브). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
-            A:{ name:'백금모루', rarity:'Unique', passiveBonuses:{ pdef:60 }, anvilStack:{ pctPerHit:10, maxPct:70 }, desc:'[A] 유니크 승급! 물리방어력 +60 (패시브, +20% 추가). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' },
-            S:{ name:'백금모루', rarity:'Unique', passiveBonuses:{ pdef:84 }, anvilStack:{ pctPerHit:10, maxPct:70 }, desc:'[S] 유니크! 물리방어력 +84 (패시브, +20% 추가). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 70%). HP 40% 이하 시 매턴 5% 체력회복.' }
+            E:{ passiveBonuses:{ pdef:3 }, anvilStack:{ pctPerHit:10, maxPct:50 }, desc:'[E] 물리방어력 +3 (패시브). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 3% 체력회복.' },
+            D:{ passiveBonuses:{ pdef:8 }, anvilStack:{ pctPerHit:10, maxPct:50 }, desc:'[D] 물리방어력 +8 (패시브). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 3% 체력회복.' },
+            C:{ passiveBonuses:{ pdef:20 }, anvilStack:{ pctPerHit:10, maxPct:50 }, desc:'[C] 물리방어력 +20 (패시브). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 3% 체력회복.' },
+            B:{ passiveBonuses:{ pdef:35 }, anvilStack:{ pctPerHit:10, maxPct:50 }, desc:'[B] 물리방어력 +35 (패시브). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 3% 체력회복.' },
+            A:{ name:'백금모루', rarity:'Unique', passiveBonuses:{ pdef:60 }, anvilStack:{ pctPerHit:10, maxPct:70 }, desc:'[A] 유니크 승급! 물리방어력 +60 (패시브, +20% 추가). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 70%). HP 40% 이하 시 매턴 3% 체력회복.' },
+            S:{ name:'백금모루', rarity:'Unique', passiveBonuses:{ pdef:84 }, anvilStack:{ pctPerHit:10, maxPct:70 }, desc:'[S] 유니크! 물리방어력 +84 (패시브, +20% 추가). 피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 70%). HP 40% 이하 시 매턴 3% 체력회복.' }
           },
-          desc:'[성장형/포지션/패시브] 등급별로 물리방어력 상승 (defenseFlat 스케일). 전투 시 자동 적용.\n피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 5% 체력회복.' },
+          desc:'[성장형/포지션/패시브] 등급별로 물리방어력 상승 (defenseFlat 스케일). 전투 시 자동 적용.\n피격 1회마다 강철모루 방어력의 10% 추가 상승(최대 50%). HP 30% 이하 시 매턴 3% 체력회복.' },
         { id:'skill_yuna_shield', name:'방패숙련', grade:'E', rarity:'Normal', category:'passive', target:'self',
           skillUsage: 'general',
           costs:{ mp:0, sp:0 }, coef:0, damageType:'physical', element:'none', statTypes:['con'], duration:0,
@@ -2689,7 +2689,7 @@ function buildDefaultState() {
         // HP 회복 임계점: A급 이상 40%, 나머지 30%
         const isUpgraded = (skill.name || '').includes('백금');
         unit._anvilHpThreshold = isUpgraded ? 0.40 : 0.30;
-        unit._anvilRegenPct = 0.05;
+        unit._anvilRegenPct = 0.03;
       }
     });
     // 투척단검: 무기가 투척단검이면 단검 카운트 초기화 (전투 시작 시 10개)
@@ -7317,7 +7317,7 @@ function getBuffedStat(unit, statKey) {
         const spRegen = Math.max(1, Math.round(unit.maxSp * unit.passiveMods.spRegenPct));
         unit.sp = Math.min(unit.maxSp, unit.sp + spRegen);
       }
-      // 강철모루: HP 임계점 이하 시 매턴 체력 5% 회복
+      // 강철모루: HP 임계점 이하 시 매턴 체력 3% 회복
       if (!unit.dead && unit._anvilPdef > 0 && unit._anvilRegenPct > 0) {
         const threshold = unit._anvilHpThreshold || 0.30;
         if (unit.hp / unit.maxHp <= threshold) {
