@@ -2590,7 +2590,7 @@ function buildDefaultState() {
       lines.push('');
     });
     // 공용 인벤토리 요약
-    const sharedInv = getSharedInventory();
+    const sharedInv = getInventory();
     lines.push(`[공용 인벤토리] 골드: ${formatWon(sharedInv.gold || 0)}원 | 아이템: ${(sharedInv.items || []).length}종`);
     return lines.join('\n');
   }
