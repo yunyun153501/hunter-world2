@@ -2525,6 +2525,76 @@ function buildDefaultState() {
   };
 }
 
+  // ── 파티원 정보 블록 (LLM 전달용) ─────────────────────────────────────────
+  function buildPartyInfoBlock() {
+    const allSkillMap = getAllSkillMap();
+    const team = Array.isArray(model.db.team) ? model.db.team : [];
+    const teamCharIds = team.map(m => m.charId).filter(id => id && id !== '__shared__');
+    const allUnits = (model.db.characters || []).concat(model.db.personas || []);
+    const members = teamCharIds.map(id => allUnits.find(u => u.id === id)).filter(Boolean);
+    if (!members.length) return '(파티원이 없습니다.)';
+    const gd = model.db.gameDate || { year:2026, month:1, day:1 };
+    const lines = [];
+    lines.push(`[파티원 정보] (${gd.year}년 ${gd.month}월 ${gd.day}일 기준)`);
+    lines.push(`인원: ${members.length}명`);
+    lines.push('');
+    members.forEach((u, idx) => {
+      const stats = normaliseStats(u.stats);
+      const lv = Number(u.level || 1);
+      const lvBonus = (lv - 1) * 2;
+      const maxHp = Number(u.hp || (100 + (stats.con - 10) * 10 + (stats.str - 10) * 3 + lvBonus));
+      const maxMp = Number(u.mp || (100 + (stats.int - 10) * 10 + (stats.sense - 10) * 3 + lvBonus));
+      const maxSp = Number(u.sp || (100 + (stats.agi - 10) * 10 + (stats.sense - 10) * 3 + lvBonus));
+      const atk = calcUnitAtk(u, stats);
+      const pdef = calcUnitEquipDef(u, 'pdef');
+      const mdef = calcUnitEquipDef(u, 'mdef');
+      lines.push(`── ${idx+1}. ${u.name} ──`);
+      lines.push(`직업: ${u.job || '무직'} | 포지션: ${u.position || '-'} | 열: ${rowLabel(u.row || 'front')} | 등급: ${u.rank || 'E'} | Lv.${lv}`);
+      lines.push(`스탯: 근력 ${stats.str} / 체력 ${stats.con} / 지능 ${stats.int} / 민첩 ${stats.agi} / 감각 ${stats.sense}`);
+      lines.push(`HP ${maxHp} | MP ${maxMp} | SP ${maxSp} | ATK ${atk} | 물방 ${pdef} | 마방 ${mdef}`);
+      lines.push(`피해타입: ${u.damageType || 'physical'} | 주스탯: ${u.attackStat || 'str'}`);
+      // 장비
+      const inv = u.inventory;
+      if (inv && inv.equipped) {
+        const eqParts = ['weapon','subweapon','armor','accessory'];
+        const eqLines = eqParts.map(part => {
+          const eq = inv.equipped[part];
+          if (!eq) return null;
+          const partLabel = ({weapon:'무기',subweapon:'보조무기',armor:'방어구',accessory:'악세서리'})[part] || part;
+          const enhance = eq.enhance > 0 ? `+${eq.enhance}` : '';
+          const statParts = [eq.atk ? `ATK:${eq.atk}` : '', eq.pdef ? `물방:${eq.pdef}` : '', eq.mdef ? `마방:${eq.mdef}` : ''].filter(Boolean).join('/');
+          const traits = (eq.traits || []).map(tid => { const t = getMaterialTraitById(tid); return t ? t.label || t.id : tid; }).join(', ');
+          return `  ${partLabel}: ${eq.name || eq.id}${enhance ? ' '+enhance : ''} [${eq.rank || '?'}/${eq.rarity || 'Normal'}]${statParts ? ' ('+statParts+')' : ''}${traits ? ' 특성:'+traits : ''}`;
+        }).filter(Boolean);
+        if (eqLines.length) { lines.push('장비:'); eqLines.forEach(l => lines.push(l)); }
+      }
+      // 스킬
+      if (Array.isArray(u.skills) && u.skills.length) {
+        const skillLines = u.skills.map(sid => {
+          const sk = resolveSkillForUnit(u, sid);
+          if (!sk) return `  - ${sid} (미등록)`;
+          const costParts = [];
+          if (sk.costs) { if (sk.costs.mp) costParts.push(`MP:${sk.costs.mp}`); if (sk.costs.sp) costParts.push(`SP:${sk.costs.sp}`); }
+          const costStr = costParts.length ? ` 비용:${costParts.join('/')}` : '';
+          const coefStr = sk.coef ? ` 계수:${sk.coef}` : '';
+          const cdStr = sk.cooldown ? ` 쿨:${sk.cooldown}턴` : '';
+          const growthStr = sk.growth ? ' [성장형]' : '';
+          const rarityStr = sk.rarity && sk.rarity !== 'Normal' ? `[${sk.rarity}]` : '';
+          return `  - ${sk.name} (${sk.grade || '?'}급/${sk.category || '?'}) 대상:${sk.target || '?'}${coefStr}${costStr}${cdStr}${growthStr}${rarityStr}${sk.desc ? ' — '+sk.desc : ''}`;
+        });
+        lines.push('스킬:');
+        skillLines.forEach(l => lines.push(l));
+      }
+      // 메모
+      if (u.note) lines.push(`메모: ${u.note.replace(/\n/g, ' / ')}`);
+      lines.push('');
+    });
+    // 공용 인벤토리 요약
+    const sharedInv = getSharedInventory();
+    lines.push(`[공용 인벤토리] 골드: ${formatWon(sharedInv.gold || 0)}원 | 아이템: ${(sharedInv.items || []).length}종`);
+    return lines.join('\n');
+  }
+
   // ── 활동 로그 ──────────────────────────────────────────────────────────────
   function pushActivityLog(actor, action, detail) {
     if (!Array.isArray(model.db.activityLog)) model.db.activityLog = [];
@@ -7411,6 +7481,7 @@ function getBuffedStat(unit, statKey) {
     const partyHpMax = runtime.party.reduce((s,u)=>s+Number(u.maxHp||0),0);
     const enemyHpNow = runtime.enemies.reduce((s,u)=>s+Math.max(0,u.hp),0);
     const enemyHpMax = runtime.enemies.reduce((s,u)=>s+Number(u.maxHp||0),0);
+    const allSkillMap = getAllSkillMap();
     const lines = [];
     lines.push('[Battle Result]');
     lines.push(`Outcome: ${runtime.outcome || 'In Progress'}`);
@@ -7420,10 +7491,42 @@ function getBuffedStat(unit, statKey) {
     lines.push(`Party HP Sum: ${partyHpNow}/${partyHpMax}`);
     lines.push(`Enemy HP Sum: ${enemyHpNow}/${enemyHpMax}`);
     lines.push('');
+    // ── 전투 참가 유닛 상세 (아군) ──
+    lines.push('[Party Units]');
+    runtime.party.forEach(u => {
+      const dead = u.dead ? ' (사망)' : '';
+      const st = u.stats || {};
+      const skillNames = (u.skills || []).map(sid => { const sk = allSkillMap[sid]; return sk ? sk.name : sid; }).join(', ');
+      const eqSummary = [];
+      if (u.inventory && u.inventory.equipped) {
+        ['weapon','subweapon','armor','accessory'].forEach(part => {
+          const eq = u.inventory.equipped[part];
+          if (eq) eqSummary.push(eq.name || eq.id);
+        });
+      }
+      lines.push(`- ${u.name}${dead} [${u.rank || '?'}급/Lv${u.level || '?'}] ${u.job || ''} ${u.position || ''} (${rowLabel(u.row)})`);
+      lines.push(`  스탯: 근${st.str||0}/체${st.con||0}/지${st.int||0}/민${st.agi||0}/감${st.sense||0} | ATK ${u.atk||0} 물방 ${u.pdef||0} 마방 ${u.mdef||0}`);
+      lines.push(`  MaxHP ${u.maxHp} MaxMP ${u.maxMp} MaxSP ${u.maxSp} | 피해:${u.damageType||'physical'}`);
+      if (skillNames) lines.push(`  스킬: ${skillNames}`);
+      if (eqSummary.length) lines.push(`  장비: ${eqSummary.join(', ')}`);
+    });
+    lines.push('');
+    // ── 전투 참가 유닛 상세 (적군) ──
+    lines.push('[Enemy Units]');
+    runtime.enemies.forEach(u => {
+      const dead = u.dead ? ' (사망)' : '';
+      const skillNames = (u.skills || []).map(sid => { const sk = allSkillMap[sid]; return sk ? sk.name : sid; }).join(', ');
+      const elemStr = u.baseElement && u.baseElement !== 'none' ? ` 속성:${u.baseElement}` : '';
+      const speciesStr = u.speciesLabel ? ` 종족:${u.speciesLabel}` : '';
+      lines.push(`- ${u.name}${dead} [${u.rank || '?'}급/Lv${u.level || '?'}] (${rowLabel(u.row)})${speciesStr}${elemStr}`);
+      lines.push(`  MaxHP ${u.maxHp} MaxMP ${u.maxMp} MaxSP ${u.maxSp} | ATK ${u.atk||0}`);
+      if (skillNames) lines.push(`  스킬: ${skillNames}`);
+    });
+    lines.push('');
     lines.push('[Round Summaries]');
     runtime.roundSummaries.forEach(row => lines.push(`- ${row.text}`));
     lines.push('');
-    lines.push('[Current State]');
+    lines.push('[Current State — After Battle]');
     partyAlive.forEach(u => {
       const buffs = (u.buffs || []).map(b => `${b.name}(${b.turns})`).join(', ');
       const states = [];
@@ -12438,6 +12541,7 @@ function renderLogView() {
       </div>
       <div class="gb-btn-row" style="margin-bottom:8px;">
         <button class="gb-btn primary" id="gb-log-copy">📋 전체 복사 (${filtered.length}건)</button>
+        <button class="gb-btn" id="gb-log-copy-party" style="background:#2563eb;">👥 파티원 정보 복사</button>
         <button class="gb-btn danger" id="gb-log-clear">🗑️ 로그 전체 삭제</button>
       </div>
       <div class="gb-sub" style="margin-bottom:4px;">총 ${filtered.length}건${filter || entityFilter ? ` (전체 ${logs.length}건 중 필터)` : ''}</div>
@@ -13932,6 +14036,13 @@ async function saveMaterialTraitFromForm() {
     on('#gb-log-copy', 'click', () => {
       const area = document.getElementById('gb-log-copy-area');
       if (area) { area.select(); document.execCommand('copy'); toast('📋 활동 로그가 클립보드에 복사되었다.'); }
+    });
+    on('#gb-log-copy-party', 'click', async () => {
+      try {
+        const text = buildPartyInfoBlock();
+        await navigator.clipboard.writeText(text);
+        toast('👥 파티원 상세 정보가 클립보드에 복사되었다.');
+      } catch (e) { toast('클립보드 복사 실패', true); }
     });
     on('#gb-log-clear', 'click', async () => {
       if (!confirm('활동 로그를 전부 삭제하시겠습니까?')) return;
