@@ -5720,8 +5720,12 @@ function renderGateRunPanel(run) {
         <div style="max-height:300px;overflow:auto;margin-top:8px;">
           ${invItems.length ? invItems.map(it => {
             const isEq = it.category === 'equipment';
+            const _nameStyle = isEq ? rarityStyle(it.rarity) : '';
+            const _traitBrief = isEq && Array.isArray(it.traits) && it.traits.length ? ` <span style="color:#a78bfa;font-size:10px;">[${it.traits.map(t=>equipTraitDisplay(t, it.rank)).join(', ')}]</span>` : '';
+            const _smeBrief = isEq && it.specialEffect && it.specialEffect.effectId ? ' <span style="color:#a78bfa;font-size:10px;">✨</span>' : '';
+            const _atkBrief = isEq && it.part === 'weapon' ? ` <span class="gb-sub" style="font-size:10px;">ATK+${it.atk||0}</span>` : '';
             return `<div style="font-size:12px;padding:3px 0;border-bottom:1px solid rgba(148,163,184,0.08);">
-              ${escapeHtml(it.name||it.id)}${it.rank ? ` <span class="gb-badge">${it.rank}</span>` : ''}${isEq && it.part ? ` <span class="gb-badge">${EQUIP_PART_LABELS[it.part]||it.part}</span>` : ''}${it.count > 1 ? ` ×${it.count}` : ''}
+              <span style="${_nameStyle}">${escapeHtml(it.name||it.id)}</span>${it.rank ? ` <span class="gb-badge">${it.rank}</span>` : ''}${isEq && it.part ? ` <span class="gb-badge">${EQUIP_PART_LABELS[it.part]||it.part}</span>` : ''}${isEq && it.rarity && it.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(it.rarity)};color:#000;font-size:8px;">${escapeHtml(it.rarity)}</span>` : ''}${_atkBrief}${_traitBrief}${_smeBrief}${it.count > 1 ? ` ×${it.count}` : ''}
             </div>`;
           }).join('') : '<div class="gb-sub">인벤토리가 비어있다.</div>'}
         </div>
@@ -10253,8 +10257,20 @@ function renderInventoryView() {
       if (it.part === 'armor') { combatLines.push(`물리방어: +${pdefVal}`); combatLines.push(`마법방어: +${mdefVal}`); }
       if (it.part === 'accessory') combatLines.push(it.traits && it.traits.length ? `특성: ${it.traits.map(t=>equipTraitDisplay(t, it.rank)).join(', ')}` : '특성 없음');
       if (combatLines.length) lines.push(combatLines.join(' / '));
+      // 특성 표시 (무기/방어구/보조무기)
+      if (it.part !== 'accessory' && Array.isArray(it.traits) && it.traits.length) {
+        lines.push('특성: ' + it.traits.map(t => equipTraitDisplay(t, it.rank)).join(', '));
+      }
       if (it.mainStat && it.part === 'accessory') lines.push(`주 스탯: ${it.mainStat.toUpperCase()}`);
       if (it.resistType && it.resistPct) lines.push(`${EQUIP_TRAIT_LABELS[it.resistType]||it.resistType} 저항 ${it.resistPct}%`);
+      // 희귀도 표시
+      if (it.rarity && it.rarity !== 'Normal') lines.push(`희귀도: ${it.rarity}`);
+      // 특수효과 표시
+      if (it.specialEffect && it.specialEffect.effectId) {
+        const _eff = typeof getSpecialMaterialEffectById === 'function' ? getSpecialMaterialEffectById(it.specialEffect.effectId) : null;
+        const _desc = _eff ? ((it.specialEffect.type === 'debuff' && _eff.canDebuff) ? _eff.debuffDesc : _eff.buffDesc) : it.specialEffect.effectId;
+        lines.push(`✨특수효과: ${(_desc||'').replace(/N/g, String(it.specialEffect.value||0))} (${it.specialEffect.chance||0}%)`);
+      }
     }
     if (it.stats && typeof it.stats === 'object') {
       const statStrs = Object.entries(it.stats).filter(([,v])=>Number(v)!==0).map(([k,v])=>`${k.toUpperCase()}+${v}`);
@@ -10296,9 +10312,10 @@ function renderInventoryView() {
       if (it.part === 'weapon') parts.push(`ATK+${it.atk||0}`);
       if (it.part === 'armor') { parts.push(`물방+${it.pdef||0}`); parts.push(`마방+${it.mdef||0}`); }
       if (it.part === 'subweapon') parts.push(`물방+${it.pdef||0}`);
-      if (it.part === 'accessory' && it.traits && it.traits.length) parts.push(it.traits.map(t=>equipTraitDisplay(t, it.rank)).join(', '));
+      if (it.traits && it.traits.length) parts.push(it.traits.map(t=>equipTraitDisplay(t, it.rank)).join(', '));
       if (it.mainStat && it.part === 'accessory') parts.push(it.mainStat.toUpperCase());
       if (it.enhance > 0) parts.push(`+${it.enhance}`);
+      if (it.specialEffect && it.specialEffect.effectId) parts.push('✨특수효과');
       return parts.join(' / ');
     }
     if (it.effect) return it.effect;
@@ -10317,7 +10334,7 @@ function renderInventoryView() {
       const catLabel = it.category === 'skillbook' ? '📖스킬북' : it.category === 'equipment' ? (EQUIP_PART_LABELS[it.part]||it.part||'장비') : (it.category||'기타');
       slotTiles.push(`
         <div class="gb-inv-slot filled gb-inv-tooltip-wrap" style="background:${bg}22;border-color:${bg}66;">
-          <div class="gb-inv-slot-name">${escapeHtml(it.name)}</div>
+          <div class="gb-inv-slot-name"><span style="${it.category === 'equipment' ? rarityStyle(it.rarity) : ''}">${escapeHtml(it.name)}</span>${it.category === 'equipment' && it.rarity && it.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(it.rarity)};color:#000;font-size:8px;">${escapeHtml(it.rarity)}</span>` : ''}</div>
           <div class="gb-inv-slot-meta">${escapeHtml(it.rank || '')} · ${escapeHtml(catLabel)} · ×${Number(it.count||1)}</div>
           ${brief ? `<div class="gb-inv-slot-brief">${escapeHtml(brief)}</div>` : ''}
           <div class="gb-inv-slot-tooltip">${escapeHtml(buildItemTooltip(it))}</div>
@@ -10629,11 +10646,12 @@ function renderCharacterView() {
       const sk = resolveSkillForUnit(u, sId);
       if (!sk) return `<div class="gb-sub" style="padding:2px 0;">• ${escapeHtml(sId)}</div>`;
       const costStr = sk.costs ? [sk.costs.mp ? `MP:${sk.costs.mp}` : '', sk.costs.sp ? `SP:${sk.costs.sp}` : ''].filter(Boolean).join(' / ') : '비용 없음';
-      const coefStr = sk.coef != null ? (sk.growth && Number(sk.coef) === 0 ? `계수: 자동(성장형)` : `계수: ${sk.coef}`) : '';
+      const isPassive = sk.category === 'passive';
+      const coefStr = !isPassive && sk.coef != null ? (sk.growth && Number(sk.coef) === 0 ? `계수: 자동(성장형)` : `계수: ${sk.coef}`) : '';
       const catLabel = { singleAttack:'단일공격', aoeAttack:'광역공격', singleCC:'단일CC', aoeCC:'광역CC', buff:'버프', singleHeal:'힐', aoeHeal:'광역힐', passive:'패시브', utility:'유틸' }[sk.category] || sk.category;
       const elemStr = sk.element && sk.element !== 'none' ? `속성:${sk.element}` : '';
-      const dmgTypeStr = sk.damageType ? `타입:${sk.damageType}` : '';
-      const statTypeStr = (sk.statTypes||[]).length ? `스탯:${sk.statTypes.join('/')}` : '';
+      const dmgTypeStr = !isPassive && sk.damageType ? `타입:${sk.damageType}` : '';
+      const statTypeStr = !isPassive && (sk.statTypes||[]).length ? `스탯:${sk.statTypes.join('/')}` : '';
       const durationStr = sk.duration ? `${sk.duration}턴` : '';
       const ccStr = sk.cc ? `CC:${sk.cc.type}(${sk.cc.turns}턴)` : '';
       const buffStr = sk.buff && sk.buff.stats ? `버프:${Object.entries(sk.buff.stats).map(([k,v])=>`${k}+${v}`).join(',')}` : '';
@@ -10641,7 +10659,7 @@ function renderCharacterView() {
       const byRankStr = sk.byRank ? '(등급별 성장)' : '';
       const details = [catLabel, coefStr, costStr, dmgTypeStr, elemStr, statTypeStr, durationStr, ccStr, buffStr, passiveStr, byRankStr].filter(Boolean).join(' | ');
       const nameStyle = rarityStyle(sk.rarity);
-      return `<div class="gb-sub" style="padding:2px 0;cursor:help;" title="${escapeHtml(details)}">• <strong style="${nameStyle}">${escapeHtml(sk.name)}</strong>${sk.rarity && sk.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(sk.rarity)};color:#000;font-size:9px;">${escapeHtml(sk.rarity)}</span>` : ''} <span class="gb-badge">${escapeHtml(catLabel)}</span> ${coefStr ? `<span class="gb-badge">${coefStr}</span>` : ''} ${costStr ? `<span class="gb-sub" style="font-size:10px;">[${escapeHtml(costStr)}]</span>` : ''} ${sk.desc ? '— ' + escapeHtml(sk.desc) : ''}</div>`;
+      return `<div class="gb-sub" style="padding:2px 0;cursor:help;" title="${escapeHtml(details)}">• <strong style="${nameStyle}">${escapeHtml(sk.name)}</strong>${sk.rarity && sk.rarity !== 'Normal' ? ` <span class="gb-badge" style="background:${rarityColor(sk.rarity)};color:#000;font-size:9px;">${escapeHtml(sk.rarity)}</span>` : ''} <span class="gb-badge">${escapeHtml(catLabel)}</span> ${coefStr ? `<span class="gb-badge">${coefStr}</span>` : ''} ${costStr && !isPassive ? `<span class="gb-sub" style="font-size:10px;">[${escapeHtml(costStr)}]</span>` : ''} ${sk.desc ? '— ' + escapeHtml(sk.desc) : ''}</div>`;
     }).join('') || '<div class="gb-sub">스킬 없음</div>';
 
     detailHtml = `
@@ -10659,12 +10677,36 @@ function renderCharacterView() {
         </div>
       </div>
       <div class="gb-grid two" style="margin:8px 0;">
-        <div class="gb-sub">❤️ HP: <strong>${Number(u.currentHp ?? u.hp ?? 0)}</strong> / ${Number(u.hp||0)}</div>
-        <div class="gb-sub">💧 MP: <strong>${Number(u.currentMp ?? u.mp ?? 0)}</strong> / ${Number(u.mp||0)}</div>
-        <div class="gb-sub">⚡ SP: <strong>${Number(u.currentSp ?? u.sp ?? 0)}</strong> / ${Number(u.sp||0)}</div>
-        <div class="gb-sub">⚔️ ATK: <strong>${Number(u.atk||0)}</strong></div>
-        <div class="gb-sub">🛡️ 물리방어: <strong>${Number(u.pdef||0)}</strong></div>
-        <div class="gb-sub">🔮 마법방어: <strong>${Number(u.mdef||0)}</strong></div>
+        ${(() => {
+          // 패시브 + 장비 보너스 계산
+          let _pPdef = 0, _pMdef = 0;
+          const _pStats = { str:0, con:0, int:0, agi:0, sense:0 };
+          if (Array.isArray(u.skills)) {
+            u.skills.forEach(sId => {
+              const _sk = resolveSkillForUnit(u, sId);
+              if (!_sk || _sk.category !== 'passive') return;
+              if (_sk.passiveBonuses) {
+                if (_sk.passiveBonuses.pdef) _pPdef += Number(_sk.passiveBonuses.pdef);
+                if (_sk.passiveBonuses.mdef) _pMdef += Number(_sk.passiveBonuses.mdef);
+                ['str','con','int','agi','sense'].forEach(k => { if (_sk.passiveBonuses[k]) _pStats[k] += Number(_sk.passiveBonuses[k]); });
+              }
+            });
+          }
+          const _cMainStat = u.attackStat || inferAttackStat(u.position, u.job);
+          const _eqB = (u.inventory && u.inventory.equipped) ? calcEquippedStatBonus(u.inventory.equipped, _cMainStat) : { atk:0, pdef:0, mdef:0, str:0, con:0, int:0, agi:0, sense:0 };
+          const _bAtk = _eqB.atk;
+          const _bPdef = _eqB.pdef + _pPdef;
+          const _bMdef = _eqB.mdef + _pMdef;
+          const _fmtB = v => v > 0 ? ` <span style="color:#34d399;font-size:10px;">(+${v})</span>` : '';
+          return `
+            <div class="gb-sub">❤️ HP: <strong>${Number(u.currentHp ?? u.hp ?? 0)}</strong> / ${Number(u.hp||0)}</div>
+            <div class="gb-sub">💧 MP: <strong>${Number(u.currentMp ?? u.mp ?? 0)}</strong> / ${Number(u.mp||0)}</div>
+            <div class="gb-sub">⚡ SP: <strong>${Number(u.currentSp ?? u.sp ?? 0)}</strong> / ${Number(u.sp||0)}</div>
+            <div class="gb-sub">⚔️ ATK: <strong>${Number(u.atk||0)}</strong>${_fmtB(_bAtk)}</div>
+            <div class="gb-sub">🛡️ 물리방어: <strong>${Number(u.pdef||0)}</strong>${_fmtB(_bPdef)}</div>
+            <div class="gb-sub">🔮 마법방어: <strong>${Number(u.mdef||0)}</strong>${_fmtB(_bMdef)}</div>
+          `;
+        })()}
       </div>
       ${freePoints > 0 ? `<div style="color:#34d399;font-weight:700;font-size:14px;margin:8px 0;padding:6px;background:rgba(52,211,153,0.1);border-radius:6px;">🌟 배분 가능 스탯포인트: ${freePoints}</div>` : ''}
       <div style="margin:8px 0;">
@@ -12716,7 +12758,7 @@ async function saveMaterialTraitFromForm() {
       price,
       traits,
       note: fieldValue('#gb-eq-note') || '',
-      atk: Number(fieldValue('#gb-eq-atk')||0),
+      atk: (() => { const v = Number(fieldValue('#gb-eq-atk')||0); if (v > 0) return v; if (part === 'weapon') { const baseA = WEAPON_BASE_ATK[rank] || 5; const atkPerE = WEAPON_ENHANCE_ATK[rank] || 1; return baseA + enhance * atkPerE; } return 0; })(),
       pdef: Number(fieldValue('#gb-eq-pdef')||0),
       mdef: Number(fieldValue('#gb-eq-mdef')||0),
       mainStat: fieldValue('#gb-eq-main-stat') || 'str',
@@ -15783,7 +15825,7 @@ async function saveMaterialTraitFromForm() {
           traits: Array.isArray(item.traits) ? item.traits.slice() : [],
           durability: item.durability != null ? item.durability : 100,
           maxDurability: item.maxDurability != null ? item.maxDurability : 100,
-          atk: item.atk || 0,
+          atk: (item.atk || 0) > 0 ? item.atk : (item.part === 'weapon' ? ((WEAPON_BASE_ATK[item.rank] || 5) + (item.enhance || 0) * (WEAPON_ENHANCE_ATK[item.rank] || 1)) : 0),
           pdef: item.pdef || 0,
           mdef: item.mdef || 0,
           mainStat: item.mainStat || '',
@@ -15912,7 +15954,7 @@ async function saveMaterialTraitFromForm() {
       #${UI_ID} .gb-inv-slot-empty-label { font-size:10px; color:rgba(148,163,184,0.4); text-align:center; padding-top:30px; }
       /* 아이템 슬롯 툴팁 */
       #${UI_ID} .gb-inv-tooltip-wrap { position:relative; }
-      #${UI_ID} .gb-inv-tooltip-wrap .gb-inv-slot-tooltip { display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#1e2130; color:#e2e8f0; font-size:11px; white-space:pre-line; padding:6px 10px; border-radius:8px; border:1px solid rgba(148,163,184,0.25); pointer-events:none; z-index:200; min-width:160px; max-width:260px; line-height:1.45; }
+      #${UI_ID} .gb-inv-tooltip-wrap .gb-inv-slot-tooltip { display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#1e2130; color:#e2e8f0; font-size:11px; white-space:pre-line; padding:6px 10px; border-radius:8px; border:1px solid rgba(148,163,184,0.25); pointer-events:none; z-index:200; min-width:200px; max-width:360px; line-height:1.45; word-break:break-word; }
       #${UI_ID} .gb-inv-tooltip-wrap:hover .gb-inv-slot-tooltip { display:block; }
       /* tooltip for icon-only buttons */
       #${UI_ID} [data-tooltip] { position:relative; }
