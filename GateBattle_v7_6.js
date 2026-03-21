@@ -2458,7 +2458,7 @@ const RARE_FAMILY_PRESETS = {
 function buildDefaultRuntime() {
   return {
     started:false, finished:false, outcome:'', round:0,
-    party:[], enemies:[], queue:[], roundSummaries:[], llmBlock:'', logs:[],
+    party:[], enemies:[], queue:[], roundSummaries:[], llmBlock:'', logs:[], _roundLogStart:0,
     pendingActions:{},
     totals:{ partyDamage:0, enemyDamage:0, partyHealing:0, enemyHealing:0, partyKills:0, enemyKills:0 },
     warnings:[],
@@ -7447,6 +7447,7 @@ function getBuffedStat(unit, statKey) {
     const runtime = model.state.runtime;
     if (!runtime.started || runtime.finished) return;
     runtime.round += 1;
+    runtime._roundLogStart = runtime.logs.length;
     runtime.queue = buildRoundQueue(runtime);
     const summary = { round:runtime.round, partyDamage:0, enemyDamage:0, partyHealing:0, enemyHealing:0, partyKills:0, enemyKills:0, highlights:[] };
     for (const uid of runtime.queue) {
@@ -11059,10 +11060,11 @@ function renderCommandPanel(runtime) {
         </div>
         ${(() => {
           const rt = model.state.runtime;
-          const recentLogs = (rt.logs || []).filter(row => !/(전열로 전진|중열로 전진|후열로 전진)/.test(row)).slice(-8);
+          const startIdx = rt._roundLogStart || 0;
+          const recentLogs = (rt.logs || []).slice(startIdx).filter(row => !/(전열로 전진|중열로 전진|후열로 전진)/.test(row)).slice(-50);
           if (!recentLogs.length) return '';
-          return `<div class="gb-panel" style="margin-top:8px;max-height:150px;overflow:auto;">
-            <div class="gb-section-title" style="font-size:11px;">📜 최근 전투 요약</div>
+          return `<div class="gb-panel" style="margin-top:8px;max-height:400px;overflow:auto;">
+            <div class="gb-section-title" style="font-size:11px;">📜 최근 전투 요약 (${rt.round || 0}라운드)</div>
             <div class="gb-log" style="font-size:10px;">${recentLogs.map(row => `<div style="padding:1px 0;border-bottom:1px solid rgba(148,163,184,0.05);">• ${escapeHtml(row)}</div>`).join('')}</div>
           </div>`;
         })()}
