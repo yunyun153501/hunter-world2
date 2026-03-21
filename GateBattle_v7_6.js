@@ -7317,12 +7317,14 @@ function getBuffedStat(unit, statKey) {
         const spRegen = Math.max(1, Math.round(unit.maxSp * unit.passiveMods.spRegenPct));
         unit.sp = Math.min(unit.maxSp, unit.sp + spRegen);
       }
-      // 강철모루: HP 임계점 이하 시 매턴 체력 3% 회복
+      // 강철모루: HP 임계점 이하 시 매턴 체력 3% 회복 (패시브이므로 applyHeal 보너스 미적용)
       if (!unit.dead && unit._anvilPdef > 0 && unit._anvilRegenPct > 0) {
         const threshold = unit._anvilHpThreshold || 0.30;
         if (unit.hp / unit.maxHp <= threshold) {
           const heal = Math.max(1, Math.round(unit.maxHp * unit._anvilRegenPct));
-          const actual = applyHeal(unit, heal);
+          const before = unit.hp;
+          unit.hp = Math.min(unit.maxHp, unit.hp + heal);
+          const actual = unit.hp - before;
           if (actual > 0) { addRoundHighlight(summary, `${unit.name} 강철모루 회복 ${actual}`); pushBattleLog(runtime, `${unit.name} 강철모루 체력 회복 ${actual} (HP ${Math.round(threshold*100)}% 이하)`); }
         }
       }
