@@ -14328,7 +14328,7 @@ async function saveMaterialTraitFromForm() {
         if (caught) {
           // Seizure: no gold gain, item gone, + 50% fine
           const fine = Math.floor(val * BM_FINE_RATE);
-          inv.gold = Math.max(0, Number(inv.gold || 0) - fine);
+          inv.gold = Number(inv.gold || 0) - fine;
           await saveDb(); await saveState(); renderApp();
           toast(`⚠️ 협회 특수수사대에 발각됐다! ${it.name} ${cnt}개 압수·거래 무효 + 벌금 ₩${fine.toLocaleString('en-US')} 부과.`, true);
         } else {
@@ -14467,7 +14467,7 @@ async function saveMaterialTraitFromForm() {
           // 적발 — 아이템 압수, 벌금 부과
           removeInventoryItem(ikey, 'all');
           const fine = Math.floor(price * BM_FINE_RATE);
-          inv.gold = Math.max(0, Number(inv.gold || 0) - fine);
+          inv.gold = Number(inv.gold || 0) - fine;
           await saveDb(); await saveState(); renderApp();
           toast(`⚠️ [${it.rank}] ${it.name} — 발각됐다! 장비 압수·거래 무효 + 벌금 ₩${fine.toLocaleString('en-US')} 부과.`, true);
         } else {
@@ -15137,7 +15137,7 @@ async function saveMaterialTraitFromForm() {
       try {
         if (activeGateRun()) { toast('이미 진행 중인 게이트가 있다.'); return; }
         beginGateRunFromSelectedGate();
-        const gs = model.state.gateState || {};
+        const gs = gateStateSafe();
         model.state.gateRunTab = 'main';
         await saveState();
         renderApp();
