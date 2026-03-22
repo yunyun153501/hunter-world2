@@ -2636,7 +2636,15 @@ function buildDefaultState() {
     const allSkillMap = getAllSkillMap();
     const lines = [];
     const nodeProgress = buildGateNodeProgressText();
-    if (nodeProgress) { lines.push(nodeProgress); lines.push(''); }
+    if (nodeProgress) {
+      lines.push(nodeProgress);
+      const run = getGateRun();
+      if (run) {
+        const em = Number(run.elapsedMinutes || 0);
+        lines.push(`경과시간: ${Math.floor(em / 60)}h ${em % 60}m`);
+      }
+      lines.push('');
+    }
     lines.push(`[전투 조우] ${context || ''}`);
     lines.push('');
     lines.push('▸ 아군');
