@@ -16,6 +16,7 @@ try {
   const KEY_VISIBLE = 'GateBattleV21::visible';
   const MAX_PARTY = 8;
   const MAX_ENEMIES = 10;
+  const MAX_SUPPORT = 2;
   const GRADE_ORDER = ['E','D','C','B','A','S'];
   // 등급별 주스탯 상한선
   const STAT_CAP_BY_RANK = { E:25, D:40, C:60, B:80, A:100, S:150 };
@@ -1943,6 +1944,20 @@ const RARE_FAMILY_PRESETS = {
             bag:{ id:'eq_npc_dohyun_bag', name:'E급 기본가방', category:'equipment', part:'bag', rank:'E', bagId:'bag_E', slotBonus:8, maxWeightBonusG:7000, weightMul:1.00, durability:100, maxDurability:100, note:'짐꾼 전용 가방.' }
           }},
           note:'고유 NPC. 비전투/리페어/짐꾼. 레벨8.\n패시브: 탁월한 손재주 — 수리속도·통찰력 상승\n현장정비&응급처치 — 휴식효과 +1% 고정값 상승 (파티 참가 시 자동)\n빠른수리 — 전투 중 내구도 감소 50% (파티 참가 시 자동)\n장비: E급 가방, E급 곡괭이\n게이트클리어기록: E급소형6회, E급중형2회, E급대형1회(비전투)' },
+        // ── NPC: 유진성 ──
+        { id:'char_jinseong', name:'유진성', job:'대장장이', position:'비전투', row:'back', rank:'D', level:10,
+          stats:{ str:20, con:24, int:10, agi:10, sense:18 },
+          hp:0, mp:0, sp:0, atk:0, pdef:0, mdef:0,
+          damageType:'physical', attackStat:'con',
+          skills:[],
+          threatBase:0,
+          inventory:{ gold:0, items:[
+            { id:'tool_jinseong_hammer', name:'D급 정밀망치', category:'tool', rank:'D', count:1, unitWeightG:2000, note:'대장장이 전용 정밀 망치.' }
+          ], equipped:{
+            weapon:null, subweapon:null, armor:null, accessory:null,
+            bag:{ id:'eq_npc_jinseong_bag', name:'D급 공구가방', category:'equipment', part:'bag', rank:'D', bagId:'bag_D', slotBonus:10, maxWeightBonusG:10000, weightMul:1.00, durability:100, maxDurability:100, note:'대장장이 전용 공구가방.' }
+          }},
+          note:'고유 NPC. D급 대장장이. 비전투/장비 전문가.\n패시브1: 장비제작 — 유틸리티/성장형/레어/직업스킬. 장비 설계도를 보고 장비를 제작할 수 있다. 성장에 따라 상위 등급 장비 제작 가능.\n패시브2: 장비개조 — 유틸리티/성장형/레어/직업스킬. 노말 장비를 레어 장비로 개조할 수 있다. 성공 시 랜덤 특수효과 부여.\n파티원 보너스: 엔지니어 로비 강화비 10% 할인, 장비개조비 5% 할인.\n스탯: STR20/CON24/AGI10/INT10/SEN18. 주스탯 CON. 물리 피해타입.' },
         // ── NPC: 김민수 ──
         { id:'char_minsu', name:'김민수', job:'없음', position:'탱커', row:'front', rank:'E', level:5,
           stats:{ str:12, con:16, int:10, agi:10, sense:12 },
@@ -4074,6 +4089,15 @@ function hasPorterInParty() {
     if (!cid) return false;
     const c = chars.find(x => x.id === cid);
     return c && (c.job || '').includes('짐꾼');
+  });
+}
+function hasEngineerInParty() {
+  const partySlots = (model.db.battleSetup && Array.isArray(model.db.battleSetup.partySlots)) ? model.db.battleSetup.partySlots : [];
+  const chars = model.db.characters || [];
+  return partySlots.some(cid => {
+    if (!cid) return false;
+    const c = chars.find(x => x.id === cid);
+    return c && (c.job || '').includes('대장장이');
   });
 }
 function inventoryItemKey(item) {
@@ -8031,7 +8055,7 @@ function renderTeamPanel() {
 
   return `<div class="gb-panel">
     <div class="gb-section-title">👥 팀</div>
-    <div class="gb-sub" style="margin-bottom:8px;">게이트 파티 구성원과 정산 비율을 관리한다. 협회 정산 시 이 비율대로 각자 인벤에 분배된다. <strong>공용 인벤</strong>도 팀원으로 추가하면 공용비 분배 가능.</div>
+    <div class="gb-sub" style="margin-bottom:8px;">게이트 파티 구성원과 정산 비율을 관리한다. 전투 ${MAX_PARTY}명 + 비전투 지원 ${MAX_SUPPORT}명 = 최대 ${MAX_PARTY + MAX_SUPPORT}명. <strong>공용 인벤</strong>도 팀원으로 추가하면 공용비 분배 가능.</div>
     ${memberRows}
     ${ratioWarn}
     <div class="gb-btn-row" style="margin-top:8px;">
@@ -9188,12 +9212,8 @@ function renderAssociationView() {
   } else if (floor === '4F') {
     floorContent = renderRankUpView();
   } else if (floor === '7F') {
-    floorContent = `
-      <div class="gb-panel">
-        <div class="gb-section-title">🔧 엔지니어 로비 (7F)</div>
-        <div class="gb-sub">게이트 감지 시스템, 분석 장비, 기술 연구팀이 운영하는 층. 게이트 구조 분석 및 예측 보고서를 발행한다.</div>
-        <div class="gb-sub" style="margin-top:8px;">— 게이트 분석 기능 확장 예정. —</div>
-      </div>`;
+    const engTab = model.state.engLobbyTab || 'enhance';
+    floorContent = renderEngineerLobbyHtml(engTab);
   } else if (floor === 'B5F') {
     floorContent = `
       <div class="gb-panel">
@@ -9206,6 +9226,207 @@ function renderAssociationView() {
     ${lorePanel}
     ${floorContent}
     <div class="gb-btn-row"><button class="gb-btn" data-go="hub">← 허브로</button></div>`;
+}
+
+// ── 엔지니어 로비 (7F) ──────────────────────────────────────────────────────
+function renderEngineerLobbyHtml(engTab) {
+  const inv = getActiveInventory();
+  const gold = Number(inv.gold || 0);
+  const ownedEquip = (inv.items||[]).filter(it => it.category === 'equipment');
+  const selKey = model.state.engLobbySel || '';
+  const fmt = n => { n = Number(n)||0; return n >= 1e8 ? `${(n/1e8).toFixed(2)}억원` : n >= 10000 ? `${(n/10000).toFixed(1)}만원` : `${n.toLocaleString('en-US')}원`; };
+  const engDiscount = hasEngineerInParty();
+
+  const tabBar = `<div class="gb-btn-row">
+    <button class="gb-btn${engTab==='enhance'?' primary':''}" data-eng-tab="enhance">⚒️ 강화</button>
+    <button class="gb-btn${engTab==='infuse'?' primary':''}" data-eng-tab="infuse">💎 특성주입</button>
+    <button class="gb-btn${engTab==='reforge'?' primary':''}" data-eng-tab="reforge">🔧 장비개조</button>
+  </div>`;
+
+  const filterFn = (it) => {
+    if (engTab === 'reforge') return it.category === 'equipment' && (it.part === 'weapon' || it.part === 'armor') && (it.rarity || 'Normal') === 'Normal';
+    return true;
+  };
+  const filteredEquip = ownedEquip.filter(filterFn);
+
+  const listHtml = filteredEquip.length === 0
+    ? `<div class="gb-sub">${engTab==='reforge'?'개조할 노말 무기/방어구가 없다.':engTab==='infuse'?'특성주입할 장비가 없다.':'강화할 장비가 없다.'}</div>`
+    : filteredEquip.map(it => {
+        const ikey = inventoryItemKey(it);
+        const isSelected = ikey === selKey;
+        const dur = Number(it.durability ?? 100);
+        const maxDur = Number(it.maxDurability ?? 100);
+        const maxEnh = EQUIP_MAX_ENHANCE[it.part||'weapon'] || 3;
+        const maxInf = it.maxInfuse ?? EQUIP_MAX_INFUSE[it.part||'weapon'] ?? 1;
+        const isFull = engTab === 'enhance' ? (it.enhance || 0) >= maxEnh : engTab === 'infuse' ? (it.infuse || 0) >= maxInf : false;
+        const badgeText = engTab === 'infuse' ? `특성 ${(it.traits||[]).length}/${maxInf}` : engTab === 'reforge' ? (it.rarity || 'Normal') : `+${it.enhance||0}`;
+        return `<button class="gb-list-item ${isSelected?'is-active':''}" data-eng-sel="${escapeHtml(ikey)}">
+          <strong>${escapeHtml(it.name||it.id)}</strong>
+          <span class="gb-badge">${escapeHtml(it.rank||'E')}</span>
+          <span class="gb-badge">${badgeText}</span>
+          <div class="gb-sub">내구도 ${fmtDur(dur)}/${fmtDur(maxDur)}${isFull ? ' | <span style="color:#f97316;">최대</span>' : ''}</div>
+        </button>`;
+      }).join('');
+
+  let detailHtml = `<div class="gb-sub">목록에서 ${engTab==='reforge'?'개조할':engTab==='infuse'?'특성주입할':'강화할'} 장비를 선택하세요.</div>`;
+
+  if (selKey) {
+    const it = (engTab === 'reforge' ? filteredEquip : ownedEquip).find(x => inventoryItemKey(x) === selKey);
+    if (it) {
+      const rank = it.rank || 'E';
+      const part = it.part || 'weapon';
+
+      if (engTab === 'enhance') {
+        // ── 엔지니어 강화 (대장간+5%비용, +2%확률) ─────────────────
+        const curEnh = it.enhance || 0;
+        const maxEnh = EQUIP_MAX_ENHANCE[part] || 3;
+        if (curEnh >= maxEnh) {
+          detailHtml = `
+            <div class="gb-section-title">⚒️ ${escapeHtml(it.name||it.id)}</div>
+            <div class="gb-sub" style="color:#f97316;">이미 최대 강화 단계(+${maxEnh})에 도달했다.</div>`;
+        } else {
+          const stones = (inv.items||[]).filter(si =>
+            si.category === 'manaStone' &&
+            String(si.rank||'').toUpperCase() === rank.toUpperCase() &&
+            Number(si.note || 0) >= 80
+          );
+          const selStone = model.state.engLobbyStone || '';
+          const stoneOptions = stones.length === 0
+            ? `<div class="gb-sub" style="color:#ef4444;">${rank}등급 마정석(순도 80% 이상)이 없다.</div>`
+            : stones.map(si => {
+                const skey = inventoryItemKey(si);
+                const purity = Number(si.note || 80);
+                return `<button class="gb-list-item${skey===selStone?' is-active':''}" data-eng-stone="${escapeHtml(skey)}">
+                  ${escapeHtml(si.name||si.id)} <span class="gb-sub">순도 ${purity}%</span>
+                </button>`;
+              }).join('');
+
+          let actionHtml = '';
+          if (selStone) {
+            const stone = stones.find(si => inventoryItemKey(si) === selStone);
+            if (stone) {
+              const purity = Number(stone.note || 80);
+              const baseRate = calcForgeSuccessRate(purity);
+              const rate = Math.min(1, baseRate + 0.02);
+              const baseFee = calcForgeFee(rank, purity);
+              const feeMultiplier = engDiscount ? 0.95 : 1.05;
+              const fee = Math.round(baseFee * feeMultiplier);
+              const canAfford = gold >= fee;
+              const discountLabel = engDiscount ? ' <span style="color:#34d399;">(대장장이 파티원 10% 할인)</span>' : ' <span style="color:#f59e0b;">(+5% 프리미엄)</span>';
+              actionHtml = `
+                <div style="margin-top:8px;">
+                  <div class="gb-sub">성공률: <strong>${(rate * 100).toFixed(1)}%</strong> (대장간 대비 +2%p)</div>
+                  <div class="gb-sub">수수료: <strong>${fmt(fee)}</strong>${discountLabel}</div>
+                  <div class="gb-sub">소지금: ${fmt(gold)}</div>
+                  <button class="gb-btn primary${canAfford?'':' disabled'}" id="gb-eng-enhance-do"
+                    data-eng-equip="${escapeHtml(inventoryItemKey(it))}"
+                    data-eng-stone-key="${escapeHtml(selStone)}"
+                    data-eng-fee="${fee}" data-eng-rate="${rate}" data-eng-rank="${rank}"
+                    ${canAfford?'':'disabled'}>⚒️ 강화 실행</button>
+                </div>`;
+            }
+          }
+          detailHtml = `
+            <div class="gb-section-title">⚒️ ${escapeHtml(it.name||it.id)} +${curEnh} → +${curEnh+1}</div>
+            <div class="gb-sub">마정석 선택:</div>
+            ${stoneOptions}
+            ${actionHtml}`;
+        }
+      } else if (engTab === 'infuse') {
+        // ── 특성주입 (대장간 동일) ─────────────────────────────────
+        const maxInf = it.maxInfuse ?? EQUIP_MAX_INFUSE[part||'weapon'] ?? 1;
+        const curInf = it.infuse || 0;
+        if (curInf >= maxInf) {
+          detailHtml = `
+            <div class="gb-section-title">💎 ${escapeHtml(it.name||it.id)}</div>
+            <div class="gb-sub" style="color:#f97316;">이미 최대 특성 수(${maxInf})에 도달했다.</div>`;
+        } else {
+          const rareMats = [];
+          const searchInvs = [{ inv, label:'활성 인벤' }];
+          const sharedInv = getInventory();
+          if (sharedInv !== inv) searchInvs.push({ inv:sharedInv, label:'공용 인벤' });
+          searchInvs.forEach(({ inv:si }) => {
+            (si.items||[]).forEach(mi => {
+              if (mi.category === 'rareMaterial' && mi.traitId) rareMats.push(mi);
+            });
+          });
+          const selMat = model.state.engLobbyInfuseMat || '';
+          const matOptions = rareMats.length === 0
+            ? `<div class="gb-sub" style="color:#ef4444;">주입 가능한 희귀재료가 없다.</div>`
+            : rareMats.map(mi => {
+                const mkey = inventoryItemKey(mi);
+                const trLabel = EQUIP_TRAIT_LABELS[mi.traitId] || mi.traitId;
+                return `<button class="gb-list-item${mkey===selMat?' is-active':''}" data-eng-infuse-mat="${escapeHtml(mkey)}">
+                  ${escapeHtml(mi.name||mi.id)} <span class="gb-sub">[${escapeHtml(trLabel)}]</span>
+                </button>`;
+              }).join('');
+          let actionHtml = '';
+          if (selMat) {
+            const mat = rareMats.find(mi => inventoryItemKey(mi) === selMat);
+            if (mat) {
+              const sugPrice = Number(mat.price || mat.suggestedPrice || 0);
+              const totalCost = Math.round(sugPrice * 0.25);
+              const traitId = mat.traitId || '';
+              const canAfford = gold >= totalCost;
+              const alreadyHas = (it.traits||[]).includes(traitId);
+              actionHtml = `
+                <div style="margin-top:8px;">
+                  <div class="gb-sub">특성: <strong>${escapeHtml(EQUIP_TRAIT_LABELS[traitId]||traitId)}</strong></div>
+                  <div class="gb-sub">비용: <strong>${fmt(totalCost)}</strong></div>
+                  ${alreadyHas?'<div class="gb-sub" style="color:#ef4444;">이미 보유한 특성이다.</div>':''}
+                  <button class="gb-btn primary${canAfford&&!alreadyHas?'':' disabled'}" id="gb-eng-infuse-do"
+                    data-eng-equip="${escapeHtml(inventoryItemKey(it))}"
+                    data-eng-mat-key="${escapeHtml(selMat)}"
+                    data-eng-infuse-fee="${totalCost}"
+                    data-eng-trait-id="${escapeHtml(traitId)}"
+                    ${canAfford&&!alreadyHas?'':'disabled'}>💎 특성주입 실행</button>
+                </div>`;
+            }
+          }
+          detailHtml = `
+            <div class="gb-section-title">💎 ${escapeHtml(it.name||it.id)} — 특성 ${curInf}/${maxInf}</div>
+            <div class="gb-sub">희귀재료 선택:</div>
+            ${matOptions}
+            ${actionHtml}`;
+        }
+      } else if (engTab === 'reforge') {
+        // ── 장비개조 (노말→레어) ─────────────────────────────────
+        const basePrice = Number(it.price || calcEquipBasePrice(rank, part));
+        const baseCost = Math.round(basePrice * 0.10);
+        const cost = engDiscount ? Math.round(baseCost * 0.95) : baseCost;
+        const canAfford = gold >= cost;
+        const discountLabel = engDiscount ? ' <span style="color:#34d399;">(대장장이 파티원 5% 할인)</span>' : '';
+        detailHtml = `
+          <div class="gb-section-title">🔧 장비개조 — ${escapeHtml(it.name||it.id)}</div>
+          <div class="gb-sub">노말 장비를 레어 장비로 개조합니다. 성공 시 랜덤 특수효과가 부여됩니다.</div>
+          <div style="margin-top:8px;padding:8px;background:rgba(100,100,100,0.1);border-radius:6px;">
+            <div class="gb-sub">성공률: <strong>50%</strong></div>
+            <div class="gb-sub">비용: <strong>${fmt(cost)}</strong> (장비 가격의 10%)${discountLabel}</div>
+            <div class="gb-sub" style="color:#ef4444;">실패 시: 최대내구도 -5 / 현재내구도 -20</div>
+            <div class="gb-sub">성공 시 특성 등급: T4(40%) / T3(30%) / T2(20%) / T1(10%)</div>
+            <div class="gb-sub">소지금: ${fmt(gold)}</div>
+          </div>
+          <button class="gb-btn primary${canAfford?'':' disabled'}" id="gb-eng-reforge-do"
+            data-eng-equip="${escapeHtml(inventoryItemKey(it))}"
+            data-eng-reforge-cost="${cost}"
+            ${canAfford?'':'disabled'}>🔧 장비개조 실행</button>`;
+      }
+    }
+  }
+
+  return `
+    <div class="gb-panel">
+      <div class="gb-section-title">🔧 엔지니어 로비 (7F)</div>
+      <div class="gb-sub">협회 소속 엔지니어들이 운영하는 고급 장비 작업장. 대장간보다 정밀한 장비 강화와 장비개조가 가능하다.</div>
+      ${engDiscount ? '<div class="gb-sub" style="color:#34d399;">🔧 대장장이(유진성) 파티원 보너스 적용 중 — 강화비 10% 할인, 개조비 5% 할인</div>' : ''}
+      ${tabBar}
+    </div>
+    <div class="gb-panel">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>${listHtml}</div>
+        <div>${detailHtml}</div>
+      </div>
+    </div>`;
 }
 
 // ── 상점 (Shop) ──────────────────────────────────────────────────────────────
@@ -10985,19 +11206,34 @@ function renderPartyView() {
     `;
   }
 
-  // 팀원을 파티 슬롯에 자동 연동 (battleSetup.partySlots를 팀원 기반으로 갱신)
+  // 팀원을 파티 슬롯에 자동 연동 (전투/비전투 분리)
   if (!model.db.battleSetup) model.db.battleSetup = { partySlots:[], enemySlots:[] };
   if (!model.db.battleSetup.partySlots) model.db.battleSetup.partySlots = [];
-  for (let i = 0; i < MAX_PARTY; i++) {
-    model.db.battleSetup.partySlots[i] = teamCharIds[i] || '';
+  const combatIds = [];
+  const supportIds = [];
+  teamCharIds.forEach(cid => {
+    const ch = allUnits.find(u => u.id === cid);
+    if (ch && ch.position === '비전투') supportIds.push(cid);
+    else combatIds.push(cid);
+  });
+  const allSlotIds = combatIds.concat(supportIds);
+  for (let i = 0; i < MAX_PARTY + MAX_SUPPORT; i++) {
+    model.db.battleSetup.partySlots[i] = allSlotIds[i] || '';
   }
 
-  // 현재 파티에 들어있는 캐릭터 (팀 기반)
+  // 전투 파티 슬롯 (최대 MAX_PARTY 명)
   const partySlots = [];
-  for (let i = 0; i < teamCharIds.length && i < MAX_PARTY; i++) {
-    const slotId = teamCharIds[i];
+  for (let i = 0; i < combatIds.length && i < MAX_PARTY; i++) {
+    const slotId = combatIds[i];
     const unit = allUnits.find(u => u.id === slotId);
     partySlots.push({ index: i, id: slotId, unit });
+  }
+  // 비전투 지원 슬롯 (최대 MAX_SUPPORT 명)
+  const supportSlots = [];
+  for (let i = 0; i < supportIds.length && i < MAX_SUPPORT; i++) {
+    const slotId = supportIds[i];
+    const unit = allUnits.find(u => u.id === slotId);
+    supportSlots.push({ index: i, id: slotId, unit });
   }
 
   // 파티 멤버 카드 렌더
@@ -11129,11 +11365,33 @@ function renderPartyView() {
     </div>`;
   })();
 
+  // ── 비전투 지원 카드 ──
+  const supportCards = supportSlots.length === 0 ? '' : supportSlots.map((slot, i) => {
+    if (!slot.unit) return '';
+    const u = slot.unit;
+    const stats = u.stats || { str:0, con:0, int:0, agi:0, sense:0 };
+    const lv = Number(u.level || 1);
+    return `<div class="gb-panel" style="border-left:3px solid #f59e0b;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <strong>${escapeHtml(u.name)}</strong> <span class="gb-badge">${escapeHtml(u.rank || 'E')}</span> <span class="gb-badge" style="background:#f59e0b;color:#000;">비전투</span>
+          <div class="gb-sub">${escapeHtml(u.job || '직업없음')} / ${escapeHtml(rowLabel(u.row))} / Lv${lv}</div>
+        </div>
+      </div>
+      <div class="gb-sub" style="margin:4px 0;font-size:11px;">STR:${stats.str||0} CON:${stats.con||0} AGI:${stats.agi||0} INT:${stats.int||0} SEN:${stats.sense||0}</div>
+      <div class="gb-sub" style="font-size:11px;white-space:pre-wrap;">${escapeHtml((u.note||'').split('\\n').slice(0,3).join('\n'))}</div>
+      <div class="gb-btn-row" style="margin-top:6px;">
+        <button class="gb-btn tiny" data-party-inv="${escapeHtml(u.id)}">🎒 인벤토리</button>
+      </div>
+    </div>`;
+  }).join('');
+
   return `
     <div class="gb-panel">
       <div class="gb-section-title">👥 파티 관리</div>
-      <div class="gb-sub" style="margin-bottom:8px;">허브에서 편성한 팀원이 파티로 자동 연동됩니다. 스탯포인트 배분, 인벤토리 관리, 골드 이동이 가능합니다.</div>
+      <div class="gb-sub" style="margin-bottom:8px;">허브에서 편성한 팀원이 파티로 자동 연동됩니다. (전투 최대 ${MAX_PARTY}명 / 비전투 지원 최대 ${MAX_SUPPORT}명)</div>
     </div>
+    ${supportSlots.length > 0 ? `<div class="gb-panel" style="margin-top:12px;"><div class="gb-section-title" style="color:#f59e0b;">🛠️ 비전투 지원 (${supportSlots.length}/${MAX_SUPPORT})</div><div class="gb-sub" style="margin-bottom:8px;">비전투 포지션 파티원. 전투에 참가하지 않지만 패시브 효과를 제공합니다.</div></div>${supportCards}` : ''}
     <div class="gb-grid two">${partyCards}</div>
     ${partyInvSection}
     ${partyGoldSection}
@@ -13581,6 +13839,14 @@ async function saveMaterialTraitFromForm() {
       if (!charId) { toast('추가할 인물을 선택하라.', true); return; }
       if (!Array.isArray(model.db.team)) model.db.team = [];
       if (model.db.team.find(m => m.charId === charId)) { toast('이미 팀에 있다.', true); return; }
+      // 전투/비전투 슬롯 용량 확인
+      const allCharsCheck = (model.db.characters || []).concat(model.db.personas || []);
+      const addChar = allCharsCheck.find(c => c.id === charId);
+      const isNonCombat = addChar && addChar.position === '비전투';
+      const currentCombat = model.db.team.filter(m => { const c = allCharsCheck.find(x => x.id === m.charId); return !c || c.position !== '비전투'; }).length;
+      const currentSupport = model.db.team.filter(m => { const c = allCharsCheck.find(x => x.id === m.charId); return c && c.position === '비전투'; }).length;
+      if (isNonCombat && currentSupport >= MAX_SUPPORT) { toast(`비전투 지원 슬롯이 가득 찼다. (최대 ${MAX_SUPPORT}명)`, true); return; }
+      if (!isNonCombat && currentCombat >= MAX_PARTY) { toast(`전투 파티 슬롯이 가득 찼다. (최대 ${MAX_PARTY}명)`, true); return; }
       const n = model.db.team.length;
       const ratio = n === 0 ? 100 : Math.floor(100 / (n + 1));
       model.db.team.push({ charId, ratio });
@@ -14678,6 +14944,152 @@ async function saveMaterialTraitFromForm() {
           toast(`🖤 ${it.name} ${cnt}개 블랙마켓 거래 완료 (+₩${val.toLocaleString('en-US')})`);
         }
       } catch (e) { toast(e.message || String(e), true); }
+    });
+    // ── Engineer Lobby (7F) handlers ────────────────────────────────────────
+    on('[data-eng-tab]', 'click', async (ev) => {
+      model.state.engLobbyTab = ev.currentTarget.getAttribute('data-eng-tab') || 'enhance';
+      model.state.engLobbySel = '';
+      model.state.engLobbyStone = '';
+      model.state.engLobbyInfuseMat = '';
+      await saveState(); renderApp();
+    });
+    on('[data-eng-sel]', 'click', async (ev) => {
+      model.state.engLobbySel = ev.currentTarget.getAttribute('data-eng-sel') || '';
+      model.state.engLobbyStone = '';
+      model.state.engLobbyInfuseMat = '';
+      await saveState(); renderApp();
+    });
+    on('[data-eng-stone]', 'click', async (ev) => {
+      model.state.engLobbyStone = ev.currentTarget.getAttribute('data-eng-stone') || '';
+      await saveState(); renderApp();
+    });
+    on('[data-eng-infuse-mat]', 'click', async (ev) => {
+      model.state.engLobbyInfuseMat = ev.currentTarget.getAttribute('data-eng-infuse-mat') || '';
+      await saveState(); renderApp();
+    });
+    on('#gb-eng-enhance-do', 'click', async (ev) => {
+      try {
+        const inv = getActiveInventory();
+        const btn = ev.currentTarget;
+        const equipKey = btn.getAttribute('data-eng-equip') || '';
+        const stoneKey = btn.getAttribute('data-eng-stone-key') || '';
+        const fee = Number(btn.getAttribute('data-eng-fee') || '0');
+        const rate = Number(btn.getAttribute('data-eng-rate') || '0');
+        const btnRank = btn.getAttribute('data-eng-rank') || 'E';
+        const equip = inv.items.find(x => inventoryItemKey(x) === equipKey);
+        const stone = inv.items.find(x => inventoryItemKey(x) === stoneKey);
+        if (!equip) throw new Error('강화할 장비를 찾을 수 없다.');
+        if (!stone) throw new Error('마정석을 찾을 수 없다.');
+        if (Number(inv.gold || 0) < fee) throw new Error(`소지금 부족. (필요 ₩${fee.toLocaleString('en-US')})`);
+        inv.gold = Math.max(0, Number(inv.gold || 0) - fee);
+        const _stoneIdx = inv.items.findIndex(x => inventoryItemKey(x) === stoneKey);
+        if (_stoneIdx < 0) throw new Error('마정석을 인벤토리에서 찾을 수 없다.');
+        const _stoneItem = inv.items[_stoneIdx];
+        if (_stoneItem.stackable && Number(_stoneItem.count || 0) > 1) _stoneItem.count = Number(_stoneItem.count) - 1;
+        else inv.items.splice(_stoneIdx, 1);
+        const success = Math.random() < rate;
+        if (success) {
+          equip.enhance = (equip.enhance || 0) + 1;
+          if (equip.part === 'weapon') {
+            const baseAtk = WEAPON_BASE_ATK[equip.rank || btnRank] || WEAPON_BASE_ATK.E;
+            const atkPerEnh = WEAPON_ENHANCE_ATK[equip.rank || btnRank] || 1;
+            equip.atk = baseAtk + equip.enhance * atkPerEnh;
+          }
+          model.state.engLobbyStone = '';
+          await saveDb(); await saveState(); renderApp();
+          toast(`✨ 강화 성공! ${equip.name} +${equip.enhance} 달성! (-수수료 ₩${fee.toLocaleString('en-US')})`);
+          pushActivityLog(getActiveLabel(), '엔지니어 강화 성공', `${equip.name} +${equip.enhance} [${equip.rank}] / 비용 ₩${fee.toLocaleString('en-US')}`);
+        } else {
+          model.state.engLobbyStone = '';
+          await saveDb(); await saveState(); renderApp();
+          toast(`💥 강화 실패. ${equip.name} 장비 유지, 마정석 소멸 (-수수료 ₩${fee.toLocaleString('en-US')})`, true);
+          pushActivityLog(getActiveLabel(), '엔지니어 강화 실패', `${equip.name} 강화 실패 [${equip.rank}] / 비용 ₩${fee.toLocaleString('en-US')}`);
+        }
+      } catch(e) { toast(e.message || String(e), true); }
+    });
+    on('#gb-eng-infuse-do', 'click', async (ev) => {
+      try {
+        const inv = getActiveInventory();
+        const btn = ev.currentTarget;
+        const equipKey = btn.getAttribute('data-eng-equip') || '';
+        const matKey = btn.getAttribute('data-eng-mat-key') || '';
+        const totalCost = Number(btn.getAttribute('data-eng-infuse-fee') || '0');
+        const traitId = btn.getAttribute('data-eng-trait-id') || '';
+        const equip = inv.items.find(x => inventoryItemKey(x) === equipKey);
+        let mat = inv.items.find(x => inventoryItemKey(x) === matKey);
+        let matInv = inv;
+        if (!mat) {
+          const sharedInv = getInventory();
+          if (sharedInv !== inv) {
+            mat = (sharedInv.items||[]).find(x => inventoryItemKey(x) === matKey);
+            if (mat) matInv = sharedInv;
+          }
+        }
+        if (!equip) throw new Error('특성주입할 장비를 찾을 수 없다.');
+        if (!mat) throw new Error('희귀재료를 찾을 수 없다.');
+        if (!traitId) throw new Error('주입할 특성 정보가 없다.');
+        const maxInfuse = equip.maxInfuse ?? EQUIP_MAX_INFUSE[equip.part||'weapon'] ?? 1;
+        if ((equip.infuse || 0) >= maxInfuse) throw new Error(`이미 최대 특성 수(${maxInfuse})에 도달했다.`);
+        if ((equip.traits||[]).includes(traitId)) throw new Error('이미 보유한 특성이다.');
+        if (Number(inv.gold || 0) < totalCost) throw new Error(`소지금 부족. (필요 ₩${totalCost.toLocaleString('en-US')})`);
+        inv.gold = Math.max(0, Number(inv.gold || 0) - totalCost);
+        const _matIdx = matInv.items.findIndex(x => inventoryItemKey(x) === matKey);
+        if (_matIdx < 0) throw new Error('재료를 인벤토리에서 찾을 수 없다.');
+        const _matItem = matInv.items[_matIdx];
+        if (_matItem.stackable && Number(_matItem.count || 0) > 1) _matItem.count = Number(_matItem.count) - 1;
+        else matInv.items.splice(_matIdx, 1);
+        if (!Array.isArray(equip.traits)) equip.traits = [];
+        equip.traits.push(traitId);
+        equip.infuse = (equip.infuse || 0) + 1;
+        model.state.engLobbyInfuseMat = '';
+        await saveDb(); await saveState(); renderApp();
+        const traitLabel = EQUIP_TRAIT_LABELS[traitId] || traitId;
+        toast(`💎 특성주입 성공! ${equip.name}에 [${traitLabel}] 주입 완료. (-₩${totalCost.toLocaleString('en-US')})`);
+        pushActivityLog(getActiveLabel(), '엔지니어 특성주입', `${equip.name} [${equip.rank}] — [${traitLabel}] 주입 / 비용 ₩${totalCost.toLocaleString('en-US')}`);
+      } catch(e) { toast(e.message || String(e), true); }
+    });
+    on('#gb-eng-reforge-do', 'click', async (ev) => {
+      try {
+        const inv = getActiveInventory();
+        const btn = ev.currentTarget;
+        const equipKey = btn.getAttribute('data-eng-equip') || '';
+        const cost = Number(btn.getAttribute('data-eng-reforge-cost') || '0');
+        const equip = inv.items.find(x => inventoryItemKey(x) === equipKey);
+        if (!equip) throw new Error('개조할 장비를 찾을 수 없다.');
+        if ((equip.rarity || 'Normal') !== 'Normal') throw new Error('이미 레어 이상 장비이다.');
+        if (equip.part !== 'weapon' && equip.part !== 'armor') throw new Error('무기와 방어구만 개조 가능.');
+        if (Number(inv.gold || 0) < cost) throw new Error(`소지금 부족. (필요 ₩${cost.toLocaleString('en-US')})`);
+        inv.gold = Math.max(0, Number(inv.gold || 0) - cost);
+        const success = Math.random() < 0.50;
+        if (success) {
+          // 티어별 랜덤 특성: T4=40%, T3=30%, T2=20%, T1=10%
+          const roll = Math.random();
+          let targetTier;
+          if (roll < 0.40) targetTier = 4;
+          else if (roll < 0.70) targetTier = 3;
+          else if (roll < 0.90) targetTier = 2;
+          else targetTier = 1;
+          const pool = EQUIP_TRAIT_TYPES.filter(t => (TRAIT_TIER_MAP[t] || 4) === targetTier);
+          const traitId = pool.length ? pool[Math.floor(Math.random() * pool.length)] : EQUIP_TRAIT_TYPES[Math.floor(Math.random() * EQUIP_TRAIT_TYPES.length)];
+          if (!Array.isArray(equip.traits)) equip.traits = [];
+          equip.traits.push(traitId);
+          equip.rarity = 'Rare';
+          equip.infuse = (equip.infuse || 0) + 1;
+          model.state.engLobbySel = '';
+          await saveDb(); await saveState(); renderApp();
+          const traitLabel = EQUIP_TRAIT_LABELS[traitId] || traitId;
+          const tierLabel = `T${targetTier}`;
+          toast(`🔧 장비개조 성공! ${equip.name} → 레어 등급! [${traitLabel}] (${tierLabel}) 부여. (-₩${cost.toLocaleString('en-US')})`);
+          pushActivityLog(getActiveLabel(), '장비개조 성공', `${equip.name} [${equip.rank}] → Rare [${traitLabel}] (${tierLabel}) / 비용 ₩${cost.toLocaleString('en-US')}`);
+        } else {
+          equip.maxDurability = Math.max(EQUIP_MAX_DURABILITY_FLOOR, Number(equip.maxDurability ?? 100) - 5);
+          equip.durability = Math.max(0, Number(equip.durability ?? 100) - 20);
+          model.state.engLobbySel = '';
+          await saveDb(); await saveState(); renderApp();
+          toast(`💥 장비개조 실패! ${equip.name} 최대내구도 -5, 현재내구도 -20. (-₩${cost.toLocaleString('en-US')})`, true);
+          pushActivityLog(getActiveLabel(), '장비개조 실패', `${equip.name} [${equip.rank}] 개조 실패 / 내구도 감소 / 비용 ₩${cost.toLocaleString('en-US')}`);
+        }
+      } catch(e) { toast(e.message || String(e), true); }
     });
     // ── Forge (대장간 강화) handlers ─────────────────────────────────────────────
     on('[data-forge-tab]', 'click', async (ev) => {
