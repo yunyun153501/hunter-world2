@@ -2193,7 +2193,7 @@ const RARE_FAMILY_PRESETS = {
       ownedHomes: {},    // { [activeCharId]: [ { regionId, homeId, moveInDate:'2026-01-01', lastRentPaidMonth:'2026-01', rentLog:[{month,amount,paidDate}] }, ... ] }
       gameDate: { year: 2026, month: 1, day: 1 },
       battleSetup: {
-        partySlots: Array(MAX_PARTY).fill(''),
+        partySlots: Array(MAX_PARTY + MAX_SUPPORT).fill(''),
         enemySlots: Array(10).fill('')
       }
     };
@@ -2270,7 +2270,7 @@ const RARE_FAMILY_PRESETS = {
     if (!Array.isArray(model.db.homeRegions)) model.db.homeRegions = [];
     if (!model.db.gameDate || typeof model.db.gameDate !== 'object') model.db.gameDate = { year:2026, month:1, day:1 };
     if (!model.db.battleSetup || typeof model.db.battleSetup !== 'object') {
-      model.db.battleSetup = { partySlots: Array(MAX_PARTY).fill(''), enemySlots: Array(10).fill('') };
+      model.db.battleSetup = { partySlots: Array(MAX_PARTY + MAX_SUPPORT).fill(''), enemySlots: Array(10).fill('') };
     }
 
     // 5) NPC 초기장비 보충 — inventory가 없는 기존 NPC에게 기본장비 자동 장착
@@ -2913,7 +2913,10 @@ function buildDefaultState() {
   function calcUnitAtk(entry, stats) {
     let weaponAtk = 0;
     const inv = entry.inventory;
-    if (inv && inv.equipped && inv.equipped.weapon) weaponAtk = Number(inv.equipped.weapon.atk || 0);
+    if (inv && inv.equipped && inv.equipped.weapon) {
+      const w = inv.equipped.weapon;
+      weaponAtk = Number(w.durability ?? 100) <= 0 ? 0 : Number(w.atk || 0);
+    }
     const s = stats || normaliseStats(entry.stats);
     return Math.round(weaponAtk + ((Number(s.str)||0) - 10) * 0.2 + ((Number(s.agi)||0) - 10) * 0.2 + ((Number(s.int)||0) - 10) * 0.3);
   }
@@ -2924,7 +2927,10 @@ function buildDefaultState() {
     if (inv && inv.equipped) {
       EQUIP_PARTS.forEach(part => {
         const eq = inv.equipped[part];
-        if (eq) total += Number(eq[key] || 0);
+        if (eq) {
+          const broken = Number(eq.durability ?? 100) <= 0;
+          total += broken ? 0 : Number(eq[key] || 0);
+        }
       });
     }
     return total;
@@ -4044,8 +4050,17 @@ function syncTeamToPartySlots() {
   if (!model.db.battleSetup) model.db.battleSetup = { partySlots:[], enemySlots:[] };
   if (!model.db.battleSetup.partySlots) model.db.battleSetup.partySlots = [];
   const teamCharIds = model.db.team.map(m => m.charId).filter(id => id && id !== '__shared__');
-  for (let i = 0; i < MAX_PARTY; i++) {
-    model.db.battleSetup.partySlots[i] = teamCharIds[i] || '';
+  const allCharsSync = (model.db.characters || []).concat(model.db.personas || []);
+  const combatIdsSync = [];
+  const supportIdsSync = [];
+  teamCharIds.forEach(cid => {
+    const ch = allCharsSync.find(u => u.id === cid);
+    if (ch && ch.position === '비전투') supportIdsSync.push(cid);
+    else combatIdsSync.push(cid);
+  });
+  const allSlotIdsSync = combatIdsSync.concat(supportIdsSync);
+  for (let i = 0; i < MAX_PARTY + MAX_SUPPORT; i++) {
+    model.db.battleSetup.partySlots[i] = allSlotIdsSync[i] || '';
   }
 }
 function getPartyCharBags() {
@@ -11379,7 +11394,7 @@ function renderPartyView() {
         </div>
       </div>
       <div class="gb-sub" style="margin:4px 0;font-size:11px;">STR:${stats.str||0} CON:${stats.con||0} AGI:${stats.agi||0} INT:${stats.int||0} SEN:${stats.sense||0}</div>
-      <div class="gb-sub" style="font-size:11px;white-space:pre-wrap;">${escapeHtml((u.note||'').split('\\n').slice(0,3).join('\n'))}</div>
+      <div class="gb-sub" style="font-size:11px;white-space:pre-wrap;">${escapeHtml((u.note||'').split('\n').slice(0,3).join('\n'))}</div>
       <div class="gb-btn-row" style="margin-top:6px;">
         <button class="gb-btn tiny" data-party-inv="${escapeHtml(u.id)}">🎒 인벤토리</button>
       </div>
@@ -11391,8 +11406,8 @@ function renderPartyView() {
       <div class="gb-section-title">👥 파티 관리</div>
       <div class="gb-sub" style="margin-bottom:8px;">허브에서 편성한 팀원이 파티로 자동 연동됩니다. (전투 최대 ${MAX_PARTY}명 / 비전투 지원 최대 ${MAX_SUPPORT}명)</div>
     </div>
-    ${supportSlots.length > 0 ? `<div class="gb-panel" style="margin-top:12px;"><div class="gb-section-title" style="color:#f59e0b;">🛠️ 비전투 지원 (${supportSlots.length}/${MAX_SUPPORT})</div><div class="gb-sub" style="margin-bottom:8px;">비전투 포지션 파티원. 전투에 참가하지 않지만 패시브 효과를 제공합니다.</div></div>${supportCards}` : ''}
     <div class="gb-grid two">${partyCards}</div>
+    ${supportSlots.length > 0 ? `<div class="gb-panel" style="margin-top:12px;"><div class="gb-section-title" style="color:#f59e0b;">🛠️ 비전투 지원 (${supportSlots.length}/${MAX_SUPPORT})</div><div class="gb-sub" style="margin-bottom:8px;">비전투 포지션 파티원. 전투에 참가하지 않지만 패시브 효과를 제공합니다.</div></div>${supportCards}` : ''}
     ${partyInvSection}
     ${partyGoldSection}
     <div class="gb-panel" style="margin-top:12px;">
@@ -11968,12 +11983,16 @@ function renderCommandPanel(runtime) {
     let equipMdef = 0;
     const inv = entity.inventory;
     if (inv && inv.equipped) {
-      if (inv.equipped.weapon) weaponAtk = Number(inv.equipped.weapon.atk || 0);
+      if (inv.equipped.weapon) {
+        const w = inv.equipped.weapon;
+        weaponAtk = Number(w.durability ?? 100) <= 0 ? 0 : Number(w.atk || 0);
+      }
       EQUIP_PARTS.forEach(part => {
         const eq = inv.equipped[part];
         if (!eq) return;
-        equipPdef += Number(eq.pdef || 0);
-        equipMdef += Number(eq.mdef || 0);
+        const broken = Number(eq.durability ?? 100) <= 0;
+        equipPdef += broken ? 0 : Number(eq.pdef || 0);
+        equipMdef += broken ? 0 : Number(eq.mdef || 0);
       });
     }
     entity.atk = Math.round(weaponAtk + (effStr - 10) * 0.2 + (effAgi - 10) * 0.2 + (effInt - 10) * 0.3);
@@ -13169,7 +13188,7 @@ function readPartySlotsFromUI() {
   async function clearAllCharacters() {
     model.db.characters = [];
     model.state.selected.characters = '';
-    model.db.battleSetup.partySlots = Array(MAX_PARTY).fill('');
+    model.db.battleSetup.partySlots = Array(MAX_PARTY + MAX_SUPPORT).fill('');
     model.db.team = [];
     model.state.runtime = buildDefaultRuntime();
     await saveDb(); await saveState(); renderApp(); toast('캐릭터 전체 삭제 완료');
@@ -13843,7 +13862,7 @@ async function saveMaterialTraitFromForm() {
       const allCharsCheck = (model.db.characters || []).concat(model.db.personas || []);
       const addChar = allCharsCheck.find(c => c.id === charId);
       const isNonCombat = addChar && addChar.position === '비전투';
-      const currentCombat = model.db.team.filter(m => { const c = allCharsCheck.find(x => x.id === m.charId); return !c || c.position !== '비전투'; }).length;
+      const currentCombat = model.db.team.filter(m => { if (m.charId === '__shared__') return false; const c = allCharsCheck.find(x => x.id === m.charId); return !c || c.position !== '비전투'; }).length;
       const currentSupport = model.db.team.filter(m => { const c = allCharsCheck.find(x => x.id === m.charId); return c && c.position === '비전투'; }).length;
       if (isNonCombat && currentSupport >= MAX_SUPPORT) { toast(`비전투 지원 슬롯이 가득 찼다. (최대 ${MAX_SUPPORT}명)`, true); return; }
       if (!isNonCombat && currentCombat >= MAX_PARTY) { toast(`전투 파티 슬롯이 가득 찼다. (최대 ${MAX_PARTY}명)`, true); return; }
