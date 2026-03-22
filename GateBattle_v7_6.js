@@ -6403,9 +6403,29 @@ function getBuffedStat(unit, statKey) {
     const passiveSkill = (unit.skills || []).map(sid => resolveSkillForUnit(unit, sid)).find(sk => sk && sk.athenaPassive && sk.athenaPassive.hpThreshold);
     if (!passiveSkill || !passiveSkill.athenaPassive) return;
     const ap = passiveSkill.athenaPassive;
+    // usesPerDay 제한: 게이트 런 단위로 사용 횟수 추적
+    const usesPerDay = Number(ap.usesPerDay || 0);
+    if (usesPerDay > 0) {
+      const run = getGateRun();
+      if (run) {
+        if (!run._athenaUses) run._athenaUses = {};
+        const key = unit.baseId || unit.uid;
+        const used = Number(run._athenaUses[key] || 0);
+        if (used >= usesPerDay) return;
+      }
+    }
     const threshold = Number(ap.hpThreshold || 0.30);
     if (unit.hp / unit.maxHp > threshold) return;
     unit._athenaTriggered = true;
+    // 게이트 런에 사용 횟수 기록
+    if (usesPerDay > 0) {
+      const run = getGateRun();
+      if (run) {
+        if (!run._athenaUses) run._athenaUses = {};
+        const key = unit.baseId || unit.uid;
+        run._athenaUses[key] = (Number(run._athenaUses[key] || 0)) + 1;
+      }
+    }
     const recoveryPct = Number(ap.recoveryPct || 0.30);
     const lightTurns = Number(ap.lightTurns || 3);
     const allies = runtime.party.filter(u => !u.dead);
