@@ -7197,6 +7197,53 @@ function getBuffedStat(unit, statKey) {
       return;
     }
 
+    // ── 트리플샷 특수 처리: 계수를 3등분하여 발사, 대상 처치 시 남은 탄환 자동 전환 ──
+    if (skill.id === 'skill_haneul_tripleshot') {
+      const arrowCount = 3;
+      const perArrowCoef = round3(skill.coef / arrowCount);
+      const arrowSkill = Object.assign({}, skill, { coef: perArrowCoef });
+      let totalDmg = 0;
+      const killedNames = [];
+      let currentTarget = chooseWeightedTarget(actor, foes, skill, action.target);
+      applyDurabilityOnAttack(runtime, actor, true);
+      for (let a = 0; a < arrowCount; a++) {
+        if (!currentTarget || currentTarget.dead) {
+          const alive = getAlive(foes);
+          currentTarget = alive.length ? alive[Math.floor(Math.random() * alive.length)] : null;
+        }
+        if (!currentTarget || currentTarget.dead) break;
+        const hit = performHit(actor, currentTarget, arrowSkill);
+        if (!hit.hit) {
+          pushBattleLog(runtime, `${actor.name}의 ${skill.name} ${a+1}발째 → ${currentTarget.name} 빗나감`);
+          continue;
+        }
+        const dmg = computeDamage(actor, currentTarget, arrowSkill, hit.crit);
+        totalDmg += dmg;
+        const hpBefore = Number(currentTarget.hp || 0);
+        applyDamage(currentTarget, dmg);
+        if (Number(currentTarget.statuses.sleep || 0) > 0) currentTarget.statuses.sleep = 0;
+        applyDurabilityOnHit(runtime, currentTarget);
+        pushDamageEventLog(runtime, actor, currentTarget, skill.name + ` ${a+1}발`, dmg, hit.crit, currentTarget.dead);
+        pushHpShiftLog(runtime, currentTarget, hpBefore);
+        if (hit.crit) addRoundHighlight(summary, `${actor.name} 치명타`);
+        if (currentTarget.dead) {
+          killedNames.push(currentTarget.name);
+          if (actor.side === 'party') { summary.partyKills += 1; recordKillExp(runtime, currentTarget); } else summary.enemyKills += 1;
+          currentTarget = null; // 다음 발은 새 대상 자동 선택
+        }
+      }
+      if (actor.side === 'party') summary.partyDamage += totalDmg; else summary.enemyDamage += totalDmg;
+      if (actor.side === 'party') actor.sp = Math.max(0, (actor.sp || 0) - 1);
+      if ((actor.skills || []).includes('skill_haneul_reload')) {
+        actor._reloadStacks = Math.min(6, (Number(actor._reloadStacks) || 0) + 1);
+      }
+      const killMsg = killedNames.length ? ` (${killedNames.join(', ')} 처치)` : '';
+      addRoundHighlight(summary, `${actor.name}의 ${skill.name} → ${arrowCount}발 총 ${totalDmg} 피해${killMsg}`);
+      pushBattleLog(runtime, `${actor.name}의 ${skill.name}: 계수 ${skill.coef.toFixed(2)} → ${arrowCount}발 (발당 ${perArrowCoef.toFixed(2)}) 총 ${totalDmg} 피해${killMsg}`);
+      actor.lastAction = `${skill.name} → ${arrowCount}발 총 ${totalDmg}${killMsg}`;
+      return;
+    }
+
     // ── 퀵스로/투척단검 스킬: 투척단검 1개 소모 ──
     if (skill.throwDagger && actor._throwingDaggers != null) {
       if (actor._throwingDaggers <= 0) {
